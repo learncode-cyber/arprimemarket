@@ -3,17 +3,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Search, Menu, X, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { CartDrawer } from "./CartDrawer";
+import { useCart } from "@/context/CartContext";
 
 const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop" },
-  { label: "Categories", href: "/categories" },
-  { label: "About", href: "/about" },
+  { label: "Products", href: "/products" },
+  { label: "Cart", href: "/cart" },
+  { label: "Login", href: "/login" },
 ];
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const { totalItems } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -32,7 +36,6 @@ export const Navbar = () => {
         }`}
       >
         <nav className="flex items-center justify-between px-6 py-3">
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
@@ -45,7 +48,6 @@ export const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
@@ -58,7 +60,6 @@ export const Navbar = () => {
             ))}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <motion.button
@@ -68,21 +69,24 @@ export const Navbar = () => {
             >
               <Search className="w-4 h-4" />
             </motion.button>
+            <Link to="/dashboard">
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <User className="w-4 h-4" />
+              </motion.span>
+            </Link>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            >
-              <User className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              onClick={() => setCartOpen(true)}
               className="relative p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
               <ShoppingCart className="w-4 h-4" />
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-                0
+                {totalItems}
               </span>
             </motion.button>
             <button
@@ -94,7 +98,6 @@ export const Navbar = () => {
           </div>
         </nav>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
@@ -120,6 +123,8 @@ export const Navbar = () => {
           )}
         </AnimatePresence>
       </motion.header>
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
   );
 };
