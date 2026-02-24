@@ -1,29 +1,37 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ShoppingCart, Search, Menu, X, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingCart, Search, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CartDrawer } from "./CartDrawer";
 import { useCart } from "@/context/CartContext";
-
-const navLinks = [
-  { label: "Home", href: "/" },
-  { label: "Products", href: "/products" },
-  { label: "Cart", href: "/cart" },
-  { label: "Login", href: "/login" },
-];
+import { useAuth } from "@/context/AuthContext";
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { totalItems } = useCart();
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const navLinks = [
+    { label: "Home", href: "/" },
+    { label: "Products", href: "/products" },
+    { label: "Cart", href: "/cart" },
+    ...(user ? [] : [{ label: "Login", href: "/login" }]),
+  ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <>
@@ -69,15 +77,41 @@ export const Navbar = () => {
             >
               <Search className="w-4 h-4" />
             </motion.button>
-            <Link to="/dashboard">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              >
-                <User className="w-4 h-4" />
-              </motion.span>
-            </Link>
+
+            {user && isAdmin && (
+              <Link to="/admin">
+                <motion.span
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                </motion.span>
+              </Link>
+            )}
+
+            {user && (
+              <>
+                <Link to="/dashboard">
+                  <motion.span
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <User className="w-4 h-4" />
+                  </motion.span>
+                </Link>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSignOut}
+                  className="hidden md:flex p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </motion.button>
+              </>
+            )}
+
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -118,6 +152,14 @@ export const Navbar = () => {
                     {link.label}
                   </Link>
                 ))}
+                {user && (
+                  <button
+                    onClick={() => { handleSignOut(); setMobileOpen(false); }}
+                    className="px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all text-left"
+                  >
+                    Sign Out
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
