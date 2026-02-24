@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [submitting, setSubmitting] = useState(false);
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof errors = {};
     if (!name) errs.name = "Name is required";
@@ -17,6 +22,18 @@ const Register = () => {
     if (!password) errs.password = "Password is required";
     else if (password.length < 6) errs.password = "Must be at least 6 characters";
     setErrors(errs);
+    if (Object.keys(errs).length) return;
+
+    setSubmitting(true);
+    const { error } = await signUp(email, password, name);
+    setSubmitting(false);
+
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Account created! Please check your email to verify.");
+      navigate("/login");
+    }
   };
 
   return (
@@ -54,8 +71,8 @@ const Register = () => {
             </div>
             {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
           </div>
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary">
-            Create Account <ArrowRight className="w-4 h-4" />
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary disabled:opacity-50">
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Create Account <ArrowRight className="w-4 h-4" /></>}
           </motion.button>
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">
