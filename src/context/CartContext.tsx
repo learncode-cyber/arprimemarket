@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Product } from "@/hooks/useProductData";
+import { useTracking } from "@/context/TrackingContext";
 
 export interface CartItem {
   product: Product;
@@ -27,12 +28,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+  const { trackAddToCart } = useTracking();
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items]);
 
   const addToCart = (product: Product) => {
+    trackAddToCart({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      category: product.category,
+      currency: product.currency,
+      quantity: 1,
+    });
     setItems((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
