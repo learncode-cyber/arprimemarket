@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
-  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone
+  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ import SEOManagement from "@/components/admin/SEOManagement";
 import PromotionManagement from "@/components/admin/PromotionManagement";
 import ReferralManagement from "@/components/admin/ReferralManagement";
 import CampaignManagement from "@/components/admin/CampaignManagement";
+import BackupManagement from "@/components/admin/BackupManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +36,7 @@ const adminTabs = [
   { id: "suppliers", label: "Suppliers", icon: Store },
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
+  { id: "backup", label: "System", icon: Database },
 ];
 
 const Admin = () => {
@@ -176,6 +178,7 @@ const Admin = () => {
               {activeTab === "suppliers" && <SupplierManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
               {activeTab === "seo" && <SEOManagement />}
+              {activeTab === "backup" && <BackupManagement />}
             </motion.div>
           </AnimatePresence>
         </main>
