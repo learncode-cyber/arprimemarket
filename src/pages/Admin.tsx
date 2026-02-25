@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users, Wallet } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users, Wallet, Truck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { useProducts, useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import PaymentSettings from "@/components/admin/PaymentSettings";
 import OrderManagement from "@/components/admin/OrderManagement";
+import ShippingManagement from "@/components/admin/ShippingManagement";
 
 const adminTabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const adminTabs = [
   { id: "customers", label: "Customers", icon: Users },
   { id: "coupons", label: "Coupons", icon: Tag },
   { id: "payments", label: "Payments", icon: Wallet },
+  { id: "shipping", label: "Shipping", icon: Truck },
   { id: "add", label: "Add Product", icon: Plus },
 ];
 
@@ -193,7 +195,14 @@ const Admin = () => {
             </div>
           )}
 
+          {activeTab === "shipping" && (
+            <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
+              <ShippingManagement />
+            </div>
+          )}
+
           {activeTab === "add" && (
+
             <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 space-y-6">
               <h2 className="font-display text-xl font-semibold text-foreground">Add New Product</h2>
               <div className="space-y-4">

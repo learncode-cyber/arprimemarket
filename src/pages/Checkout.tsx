@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
+import { useShipping } from "@/hooks/useShipping";
 
 const shippingSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -52,7 +54,8 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
 
-  const shippingCost = subtotal >= 999 ? 0 : 60;
+  const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
+  const shippingCost = selectedShipping?.totalCost ?? 0;
   const total = subtotal - couponDiscount + shippingCost;
 
   // Load user profile data
@@ -175,6 +178,7 @@ const Checkout = () => {
           shipping_city: form.city,
           shipping_postal_code: form.postalCode || null,
           shipping_country: form.country,
+          shipping_method: shippingType,
         })
         .select("id, order_number")
         .single();
@@ -390,7 +394,29 @@ const Checkout = () => {
                       )}
                     </div>
                   ))}
+                  {/* Country selector */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      {tx("Country", "দেশ", "البلد")}
+                    </label>
+                    <select
+                      value={form.country}
+                      onChange={e => handleChange("country", e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
+                    >
+                      <option value="Bangladesh">Bangladesh</option>
+                      <option value="United States">United States</option>
+                      <option value="Canada">Canada</option>
+                      <option value="United Arab Emirates">United Arab Emirates</option>
+                    </select>
+                  </div>
                 </div>
+
+                {/* Shipping Method */}
+                <div className="mt-2">
+                  <ShippingMethodSelector options={shippingOptions} selectedType={shippingType} onSelect={setShippingType} tx={tx} />
+                </div>
+
                 <button
                   onClick={goToPayment}
                   className="w-full sm:w-auto px-8 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2 mt-2"
@@ -564,11 +590,18 @@ const Checkout = () => {
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("shipping")}</span>
+                <span className="text-muted-foreground">
+                  {t("shipping")}
+                  {selectedShipping && (
+                    <span className="text-[10px] ml-1">({selectedShipping.rate.shipping_type})</span>
+                  )}
+                </span>
                 <span className="text-foreground">{shippingCost === 0 ? t("free") : formatPrice(shippingCost)}</span>
               </div>
-              {shippingCost > 0 && (
-                <p className="text-[10px] text-muted-foreground">{tx("Free shipping on orders over ৳999", "৳৯৯৯+ অর্ডারে ফ্রি শিপিং", "شحن مجاني للطلبات فوق ৳٩٩٩")}</p>
+              {selectedShipping?.isFree && (
+                <p className="text-[10px] text-green-600 dark:text-green-400">
+                  {tx("Free standard shipping applied!", "ফ্রি স্ট্যান্ডার্ড শিপিং প্রয়োগ হয়েছে!", "تم تطبيق الشحن المجاني!")}
+                </p>
               )}
             </div>
 
@@ -586,7 +619,11 @@ const Checkout = () => {
             <div className="bg-muted/30 rounded-xl px-4 py-3 flex items-center gap-2">
               <Truck className="w-4 h-4 text-primary shrink-0" />
               <span className="text-xs text-muted-foreground">
-                {tx("Estimated delivery: 3-7 business days", "আনুমানিক ডেলিভারি: ৩-৭ কার্যদিবস", "التسليم المتوقع: ٣-٧ أيام عمل")}
+                {selectedShipping ? tx(
+                  `Estimated delivery: ${selectedShipping.estimatedDays} business days`,
+                  `আনুমানিক ডেলিভারি: ${selectedShipping.estimatedDays} কার্যদিবস`,
+                  `التسليم المتوقع: ${selectedShipping.estimatedDays} أيام عمل`
+                ) : tx("Estimated delivery: 3-7 business days", "আনুমানিক ডেলিভারি: ৩-৭ কার্যদিবস", "التسليم المتوقع: ٣-٧ أيام عمل")}
               </span>
             </div>
 

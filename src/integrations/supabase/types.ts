@@ -487,6 +487,80 @@ export type Database = {
         }
         Relationships: []
       }
+      shipping_rates: {
+        Row: {
+          base_cost: number
+          created_at: string
+          id: string
+          is_active: boolean
+          max_days: number
+          min_days: number
+          per_kg_cost: number
+          shipping_type: string
+          zone_id: string
+        }
+        Insert: {
+          base_cost?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_days?: number
+          min_days?: number
+          per_kg_cost?: number
+          shipping_type?: string
+          zone_id: string
+        }
+        Update: {
+          base_cost?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_days?: number
+          min_days?: number
+          per_kg_cost?: number
+          shipping_type?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_rates_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_zones: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          free_shipping_threshold: number | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          free_shipping_threshold?: number | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          free_shipping_threshold?: number | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
