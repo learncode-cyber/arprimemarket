@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
-  Menu, X, ChevronRight, Activity, Globe
+  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,9 @@ import ShippingManagement from "@/components/admin/ShippingManagement";
 import SupplierManagement from "@/components/admin/SupplierManagement";
 import TrackingManagement from "@/components/admin/TrackingManagement";
 import SEOManagement from "@/components/admin/SEOManagement";
+import PromotionManagement from "@/components/admin/PromotionManagement";
+import ReferralManagement from "@/components/admin/ReferralManagement";
+import CampaignManagement from "@/components/admin/CampaignManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +27,9 @@ const adminTabs = [
   { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "customers", label: "Customers", icon: Users },
   { id: "coupons", label: "Coupons", icon: Tag },
+  { id: "promotions", label: "Promotions", icon: Zap },
+  { id: "referrals", label: "Referrals", icon: Gift },
+  { id: "campaigns", label: "Campaigns", icon: Megaphone },
   { id: "payments", label: "Payments", icon: Wallet },
   { id: "shipping", label: "Shipping", icon: Truck },
   { id: "suppliers", label: "Suppliers", icon: Store },
@@ -154,6 +160,9 @@ const Admin = () => {
               {activeTab === "orders" && <OrderManagement />}
               {activeTab === "customers" && <CustomerManagement />}
               {activeTab === "coupons" && <CouponManagement />}
+              {activeTab === "promotions" && <PromotionManagement />}
+              {activeTab === "referrals" && <ReferralManagement />}
+              {activeTab === "campaigns" && <CampaignManagement />}
               {activeTab === "payments" && (
                 <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
                   <PaymentSettings />

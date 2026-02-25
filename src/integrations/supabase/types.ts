@@ -59,6 +59,72 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          budget: number | null
+          campaign_type: string
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          metrics: Json | null
+          name: string
+          related_coupon_id: string | null
+          related_promotion_id: string | null
+          spent: number
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: number | null
+          campaign_type?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          metrics?: Json | null
+          name: string
+          related_coupon_id?: string | null
+          related_promotion_id?: string | null
+          spent?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: number | null
+          campaign_type?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          metrics?: Json | null
+          name?: string
+          related_coupon_id?: string | null
+          related_promotion_id?: string | null
+          spent?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_related_coupon_id_fkey"
+            columns: ["related_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_related_promotion_id_fkey"
+            columns: ["related_promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -531,6 +597,156 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      promotions: {
+        Row: {
+          banner_url: string | null
+          category_ids: string[] | null
+          conditions: Json | null
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          priority: number
+          product_ids: string[] | null
+          promotion_type: string
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          banner_url?: string | null
+          category_ids?: string[] | null
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number
+          product_ids?: string[] | null
+          promotion_type?: string
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          banner_url?: string | null
+          category_ids?: string[] | null
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number
+          product_ids?: string[] | null
+          promotion_type?: string
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          referrer_reward_value: number
+          reward_type: string
+          reward_value: number
+          used_count: number
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          referrer_reward_value?: number
+          reward_type?: string
+          reward_value?: number
+          used_count?: number
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          referrer_reward_value?: number
+          reward_type?: string
+          reward_value?: number
+          used_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          referral_code_id: string
+          referred_id: string
+          referred_reward: number | null
+          referrer_id: string
+          referrer_reward: number | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referral_code_id: string
+          referred_id: string
+          referred_reward?: number | null
+          referrer_id: string
+          referrer_reward?: number | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referral_code_id?: string
+          referred_id?: string
+          referred_reward?: number | null
+          referrer_id?: string
+          referrer_reward?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shipping_rates: {
         Row: {
