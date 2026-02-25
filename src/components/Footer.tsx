@@ -90,10 +90,8 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           {/* Brand column */}
           <div className="col-span-2 space-y-4">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-display font-bold text-xs">AR</span>
-              </div>
+            <Link to="/" className="flex items-center gap-1.5">
+              <img src="/images/logo.png" alt="AR Prime Market" className="w-9 h-9 object-contain" />
               <span className="font-display font-bold text-base text-foreground">Prime Market</span>
             </Link>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">

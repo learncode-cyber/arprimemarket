@@ -53,12 +53,8 @@ export const Navbar = () => {
       >
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
           {/* Logo - collapses on scroll */}
-          <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
-            <motion.div
-              className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0"
-            >
-              <span className="text-primary-foreground font-display font-bold text-xs">AR</span>
-            </motion.div>
+          <Link to="/" className="flex items-center gap-1.5 overflow-hidden">
+            <img src="/images/logo.png" alt="AR Prime Market" className="w-9 h-9 shrink-0 object-contain" />
             <motion.span
               animate={{
                 width: hidden ? 0 : "auto",
