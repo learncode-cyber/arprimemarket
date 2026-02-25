@@ -7,6 +7,7 @@ import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { LanguageProvider } from "./context/LanguageContext";
+import { TrackingProvider } from "./context/TrackingContext";
 import { Layout } from "./components/Layout";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -30,6 +31,7 @@ const App = () => (
           <CurrencyProvider>
             <AuthProvider>
               <CartProvider>
+                <TrackingProvider>
                 <Toaster />
                 <Sonner />
                 <Routes>
@@ -51,6 +53,7 @@ const App = () => (
                     </Layout>
                   } />
                 </Routes>
+                </TrackingProvider>
               </CartProvider>
             </AuthProvider>
           </CurrencyProvider>

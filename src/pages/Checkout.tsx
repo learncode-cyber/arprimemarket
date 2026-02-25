@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
+import { useTracking } from "@/context/TrackingContext";
 import { useShipping } from "@/hooks/useShipping";
 
 const shippingSchema = z.object({
@@ -39,6 +40,7 @@ const Checkout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { trackInitiateCheckout, trackPurchase } = useTracking();
 
   const [activeStep, setActiveStep] = useState(1);
   const [form, setForm] = useState<ShippingForm>({
@@ -141,6 +143,10 @@ const Checkout = () => {
 
   const goToPayment = () => {
     if (!validate()) return;
+    trackInitiateCheckout(subtotal, items.map(i => ({
+      id: i.product.id, title: i.product.title, price: i.product.price,
+      category: i.product.category, quantity: i.quantity,
+    })));
     setActiveStep(2);
   };
 
@@ -208,6 +214,12 @@ const Checkout = () => {
           transaction_reference: txReference || null,
         });
       }
+
+      // Track purchase conversion
+      trackPurchase(order.order_number, total, items.map(i => ({
+        id: i.product.id, title: i.product.title, price: i.product.price,
+        category: i.product.category, quantity: i.quantity,
+      })));
 
       clearCart();
       setOrderPlaced(order.order_number);

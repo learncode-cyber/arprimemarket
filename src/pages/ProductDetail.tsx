@@ -1,11 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTracking } from "@/context/TrackingContext";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -13,7 +14,14 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
+  const { trackViewContent } = useTracking();
   const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    if (product) {
+      trackViewContent({ id: product.id, title: product.title, price: product.price, category: product.category, currency: product.currency });
+    }
+  }, [product, trackViewContent]);
 
   if (isLoading) {
     return (
