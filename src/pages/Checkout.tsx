@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, CheckCircle, CreditCard, Smartphone, Banknote, MapPin } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 
 const shippingSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -21,12 +22,6 @@ const shippingSchema = z.object({
 });
 
 type ShippingForm = z.infer<typeof shippingSchema>;
-
-const paymentMethods = [
-  { id: "cod", label: "Cash on Delivery", labelBn: "ক্যাশ অন ডেলিভারি", labelAr: "الدفع عند الاستلام", icon: Banknote },
-  { id: "bkash", label: "bKash", labelBn: "বিকাশ", labelAr: "بيكاش", icon: Smartphone },
-  { id: "card", label: "Card Payment", labelBn: "কার্ড পেমেন্ট", labelAr: "بطاقة الدفع", icon: CreditCard },
-];
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -41,6 +36,7 @@ const Checkout = () => {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingForm, string>>>({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [txReference, setTxReference] = useState("");
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
 
@@ -75,7 +71,6 @@ const Checkout = () => {
 
     setLoading(true);
     try {
-      // Create order
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -113,9 +108,20 @@ const Checkout = () => {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // Create payment transaction record
+      if (paymentMethod !== "cod") {
+        await supabase.from("payment_transactions").insert({
+          order_id: order.id,
+          payment_method_key: paymentMethod,
+          amount: subtotal,
+          currency: "BDT",
+          status: "pending",
+          transaction_reference: txReference || null,
+        });
+      }
+
       clearCart();
       setOrderPlaced(order.order_number);
-
       toast({ title: "Order placed!", description: `Order ${order.order_number} confirmed.` });
     } catch (err: any) {
       console.error("Order error:", err);
@@ -131,8 +137,19 @@ const Checkout = () => {
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-16 text-center">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Order Confirmed!</h1>
-          <p className="text-sm text-muted-foreground">Your order <span className="font-semibold text-foreground">{orderPlaced}</span> has been placed successfully.</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+            {lang.code === "bn" ? "অর্ডার নিশ্চিত!" : lang.code === "ar" ? "تم تأكيد الطلب!" : "Order Confirmed!"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {lang.code === "bn" ? "আপনার অর্ডার" : lang.code === "ar" ? "طلبك" : "Your order"}{" "}
+            <span className="font-semibold text-foreground">{orderPlaced}</span>{" "}
+            {lang.code === "bn" ? "সফলভাবে দেওয়া হয়েছে।" : lang.code === "ar" ? "تم بنجاح." : "has been placed successfully."}
+          </p>
+          {paymentMethod !== "cod" && (
+            <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg px-4 py-2">
+              {lang.code === "bn" ? "পেমেন্ট কনফার্ম হলে অর্ডার প্রসেস করা হবে।" : lang.code === "ar" ? "سيتم معالجة الطلب بعد تأكيد الدفع." : "Your order will be processed once payment is confirmed."}
+            </p>
+          )}
           <div className="flex gap-3 justify-center pt-4">
             <Link to="/dashboard" className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation">
               {t("dashboard")}
@@ -155,11 +172,7 @@ const Checkout = () => {
     );
   }
 
-  const getPaymentLabel = (pm: typeof paymentMethods[0]) => {
-    if (lang.code === "bn") return pm.labelBn;
-    if (lang.code === "ar") return pm.labelAr;
-    return pm.label;
-  };
+  const needsReference = paymentMethod !== "cod" && paymentMethod !== "visa_mastercard";
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -171,14 +184,14 @@ const Checkout = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
-        {/* Shipping Form */}
+        {/* Shipping + Payment */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="lg:col-span-3 space-y-5">
+          {/* Shipping Form */}
           <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4">
             <h2 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary" />
               {lang.code === "bn" ? "শিপিং তথ্য" : lang.code === "ar" ? "معلومات الشحن" : "Shipping Information"}
             </h2>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
                 { key: "name" as const, label: lang.code === "bn" ? "পূর্ণ নাম" : lang.code === "ar" ? "الاسم الكامل" : "Full Name", span: 1 },
@@ -204,28 +217,27 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* Payment Method */}
+          {/* Payment Method - now dynamic from DB */}
           <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-3">
             <h2 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-primary" />
-              {lang.code === "bn" ? "পেমেন্ট পদ্ধতি" : lang.code === "ar" ? "طريقة الدفع" : "Payment Method"}
+              {lang.code === "bn" ? "💳 পেমেন্ট পদ্ধতি" : lang.code === "ar" ? "💳 طريقة الدفع" : "💳 Payment Method"}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {paymentMethods.map(pm => (
-                <button
-                  key={pm.id}
-                  onClick={() => setPaymentMethod(pm.id)}
-                  className={`flex items-center gap-2.5 p-3.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
-                    paymentMethod === pm.id
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/20"
-                  }`}
-                >
-                  <pm.icon className="w-5 h-5" />
-                  {getPaymentLabel(pm)}
-                </button>
-              ))}
-            </div>
+            <PaymentMethodSelector selectedKey={paymentMethod} onSelect={setPaymentMethod} />
+
+            {/* Transaction reference for crypto/mobile */}
+            {needsReference && (
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  {lang.code === "bn" ? "ট্রানজেকশন রেফারেন্স (ঐচ্ছিক)" : lang.code === "ar" ? "مرجع المعاملة (اختياري)" : "Transaction Reference (optional)"}
+                </label>
+                <input
+                  value={txReference}
+                  onChange={e => setTxReference(e.target.value)}
+                  placeholder={lang.code === "bn" ? "TxID বা রেফারেন্স নম্বর" : "TxID or reference number"}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            )}
           </div>
         </motion.div>
 
