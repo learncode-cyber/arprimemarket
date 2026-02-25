@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Search, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CartDrawer } from "./CartDrawer";
+import { CurrencySelector } from "./CurrencySelector";
+import { LanguageSelector } from "./LanguageSelector";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 export const Navbar = () => {
   const [hidden, setHidden] = useState(false);
@@ -14,6 +17,7 @@ export const Navbar = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { scrollY } = useScroll();
   const lastY = useRef(0);
@@ -21,20 +25,16 @@ export const Navbar = () => {
   useMotionValueEvent(scrollY, "change", (latest) => {
     const diff = latest - lastY.current;
     setScrolled(latest > 20);
-    // Only hide logo when scrolling down past threshold
-    if (diff > 5 && latest > 80) {
-      setHidden(true);
-    } else if (diff < -5) {
-      setHidden(false);
-    }
+    if (diff > 5 && latest > 80) setHidden(true);
+    else if (diff < -5) setHidden(false);
     lastY.current = latest;
   });
 
   const navLinks = [
-    { label: "Home", href: "/" },
-    { label: "Products", href: "/products" },
-    { label: "Cart", href: "/cart" },
-    ...(user ? [] : [{ label: "Login", href: "/login" }]),
+    { label: t("home"), href: "/" },
+    { label: t("products"), href: "/products" },
+    { label: t("cart"), href: "/cart" },
+    ...(user ? [] : [{ label: t("login"), href: "/login" }]),
   ];
 
   const handleSignOut = async () => {
@@ -52,15 +52,10 @@ export const Navbar = () => {
         }`}
       >
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
-          {/* Logo - collapses on scroll */}
           <Link to="/" className="flex items-center gap-1.5 overflow-hidden">
             <img src="/images/logo.png" alt="AR Prime Market" className="w-9 h-9 shrink-0 object-contain" />
             <motion.span
-              animate={{
-                width: hidden ? 0 : "auto",
-                opacity: hidden ? 0 : 1,
-                marginLeft: hidden ? 0 : 0,
-              }}
+              animate={{ width: hidden ? 0 : "auto", opacity: hidden ? 0 : 1 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="font-display font-bold text-base sm:text-lg tracking-tight text-foreground whitespace-nowrap overflow-hidden"
             >
@@ -68,21 +63,17 @@ export const Navbar = () => {
             </motion.span>
           </Link>
 
-          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="px-3.5 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all duration-200"
-              >
+              <Link key={link.href} to={link.href} className="px-3.5 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all duration-200">
                 {link.label}
               </Link>
             ))}
           </div>
 
-          {/* Right icons */}
           <div className="flex items-center gap-0.5 sm:gap-1">
+            <CurrencySelector />
+            <LanguageSelector />
             <ThemeToggle />
 
             <button className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
@@ -100,10 +91,7 @@ export const Navbar = () => {
                 <Link to="/dashboard" className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
                   <User className="w-[18px] h-[18px]" />
                 </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-                >
+                <button onClick={handleSignOut} className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
                   <LogOut className="w-[18px] h-[18px]" />
                 </button>
               </>
@@ -130,7 +118,6 @@ export const Navbar = () => {
           </div>
         </nav>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
@@ -142,27 +129,22 @@ export const Navbar = () => {
             >
               <div className="flex flex-col p-3 gap-0.5">
                 {navLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    to={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation"
-                  >
+                  <Link key={link.href} to={link.href} onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation">
                     {link.label}
                   </Link>
                 ))}
                 {user && isAdmin && (
                   <Link to="/admin" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation">
-                    Admin Panel
+                    {t("adminPanel")}
                   </Link>
                 )}
                 {user && (
                   <>
                     <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation">
-                      Dashboard
+                      {t("dashboard")}
                     </Link>
                     <button onClick={() => { handleSignOut(); setMobileOpen(false); }} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all text-left touch-manipulation">
-                      Sign Out
+                      {t("signOut")}
                     </button>
                   </>
                 )}
