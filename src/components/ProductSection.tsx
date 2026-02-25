@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Product } from "@/hooks/useProductData";
 import { ProductCard } from "./ProductCard";
 import { ProductCardSkeleton } from "./ProductCardSkeleton";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ProductSectionProps {
   title: string;
@@ -24,6 +25,7 @@ export const ProductSection = ({
   loading = false,
 }: ProductSectionProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -35,12 +37,7 @@ export const ProductSection = ({
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="flex items-end justify-between mb-4 sm:mb-6"
-      >
+      <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex items-end justify-between mb-4 sm:mb-6">
         <div>
           <h2 className="font-display text-lg sm:text-2xl font-bold text-foreground">{title}</h2>
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -57,7 +54,7 @@ export const ProductSection = ({
             </div>
           )}
           <Link to={viewAllLink} className="flex items-center gap-1 text-xs text-primary font-semibold hover:gap-1.5 transition-all touch-manipulation">
-            View All <ArrowRight className="w-3 h-3" />
+            {t("viewAll")} <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
       </motion.div>
@@ -79,10 +76,7 @@ export const ProductSection = ({
           </div>
         )
       ) : scrollable ? (
-        <div
-          ref={scrollRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:-mx-0 sm:px-0 snap-x snap-mandatory"
-        >
+        <div ref={scrollRef} className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:-mx-0 sm:px-0 snap-x snap-mandatory">
           {products.map((p, i) => (
             <div key={p.id} className="min-w-[45%] sm:min-w-[30%] lg:min-w-[23%] xl:min-w-[19%] snap-start">
               <ProductCard product={p} index={i} />

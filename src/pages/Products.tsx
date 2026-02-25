@@ -4,6 +4,7 @@ import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
+import { useLanguage } from "@/context/LanguageContext";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -14,6 +15,7 @@ const Products = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(initialCategory);
   const [page, setPage] = useState(1);
+  const { t } = useLanguage();
 
   const { data: products = [], isLoading } = useProducts();
   const { data: dbCategories = [] } = useCategories();
@@ -41,25 +43,22 @@ const Products = () => {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      {/* Header */}
       <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5 sm:mb-8">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Products</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Browse our curated collection</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">{t("products")}</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{t("browseCollection")}</p>
       </motion.header>
 
-      {/* Search & Filters */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="flex flex-col gap-3 mb-5 sm:mb-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="search"
-            placeholder="Search products..."
+            placeholder={t("searchProducts")}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
           />
         </div>
-
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           <SlidersHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
           {categories.map((cat) => (
@@ -67,9 +66,7 @@ const Products = () => {
               key={cat}
               onClick={() => handleCategoryChange(cat)}
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all touch-manipulation active:scale-95 ${
-                category === cat
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                category === cat ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {cat}
@@ -78,7 +75,6 @@ const Products = () => {
         </div>
       </motion.div>
 
-      {/* Grid */}
       {isLoading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
@@ -91,11 +87,10 @@ const Products = () => {
         </div>
       ) : (
         <div className="text-center py-20">
-          <p className="text-muted-foreground text-sm">No products found</p>
+          <p className="text-muted-foreground text-sm">{t("noProductsFound")}</p>
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <nav className="flex justify-center gap-1.5 mt-8 sm:mt-10" aria-label="Pagination">
           {Array.from({ length: totalPages }).map((_, i) => (
@@ -103,9 +98,7 @@ const Products = () => {
               key={i}
               onClick={() => setPage(i + 1)}
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-all touch-manipulation active:scale-95 ${
-                page === i + 1
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                page === i + 1 ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
               aria-current={page === i + 1 ? "page" : undefined}
             >

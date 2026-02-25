@@ -7,6 +7,7 @@ import { ProductSection } from "@/components/ProductSection";
 import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
 import { useProducts } from "@/hooks/useProductData";
+import { useLanguage } from "@/context/LanguageContext";
 
 const categoryImages = [
   { name: "Electronics", image: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=400&q=80" },
@@ -17,6 +18,7 @@ const categoryImages = [
 
 const Index = () => {
   const { data: products = [], isLoading } = useProducts();
+  const { t } = useLanguage();
 
   const featured = useMemo(() => products.filter(p => p.is_featured).slice(0, 10), [products]);
   const bestSelling = useMemo(() => products.filter(p => p.tags?.includes("best-selling")).slice(0, 10), [products]);
@@ -26,19 +28,15 @@ const Index = () => {
   return (
     <div className="relative">
       <HeroBanner />
-
-      {/* Trust Badges */}
       <TrustBadges />
 
-      {/* Featured Products */}
-      <ProductSection title="Featured Products" subtitle="Hand-picked for you" products={featured} scrollable loading={isLoading} />
+      <ProductSection title={t("featured")} products={featured} scrollable loading={isLoading} />
 
-      {/* Categories */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex items-end justify-between mb-4 sm:mb-6">
           <div>
-            <h2 className="font-display text-lg sm:text-2xl font-bold text-foreground">Shop by Category</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Find what you need</p>
+            <h2 className="font-display text-lg sm:text-2xl font-bold text-foreground">{t("shopByCategory")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("findWhatYouNeed")}</p>
           </div>
         </motion.div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -56,31 +54,24 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Best Selling */}
-      <ProductSection title="Best Selling" subtitle="Most popular products" products={bestSelling} loading={isLoading} />
+      <ProductSection title={t("bestSelling")} products={bestSelling} loading={isLoading} />
 
-      {/* Promo Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-primary rounded-2xl p-6 sm:p-10 md:p-14 text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 sm:w-72 sm:h-72 rounded-full bg-primary-foreground/5 blur-3xl pointer-events-none" />
-          <h2 className="font-display text-xl sm:text-3xl font-bold text-primary-foreground mb-2 relative">Mega Sale — Up to 40% Off</h2>
-          <p className="text-xs sm:text-sm text-primary-foreground/80 mb-5 max-w-md mx-auto relative">Limited time offer on premium electronics, fashion & accessories.</p>
+          <h2 className="font-display text-xl sm:text-3xl font-bold text-primary-foreground mb-2 relative">{t("megaSale")}</h2>
+          <p className="text-xs sm:text-sm text-primary-foreground/80 mb-5 max-w-md mx-auto relative">{t("megaSaleDesc")}</p>
           <Link to="/products">
             <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary-foreground text-primary font-semibold text-sm transition-all hover:brightness-95 active:scale-[0.97] touch-manipulation">
-              Shop the Sale <ArrowRight className="w-4 h-4" />
+              {t("shopTheSale")} <ArrowRight className="w-4 h-4" />
             </span>
           </Link>
         </motion.div>
       </section>
 
-      {/* New Arrivals */}
-      <ProductSection title="New Arrivals" subtitle="Just landed" products={newArrivals} scrollable loading={isLoading} />
-
-      {/* Customer Reviews */}
+      <ProductSection title={t("newArrivals")} products={newArrivals} scrollable loading={isLoading} />
       <CustomerReviews />
-
-      {/* Trending */}
-      <ProductSection title="Trending Now" subtitle="What everyone's buying" products={trending} loading={isLoading} />
+      <ProductSection title={t("trending")} products={trending} loading={isLoading} />
     </div>
   );
 };

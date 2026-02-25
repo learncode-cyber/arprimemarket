@@ -2,6 +2,8 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 import { Product } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -12,6 +14,8 @@ interface ProductCardProps {
 
 export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
+  const { formatPrice } = useCurrency();
+  const { t } = useLanguage();
   const discount = product.compare_at_price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0;
@@ -32,7 +36,6 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
             loading="lazy"
             decoding="async"
           />
-          {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {discount > 0 && (
               <span className="px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground text-[9px] sm:text-[10px] font-bold">
@@ -66,18 +69,18 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
         <div className="flex items-center justify-between mt-auto pt-1.5">
           <div className="flex items-baseline gap-1.5">
             <span className="font-display font-bold text-sm sm:text-base text-foreground">
-              ৳{product.price.toLocaleString()}
+              {formatPrice(product.price)}
             </span>
             {product.compare_at_price && (
               <span className="text-[10px] sm:text-xs text-muted-foreground line-through">
-                ৳{product.compare_at_price.toLocaleString()}
+                {formatPrice(product.compare_at_price)}
               </span>
             )}
           </div>
           <button
             onClick={(e) => { e.preventDefault(); addToCart(product); }}
             className="p-2 sm:p-2.5 rounded-lg bg-primary text-primary-foreground active:scale-90 transition-all touch-manipulation hover:brightness-110"
-            aria-label={`Add ${product.title} to cart`}
+            aria-label={t("addToCart")}
           >
             <ShoppingCart className="w-3.5 h-3.5" />
           </button>
