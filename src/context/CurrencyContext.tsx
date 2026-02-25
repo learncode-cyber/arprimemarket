@@ -1,14 +1,15 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface CurrencyConfig {
   code: string;
   symbol: string;
   name: string;
   flag: string;
-  rate: number; // rate relative to BDT (base)
+  rate: number;
 }
 
-export const currencies: CurrencyConfig[] = [
+const defaultCurrencies: CurrencyConfig[] = [
   { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", flag: "🇧🇩", rate: 1 },
   { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", rate: 0.0083 },
   { code: "CAD", symbol: "C$", name: "Canadian Dollar", flag: "🇨🇦", rate: 0.012 },
@@ -17,24 +18,76 @@ export const currencies: CurrencyConfig[] = [
 
 interface CurrencyContextType {
   currency: CurrencyConfig;
+  currencies: CurrencyConfig[];
   setCurrencyByCode: (code: string) => void;
   formatPrice: (bdtPrice: number) => string;
   convertPrice: (bdtPrice: number) => number;
+  ratesSource: "live" | "fallback" | "loading";
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 const STORAGE_KEY = "ar-pm-currency";
+const RATES_CACHE_KEY = "ar-pm-rates";
+const RATES_TTL = 60 * 60 * 1000; // 1 hour
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
+  const [currencies, setCurrencies] = useState<CurrencyConfig[]>(() => {
+    // Try loading cached rates
+    try {
+      const cached = localStorage.getItem(RATES_CACHE_KEY);
+      if (cached) {
+        const { rates, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < RATES_TTL) {
+          return defaultCurrencies.map(c => ({ ...c, rate: rates[c.code] ?? c.rate }));
+        }
+      }
+    } catch {}
+    return defaultCurrencies;
+  });
+
+  const [ratesSource, setRatesSource] = useState<"live" | "fallback" | "loading">("loading");
+  const fetchedRef = useRef(false);
+
   const [currency, setCurrency] = useState<CurrencyConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const found = currencies.find(c => c.code === saved);
       if (found) return found;
     }
-    return currencies[0]; // BDT default
+    return currencies[0];
   });
+
+  // Fetch live exchange rates
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    const fetchRates = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("exchange-rates");
+        if (error) throw error;
+
+        const rates = data.rates as Record<string, number>;
+        const updated = defaultCurrencies.map(c => ({ ...c, rate: rates[c.code] ?? c.rate }));
+        setCurrencies(updated);
+        setRatesSource(data.source === "live" ? "live" : "fallback");
+
+        // Update current currency with new rate
+        setCurrency(prev => {
+          const found = updated.find(c => c.code === prev.code);
+          return found || prev;
+        });
+
+        // Cache rates
+        localStorage.setItem(RATES_CACHE_KEY, JSON.stringify({ rates, timestamp: Date.now() }));
+      } catch {
+        setRatesSource("fallback");
+      }
+    };
+
+    fetchRates();
+  }, []);
 
   // Auto-detect country on first visit
   useEffect(() => {
@@ -43,9 +96,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
       try {
         const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
         const data = await res.json();
-        const countryMap: Record<string, string> = {
-          US: "USD", CA: "CAD", AE: "AED", BD: "BDT",
-        };
+        const countryMap: Record<string, string> = { US: "USD", CA: "CAD", AE: "AED", BD: "BDT" };
         const code = countryMap[data.country_code];
         if (code) {
           const found = currencies.find(c => c.code === code);
@@ -54,12 +105,10 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem(STORAGE_KEY, code);
           }
         }
-      } catch {
-        // fallback to BDT
-      }
+      } catch {}
     };
     detect();
-  }, []);
+  }, [currencies]);
 
   const setCurrencyByCode = useCallback((code: string) => {
     const found = currencies.find(c => c.code === code);
@@ -67,7 +116,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
       setCurrency(found);
       localStorage.setItem(STORAGE_KEY, code);
     }
-  }, []);
+  }, [currencies]);
 
   const convertPrice = useCallback((bdtPrice: number) => {
     return Math.round(bdtPrice * currency.rate * 100) / 100;
@@ -79,7 +128,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   }, [currency, convertPrice]);
 
   return (
-    <CurrencyContext.Provider value={{ currency, setCurrencyByCode, formatPrice, convertPrice }}>
+    <CurrencyContext.Provider value={{ currency, currencies, setCurrencyByCode, formatPrice, convertPrice, ratesSource }}>
       {children}
     </CurrencyContext.Provider>
   );

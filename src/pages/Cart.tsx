@@ -66,9 +66,9 @@ const Cart = () => {
               <span className="font-display font-semibold text-foreground">{t("total")}</span>
               <span className="font-display font-bold text-lg text-foreground">{formatPrice(subtotal)}</span>
             </div>
-            <button className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
+            <Link to="/checkout" className="block w-full text-center py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
               {t("checkout")}
-            </button>
+            </Link>
           </motion.div>
         </div>
       )}

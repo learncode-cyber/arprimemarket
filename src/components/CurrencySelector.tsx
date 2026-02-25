@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useCurrency, currencies } from "@/context/CurrencyContext";
+import { useCurrency } from "@/context/CurrencyContext";
 
 export const CurrencySelector = () => {
-  const { currency, setCurrencyByCode } = useCurrency();
+  const { currency, currencies, setCurrencyByCode } = useCurrency();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
