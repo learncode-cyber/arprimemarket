@@ -32,21 +32,25 @@ const App = () => (
               <CartProvider>
                 <Toaster />
                 <Sonner />
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/products/:id" element={<ProductDetail />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/track-order" element={<TrackOrder />} />
-                <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
+                <Routes>
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="*" element={
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/products" element={<Products />} />
+                        <Route path="/products/:id" element={<ProductDetail />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/track-order" element={<TrackOrder />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Layout>
+                  } />
+                </Routes>
               </CartProvider>
             </AuthProvider>
           </CurrencyProvider>
