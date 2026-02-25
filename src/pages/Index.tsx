@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { HeroBanner } from "@/components/HeroBanner";
 import { ProductSection } from "@/components/ProductSection";
+import FlashSaleTimer from "@/components/FlashSaleTimer";
 import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
 import { useProducts } from "@/hooks/useProductData";
@@ -32,6 +33,7 @@ const Index = () => {
       <SEOHead url="/" jsonLd={organizationSchema()} />
       <SEOHead jsonLd={websiteSchema()} />
       <HeroBanner />
+      <FlashSaleTimer />
       <TrustBadges />
 
       <ProductSection title={t("featured")} products={featured} scrollable loading={isLoading} />
