@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage, LangCode } from "@/context/LanguageContext";
 
 export interface CurrencyConfig {
   code: string;
@@ -9,17 +10,30 @@ export interface CurrencyConfig {
 }
 
 const defaultCurrencies: CurrencyConfig[] = [
-  { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", rate: 1 },
   { code: "USD", symbol: "$", name: "US Dollar", rate: 0.0083 },
-  { code: "EUR", symbol: "€", name: "Euro", rate: 0.0077 },
-  { code: "GBP", symbol: "£", name: "British Pound", rate: 0.0066 },
-  { code: "CAD", symbol: "C$", name: "Canadian Dollar", rate: 0.012 },
-  { code: "AED", symbol: "د.إ", name: "UAE Dirham", rate: 0.031 },
+  { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", rate: 1 },
   { code: "SAR", symbol: "﷼", name: "Saudi Riyal", rate: 0.031 },
   { code: "INR", symbol: "₹", name: "Indian Rupee", rate: 0.70 },
-  { code: "MYR", symbol: "RM", name: "Malaysian Ringgit", rate: 0.037 },
-  { code: "AUD", symbol: "A$", name: "Australian Dollar", rate: 0.013 },
+  { code: "MXN", symbol: "MX$", name: "Mexican Peso", rate: 0.14 },
+  { code: "EUR", symbol: "€", name: "Euro", rate: 0.0077 },
+  { code: "CHF", symbol: "Fr", name: "Swiss Franc", rate: 0.0074 },
+  { code: "CNY", symbol: "¥", name: "Chinese Yuan", rate: 0.060 },
+  { code: "JPY", symbol: "¥", name: "Japanese Yen", rate: 1.24 },
+  { code: "BRL", symbol: "R$", name: "Brazilian Real", rate: 0.048 },
 ];
+
+const langToCurrency: Record<LangCode, string> = {
+  en: "USD",
+  bn: "BDT",
+  ar: "SAR",
+  hi: "INR",
+  es: "MXN",
+  fr: "EUR",
+  de: "CHF",
+  zh: "CNY",
+  ja: "JPY",
+  pt: "BRL",
+};
 
 interface CurrencyContextType {
   currency: CurrencyConfig;
@@ -37,6 +51,8 @@ const RATES_CACHE_KEY = "ar-pm-rates";
 const RATES_TTL = 60 * 60 * 1000;
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
+  const { lang } = useLanguage();
+
   const [currencies, setCurrencies] = useState<CurrencyConfig[]>(() => {
     try {
       const cached = localStorage.getItem(RATES_CACHE_KEY);
@@ -52,6 +68,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
   const [ratesSource, setRatesSource] = useState<"live" | "fallback" | "loading">("loading");
   const fetchedRef = useRef(false);
+  const manuallySetRef = useRef(false);
 
   const [currency, setCurrency] = useState<CurrencyConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -59,8 +76,20 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
       const found = currencies.find(c => c.code === saved);
       if (found) return found;
     }
-    return currencies[0];
+    return currencies.find(c => c.code === "USD") || currencies[0];
   });
+
+  // Auto-switch currency when language changes
+  useEffect(() => {
+    const targetCode = langToCurrency[lang.code];
+    if (targetCode) {
+      const found = currencies.find(c => c.code === targetCode);
+      if (found) {
+        setCurrency(found);
+        localStorage.setItem(STORAGE_KEY, targetCode);
+      }
+    }
+  }, [lang.code, currencies]);
 
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -89,30 +118,6 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
     fetchRates();
   }, []);
-
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    const detect = async () => {
-      try {
-        const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
-        const data = await res.json();
-        const countryMap: Record<string, string> = {
-          US: "USD", CA: "CAD", AE: "AED", BD: "BDT", GB: "GBP",
-          SA: "SAR", IN: "INR", MY: "MYR", AU: "AUD",
-          DE: "EUR", FR: "EUR", IT: "EUR", ES: "EUR", NL: "EUR",
-        };
-        const code = countryMap[data.country_code];
-        if (code) {
-          const found = currencies.find(c => c.code === code);
-          if (found) {
-            setCurrency(found);
-            localStorage.setItem(STORAGE_KEY, code);
-          }
-        }
-      } catch {}
-    };
-    detect();
-  }, [currencies]);
 
   const setCurrencyByCode = useCallback((code: string) => {
     const found = currencies.find(c => c.code === code);
