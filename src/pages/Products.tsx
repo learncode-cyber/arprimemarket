@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 12;
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,7 +17,7 @@ const Products = () => {
 
   const { data: products = [], isLoading } = useProducts();
   const { data: dbCategories = [] } = useCategories();
-  const categories = ["All", ...dbCategories.map(c => c.name)];
+  const categories = useMemo(() => ["All", ...dbCategories.map(c => c.name)], [dbCategories]);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -30,59 +30,107 @@ const Products = () => {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const handleCategoryChange = (cat: string) => {
+  const handleCategoryChange = useCallback((cat: string) => {
     setCategory(cat);
     setPage(1);
+    const params = new URLSearchParams(searchParams);
     if (cat === "All") {
-      searchParams.delete("category");
+      params.delete("category");
     } else {
-      searchParams.set("category", cat);
+      params.set("category", cat);
     }
-    setSearchParams(searchParams);
-  };
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
 
   return (
-    <div className="container max-w-6xl mx-auto px-6 py-12">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-        <h1 className="font-display text-4xl font-bold text-foreground mb-2">Products</h1>
-        <p className="text-muted-foreground">Browse our curated collection</p>
-      </motion.div>
+    <section className="container max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      {/* Header */}
+      <motion.header
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6 sm:mb-10"
+      >
+        <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-1">
+          Products
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Browse our curated collection
+        </p>
+      </motion.header>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative flex-1">
+      {/* Search & Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="flex flex-col gap-3 mb-6 sm:mb-8"
+      >
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input type="text" placeholder="Search products..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full pl-10 pr-4 py-3 rounded-xl glass text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          <input
+            type="search"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-10 pr-4 py-3 rounded-xl glass text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 touch-manipulation"
+          />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          <SlidersHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
           {categories.map((cat) => (
-            <motion.button key={cat} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleCategoryChange(cat)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${category === cat ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"}`}>
+            <button
+              key={cat}
+              onClick={() => handleCategoryChange(cat)}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all touch-manipulation active:scale-95 ${
+                category === cat
+                  ? "bg-primary text-primary-foreground"
+                  : "glass text-muted-foreground hover:text-foreground"
+              }`}
+            >
               {cat}
-            </motion.button>
+            </button>
           ))}
         </div>
       </motion.div>
 
+      {/* Product Grid */}
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       ) : paginated.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {paginated.map((p, i) => (<ProductCard key={p.id} product={p} index={i} />))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+          {paginated.map((p, i) => (
+            <ProductCard key={p.id} product={p} index={i} />
+          ))}
         </div>
       ) : (
-        <div className="text-center py-20"><p className="text-muted-foreground">No products found</p></div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-12">
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <motion.button key={i} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setPage(i + 1)} className={`w-10 h-10 rounded-xl text-sm font-medium transition-all ${page === i + 1 ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"}`}>
-              {i + 1}
-            </motion.button>
-          ))}
+        <div className="text-center py-20">
+          <p className="text-muted-foreground">No products found</p>
         </div>
       )}
-    </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <nav className="flex justify-center gap-2 mt-8 sm:mt-12" aria-label="Pagination">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i + 1)}
+              className={`w-10 h-10 rounded-xl text-sm font-medium transition-all touch-manipulation active:scale-95 ${
+                page === i + 1
+                  ? "bg-primary text-primary-foreground"
+                  : "glass text-muted-foreground hover:text-foreground"
+              }`}
+              aria-current={page === i + 1 ? "page" : undefined}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </nav>
+      )}
+    </section>
   );
 };
 

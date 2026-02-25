@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { Product } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
-import { ShoppingCart, Star, Heart } from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface ProductCardProps {
@@ -9,70 +10,64 @@ interface ProductCardProps {
   index?: number;
 }
 
-export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
-      whileHover={{ y: -8 }}
-      className="group glass rounded-2xl overflow-hidden float-shadow"
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      className="group glass rounded-2xl overflow-hidden flex flex-col"
     >
-      <Link to={`/products/${product.id}`} className="block">
-        <div className="relative aspect-square overflow-hidden bg-secondary">
+      <Link to={`/products/${product.id}`} className="block" aria-label={`View ${product.title}`}>
+        <div className="relative aspect-[4/5] overflow-hidden bg-secondary">
           <img
             src={product.image}
             alt={product.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-105"
             loading="lazy"
+            decoding="async"
           />
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => { e.preventDefault(); }}
-            className="absolute top-3 right-3 p-2 rounded-full glass opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <Heart className="w-4 h-4 text-foreground" />
-          </motion.button>
-          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold uppercase tracking-wider">
+          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold uppercase tracking-wider">
             {product.category}
           </span>
         </div>
       </Link>
 
-      <div className="p-4 space-y-3">
+      <div className="p-3 sm:p-4 flex flex-col gap-1.5 flex-1">
         <Link to={`/products/${product.id}`}>
-          <h3 className="font-display font-semibold text-sm text-foreground line-clamp-1 hover:text-primary transition-colors">
+          <h3 className="font-display font-semibold text-xs sm:text-sm text-foreground line-clamp-2 leading-tight hover:text-primary transition-colors">
             {product.title}
           </h3>
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Star
               key={i}
               className={`w-3 h-3 ${i < Math.floor(product.rating) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`}
             />
           ))}
-          <span className="text-xs text-muted-foreground ml-1">{product.rating}</span>
+          <span className="text-[10px] text-muted-foreground ml-1">{product.rating}</span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="font-display font-bold text-lg text-foreground">
-            ${product.price.toFixed(2)}
+        <div className="flex items-center justify-between mt-auto pt-1">
+          <span className="font-display font-bold text-base sm:text-lg text-foreground">
+            ৳{product.price.toLocaleString()}
           </span>
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => addToCart(product)}
-            className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:glow-primary transition-shadow"
+            className="p-2.5 sm:p-2.5 rounded-xl bg-primary text-primary-foreground active:scale-95 transition-transform touch-manipulation"
+            aria-label={`Add ${product.title} to cart`}
           >
             <ShoppingCart className="w-4 h-4" />
           </motion.button>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
