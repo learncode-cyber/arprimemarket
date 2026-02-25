@@ -5,11 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const SUPPORTED = ["BDT", "USD", "EUR", "GBP", "CAD", "AED", "SAR", "INR", "MYR", "AUD"];
+const SUPPORTED = ["USD", "BDT", "SAR", "INR", "MXN", "EUR", "CHF", "CNY", "JPY", "BRL"];
 
 const FALLBACK_RATES: Record<string, number> = {
-  BDT: 1, USD: 0.0083, EUR: 0.0077, GBP: 0.0066, CAD: 0.012,
-  AED: 0.031, SAR: 0.031, INR: 0.70, MYR: 0.037, AUD: 0.013,
+  USD: 0.0083, BDT: 1, SAR: 0.031, INR: 0.70, MXN: 0.14,
+  EUR: 0.0077, CHF: 0.0074, CNY: 0.060, JPY: 1.24, BRL: 0.048,
 };
 
   serve(async (req) => {
