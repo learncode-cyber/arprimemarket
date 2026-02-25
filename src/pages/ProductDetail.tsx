@@ -1,15 +1,23 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus } from "lucide-react";
+import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { products } from "@/lib/dummyData";
+import { useProduct } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const product = products.find((p) => p.id === id);
+  const { data: product, isLoading } = useProduct(id || "");
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
+
+  if (isLoading) {
+    return (
+      <div className="container max-w-6xl mx-auto px-6 py-20 flex justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -33,23 +41,11 @@ const ProductDetail = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* Image */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="glass rounded-2xl overflow-hidden aspect-square float-shadow"
-        >
+        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="glass rounded-2xl overflow-hidden aspect-square float-shadow">
           <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
         </motion.div>
 
-        {/* Info */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="flex flex-col justify-center space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="flex flex-col justify-center space-y-6">
           <span className="inline-flex self-start px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider">
             {product.category}
           </span>
@@ -59,10 +55,7 @@ const ProductDetail = () => {
           <div className="flex items-center gap-2">
             <div className="flex">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-5 h-5 ${i < Math.floor(product.rating) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`}
-                />
+                <Star key={i} className={`w-5 h-5 ${i < Math.floor(product.rating) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`} />
               ))}
             </div>
             <span className="text-sm text-muted-foreground">{product.rating} rating</span>
@@ -87,19 +80,10 @@ const ProductDetail = () => {
           </div>
 
           <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleAdd}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary"
-            >
+            <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={handleAdd} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary">
               <ShoppingCart className="w-4 h-4" /> Add to Cart
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-3.5 rounded-xl glass hover:bg-destructive/10 transition-colors"
-            >
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="p-3.5 rounded-xl glass hover:bg-destructive/10 transition-colors">
               <Heart className="w-5 h-5 text-muted-foreground" />
             </motion.button>
           </div>
