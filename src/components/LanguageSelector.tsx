@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Globe } from "lucide-react";
 import { useLanguage, languages } from "@/context/LanguageContext";
 
 export const LanguageSelector = () => {
@@ -20,10 +20,10 @@ export const LanguageSelector = () => {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
       >
-        <span className="text-sm">{lang.flag}</span>
-        <span className="hidden sm:inline">{lang.nativeName}</span>
+        <Globe className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline font-medium">{lang.nativeName}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -34,20 +34,20 @@ export const LanguageSelector = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-1 w-40 bg-popover border border-border rounded-xl shadow-lg z-[60] overflow-hidden"
+            className="absolute top-full right-0 mt-1.5 w-48 bg-popover border border-border rounded-xl shadow-xl z-[60] overflow-hidden py-1 max-h-80 overflow-y-auto"
           >
             {languages.map((l) => (
               <button
                 key={l.code}
                 onClick={() => { setLang(l.code); setOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors touch-manipulation ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs transition-colors touch-manipulation ${
                   lang.code === l.code
-                    ? "bg-primary/10 text-primary font-semibold"
+                    ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-secondary"
                 }`}
               >
-                <span className="text-base">{l.flag}</span>
-                <span className="font-medium">{l.nativeName}</span>
+                <span className="font-medium flex-1 text-left">{l.nativeName}</span>
+                <span className="text-muted-foreground text-[10px] uppercase">{l.code}</span>
               </button>
             ))}
           </motion.div>

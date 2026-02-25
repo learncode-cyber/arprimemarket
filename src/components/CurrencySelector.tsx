@@ -20,10 +20,10 @@ export const CurrencySelector = () => {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
       >
-        <span className="text-sm">{currency.flag}</span>
-        <span className="hidden sm:inline">{currency.code}</span>
+        <span className="font-semibold text-foreground">{currency.code}</span>
+        <span className="text-muted-foreground hidden sm:inline">{currency.symbol}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -34,23 +34,21 @@ export const CurrencySelector = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-1 w-44 bg-popover border border-border rounded-xl shadow-lg z-[60] overflow-hidden"
+            className="absolute top-full right-0 mt-1.5 w-52 bg-popover border border-border rounded-xl shadow-xl z-[60] overflow-hidden py-1"
           >
             {currencies.map((c) => (
               <button
                 key={c.code}
                 onClick={() => { setCurrencyByCode(c.code); setOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors touch-manipulation ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs transition-colors touch-manipulation ${
                   currency.code === c.code
-                    ? "bg-primary/10 text-primary font-semibold"
+                    ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-secondary"
                 }`}
               >
-                <span className="text-base">{c.flag}</span>
-                <div className="flex-1 text-left">
-                  <span className="font-medium">{c.code}</span>
-                  <span className="text-muted-foreground ml-1.5">{c.symbol}</span>
-                </div>
+                <span className="font-bold w-8 text-left">{c.code}</span>
+                <span className="flex-1 text-left text-muted-foreground">{c.name}</span>
+                <span className="text-muted-foreground opacity-70">{c.symbol}</span>
               </button>
             ))}
           </motion.div>

@@ -5,15 +5,20 @@ export interface CurrencyConfig {
   code: string;
   symbol: string;
   name: string;
-  flag: string;
   rate: number;
 }
 
 const defaultCurrencies: CurrencyConfig[] = [
-  { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", flag: "🇧🇩", rate: 1 },
-  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", rate: 0.0083 },
-  { code: "CAD", symbol: "C$", name: "Canadian Dollar", flag: "🇨🇦", rate: 0.012 },
-  { code: "AED", symbol: "د.إ", name: "UAE Dirham", flag: "🇦🇪", rate: 0.031 },
+  { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", rate: 1 },
+  { code: "USD", symbol: "$", name: "US Dollar", rate: 0.0083 },
+  { code: "EUR", symbol: "€", name: "Euro", rate: 0.0077 },
+  { code: "GBP", symbol: "£", name: "British Pound", rate: 0.0066 },
+  { code: "CAD", symbol: "C$", name: "Canadian Dollar", rate: 0.012 },
+  { code: "AED", symbol: "د.إ", name: "UAE Dirham", rate: 0.031 },
+  { code: "SAR", symbol: "﷼", name: "Saudi Riyal", rate: 0.031 },
+  { code: "INR", symbol: "₹", name: "Indian Rupee", rate: 0.70 },
+  { code: "MYR", symbol: "RM", name: "Malaysian Ringgit", rate: 0.037 },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar", rate: 0.013 },
 ];
 
 interface CurrencyContextType {
@@ -29,11 +34,10 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined
 
 const STORAGE_KEY = "ar-pm-currency";
 const RATES_CACHE_KEY = "ar-pm-rates";
-const RATES_TTL = 60 * 60 * 1000; // 1 hour
+const RATES_TTL = 60 * 60 * 1000;
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [currencies, setCurrencies] = useState<CurrencyConfig[]>(() => {
-    // Try loading cached rates
     try {
       const cached = localStorage.getItem(RATES_CACHE_KEY);
       if (cached) {
@@ -58,7 +62,6 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     return currencies[0];
   });
 
-  // Fetch live exchange rates
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
@@ -73,13 +76,11 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
         setCurrencies(updated);
         setRatesSource(data.source === "live" ? "live" : "fallback");
 
-        // Update current currency with new rate
         setCurrency(prev => {
           const found = updated.find(c => c.code === prev.code);
           return found || prev;
         });
 
-        // Cache rates
         localStorage.setItem(RATES_CACHE_KEY, JSON.stringify({ rates, timestamp: Date.now() }));
       } catch {
         setRatesSource("fallback");
@@ -89,14 +90,17 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     fetchRates();
   }, []);
 
-  // Auto-detect country on first visit
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return;
     const detect = async () => {
       try {
         const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
         const data = await res.json();
-        const countryMap: Record<string, string> = { US: "USD", CA: "CAD", AE: "AED", BD: "BDT" };
+        const countryMap: Record<string, string> = {
+          US: "USD", CA: "CAD", AE: "AED", BD: "BDT", GB: "GBP",
+          SA: "SAR", IN: "INR", MY: "MYR", AU: "AUD",
+          DE: "EUR", FR: "EUR", IT: "EUR", ES: "EUR", NL: "EUR",
+        };
         const code = countryMap[data.country_code];
         if (code) {
           const found = currencies.find(c => c.code === code);
