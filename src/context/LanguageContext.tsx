@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
-export type LangCode = "en" | "bn" | "ar" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt";
+export type LangCode = "en" | "bn" | "ar" | "sa" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt";
 
 export interface LangConfig {
   code: LangCode;
@@ -10,7 +10,8 @@ export interface LangConfig {
 }
 
 export const languages: LangConfig[] = [
-  { code: "ar", name: "Arabic", nativeName: "العربية", dir: "rtl" },
+  { code: "ar", name: "Arabic (UAE)", nativeName: "العربية (الإمارات)", dir: "rtl" },
+  { code: "sa", name: "Arabic (Saudi)", nativeName: "العربية (السعودية)", dir: "rtl" },
   { code: "en", name: "English", nativeName: "English", dir: "ltr" },
   { code: "bn", name: "Bangla", nativeName: "বাংলা", dir: "ltr" },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr" },
@@ -156,6 +157,7 @@ const translations: Record<LangCode, Record<TranslationKey, string>> = {
     dashboard: "لوحة التحكم", signOut: "تسجيل الخروج", adminPanel: "لوحة الإدارة", rating: "تقييم",
   },
   // Fallback languages — use English translations as base
+  sa: {} as any,
   hi: {} as any,
   es: {} as any,
   fr: {} as any,
@@ -167,11 +169,14 @@ const translations: Record<LangCode, Record<TranslationKey, string>> = {
 
 // Fill missing languages with English fallback
 const enKeys = Object.keys(translations.en) as TranslationKey[];
-(["hi", "es", "fr", "de", "zh", "ja", "pt"] as LangCode[]).forEach(code => {
+(["sa", "hi", "es", "fr", "de", "zh", "ja", "pt"] as LangCode[]).forEach(code => {
   const partial: Record<string, string> = {};
   enKeys.forEach(k => { partial[k] = translations.en[k]; });
   translations[code] = partial as Record<TranslationKey, string>;
 });
+
+// Saudi Arabic uses same translations as UAE Arabic
+Object.assign(translations.sa, translations.ar);
 
 // Add key translations for popular languages
 Object.assign(translations.hi, {

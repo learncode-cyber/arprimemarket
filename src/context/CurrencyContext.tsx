@@ -11,6 +11,7 @@ export interface CurrencyConfig {
 
 const defaultCurrencies: CurrencyConfig[] = [
   { code: "AED", symbol: "د.إ", name: "UAE Dirham", rate: 0.031 },
+  { code: "SAR", symbol: "﷼", name: "Saudi Riyal", rate: 0.031 },
   { code: "USD", symbol: "$", name: "US Dollar", rate: 0.0083 },
   { code: "BDT", symbol: "৳", name: "Bangladeshi Taka", rate: 1 },
   { code: "INR", symbol: "₹", name: "Indian Rupee", rate: 0.70 },
@@ -24,6 +25,7 @@ const defaultCurrencies: CurrencyConfig[] = [
 
 const langToCurrency: Record<LangCode, string> = {
   ar: "AED",
+  sa: "SAR",
   en: "USD",
   bn: "BDT",
   hi: "INR",
