@@ -35,13 +35,14 @@ interface OrderItem {
   image_url: string | null;
 }
 
-const statusOptions = ["pending", "processing", "shipped", "delivered", "cancelled"];
+const statusOptions = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"];
 const paymentStatusOptions = ["unpaid", "pending", "paid", "refunded"];
 
 const statusColors: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
   processing: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   shipped: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  out_for_delivery: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
   delivered: "bg-green-500/10 text-green-600 dark:text-green-400",
   cancelled: "bg-destructive/10 text-destructive",
   unpaid: "bg-muted text-muted-foreground",
@@ -53,6 +54,7 @@ const statusIcons: Record<string, any> = {
   pending: Clock,
   processing: Package,
   shipped: Truck,
+  out_for_delivery: MapPin,
   delivered: CheckCircle,
 };
 
