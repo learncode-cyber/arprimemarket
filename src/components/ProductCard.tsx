@@ -6,6 +6,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
+import { WishlistButton } from "@/components/WishlistButton";
 
 interface ProductCardProps {
   product: Product;
@@ -43,9 +44,9 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
               </span>
             )}
           </div>
-          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-card/80 backdrop-blur-sm text-foreground text-[9px] sm:text-[10px] font-medium">
-            {product.category}
-          </span>
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <WishlistButton productId={product.id} className="bg-card/80 backdrop-blur-sm rounded-lg" />
+          </div>
         </div>
       </Link>
 
