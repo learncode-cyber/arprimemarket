@@ -36,6 +36,7 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
             className="w-full h-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-110"
             loading="lazy"
             decoding="async"
+            onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
           />
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {discount > 0 && (
