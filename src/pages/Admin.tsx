@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import PaymentSettings from "@/components/admin/PaymentSettings";
+import OrderManagement from "@/components/admin/OrderManagement";
 
 const adminTabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -129,41 +130,7 @@ const Admin = () => {
           )}
 
           {activeTab === "orders" && (
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-border">
-                    <th className="text-left px-6 py-4 font-medium text-muted-foreground">Order</th>
-                    <th className="text-left px-6 py-4 font-medium text-muted-foreground">Date</th>
-                    <th className="text-left px-6 py-4 font-medium text-muted-foreground">Status</th>
-                    <th className="text-left px-6 py-4 font-medium text-muted-foreground">Payment</th>
-                    <th className="text-right px-6 py-4 font-medium text-muted-foreground">Total</th>
-                  </tr></thead>
-                  <tbody>
-                    {orders.map((o) => (
-                      <tr key={o.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                        <td className="px-6 py-4 font-medium text-foreground">{o.order_number}</td>
-                        <td className="px-6 py-4 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                            o.status === "delivered" ? "bg-green-500/10 text-green-500" :
-                            o.status === "shipped" ? "bg-blue-500/10 text-blue-500" :
-                            o.status === "processing" ? "bg-amber-500/10 text-amber-500" : "bg-muted text-muted-foreground"
-                          }`}>{o.status}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                            o.payment_status === "paid" ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
-                          }`}>{o.payment_status}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-medium text-foreground">৳{Number(o.total).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                    {orders.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No orders yet</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <OrderManagement />
           )}
 
           {activeTab === "customers" && (
