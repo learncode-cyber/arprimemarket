@@ -6,6 +6,8 @@ import { useProducts, useCategories } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency } from "@/context/CurrencyContext";
+import { SEOHead } from "@/components/SEOHead";
+import { collectionPageSchema } from "@/lib/seoSchemas";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -85,6 +87,12 @@ const Products = () => {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <SEOHead
+        title="Products"
+        description="Browse premium curated products — electronics, fashion, accessories and more at AR Prime Market."
+        url="/products"
+        jsonLd={collectionPageSchema("Products", "Browse our curated collection of premium products")}
+      />
       <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5 sm:mb-8">
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">{t("products")}</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{t("browseCollection")}</p>
