@@ -12,6 +12,7 @@ import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
 import { useTracking } from "@/context/TrackingContext";
+import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
 
 const shippingSchema = z.object({
@@ -165,6 +166,24 @@ const Checkout = () => {
 
     setLoading(true);
     try {
+      // Fraud detection check
+      const fraudCheck = await securityService.checkFraud({
+        total,
+        itemCount: items.reduce((s, i) => s + i.quantity, 0),
+        shippingName: form.name,
+      });
+
+      if (fraudCheck.action === "block") {
+        toast({ title: "Order could not be processed", description: "Please contact support.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      if (fraudCheck.action === "review") {
+        // Order will be placed but flagged for review
+        console.info("Order flagged for review:", fraudCheck.flags);
+      }
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({

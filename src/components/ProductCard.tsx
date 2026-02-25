@@ -7,6 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { WishlistButton } from "@/components/WishlistButton";
+import { performanceUtils } from "@/lib/services";
 
 interface ProductCardProps {
   product: Product;
@@ -31,7 +32,9 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
       <Link to={`/products/${product.id}`} className="block" aria-label={`View ${product.title}`}>
         <div className="relative aspect-square overflow-hidden bg-secondary">
           <img
-            src={product.image}
+            src={performanceUtils.optimizeImageUrl(product.image, 400)}
+            srcSet={performanceUtils.generateSrcSet(product.image) || undefined}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-110"
             loading="lazy"

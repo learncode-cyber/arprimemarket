@@ -1,1 +1,7 @@
 project_id = "lfkmsycadsttrxuoajzk"
+
+[functions.security]
+verify_jwt = false
+
+[functions.backup]
+verify_jwt = false
