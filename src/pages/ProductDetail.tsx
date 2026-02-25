@@ -7,6 +7,8 @@ import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
+import { SEOHead } from "@/components/SEOHead";
+import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -46,6 +48,19 @@ const ProductDetail = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <SEOHead
+        title={product.title}
+        description={product.description || `Buy ${product.title} at AR Prime Market.`}
+        image={product.image}
+        url={`/products/${product.slug}`}
+        type="product"
+        jsonLd={productSchema(product)}
+      />
+      <SEOHead jsonLd={breadcrumbSchema([
+        { name: "Home", url: "/" },
+        { name: "Products", url: "/products" },
+        { name: product.title, url: `/products/${product.slug}` },
+      ])} />
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <Link to="/products" className="inline-flex items-center gap-1 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 touch-manipulation">
           <ArrowLeft className="w-4 h-4" /> {t("backToProducts")}

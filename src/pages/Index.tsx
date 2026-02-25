@@ -8,6 +8,8 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
 import { useProducts } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
+import { SEOHead } from "@/components/SEOHead";
+import { organizationSchema, websiteSchema } from "@/lib/seoSchemas";
 
 const categoryImages = [
   { name: "Electronics", image: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=400&q=80" },
@@ -27,6 +29,8 @@ const Index = () => {
 
   return (
     <div className="relative">
+      <SEOHead url="/" jsonLd={organizationSchema()} />
+      <SEOHead jsonLd={websiteSchema()} />
       <HeroBanner />
       <TrustBadges />
 
