@@ -63,8 +63,20 @@ const ProductDetail = () => {
 
           <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
 
-          <div className="font-display text-3xl sm:text-4xl font-bold text-foreground">
-            ৳{product.price.toLocaleString()}
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-3xl sm:text-4xl font-bold text-foreground">
+              ৳{product.price.toLocaleString()}
+            </span>
+            {product.compare_at_price && (
+              <span className="text-base sm:text-lg text-muted-foreground line-through">
+                ৳{product.compare_at_price.toLocaleString()}
+              </span>
+            )}
+            {product.compare_at_price && (
+              <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-semibold">
+                -{Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)}%
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
