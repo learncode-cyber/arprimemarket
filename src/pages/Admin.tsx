@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
+import PaymentSettings from "@/components/admin/PaymentSettings";
 
 const adminTabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -13,6 +14,7 @@ const adminTabs = [
   { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "customers", label: "Customers", icon: Users },
   { id: "coupons", label: "Coupons", icon: Tag },
+  { id: "payments", label: "Payments", icon: Wallet },
   { id: "add", label: "Add Product", icon: Plus },
 ];
 
@@ -26,7 +28,6 @@ const Admin = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
 
-  // Add product form state
   const [newProduct, setNewProduct] = useState({ title: "", price: "", category_id: "", image_url: "", description: "" });
 
   useEffect(() => {
@@ -45,33 +46,21 @@ const Admin = () => {
   }, [isAdmin]);
 
   const handleAddProduct = async () => {
-    if (!newProduct.title || !newProduct.price) {
-      toast.error("Title and price are required");
-      return;
-    }
+    if (!newProduct.title || !newProduct.price) { toast.error("Title and price are required"); return; }
     const slug = newProduct.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const { error } = await supabase.from("products").insert({
-      title: newProduct.title,
-      slug: slug + "-" + Date.now(),
-      price: parseFloat(newProduct.price),
-      category_id: newProduct.category_id || null,
-      image_url: newProduct.image_url || null,
-      description: newProduct.description || null,
-      is_active: true,
+      title: newProduct.title, slug: slug + "-" + Date.now(), price: parseFloat(newProduct.price),
+      category_id: newProduct.category_id || null, image_url: newProduct.image_url || null,
+      description: newProduct.description || null, is_active: true,
     });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Product added!");
-      setNewProduct({ title: "", price: "", category_id: "", image_url: "", description: "" });
-      refetchProducts();
+    if (error) { toast.error(error.message); } else {
+      toast.success("Product added!"); setNewProduct({ title: "", price: "", category_id: "", image_url: "", description: "" }); refetchProducts();
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Product deleted"); refetchProducts(); }
+    if (error) toast.error(error.message); else { toast.success("Product deleted"); refetchProducts(); }
   };
 
   if (loading || !isAdmin) return null;
@@ -79,15 +68,15 @@ const Admin = () => {
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
 
   return (
-    <div className="container max-w-6xl mx-auto px-6 py-12">
-      <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-4xl font-bold text-foreground mb-10">
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-8">
         Admin Panel
       </motion.h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass rounded-2xl p-4 h-fit space-y-1 float-shadow">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-card border border-border rounded-2xl p-3 h-fit space-y-1">
           {adminTabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all touch-manipulation ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>
           ))}
@@ -97,11 +86,11 @@ const Admin = () => {
           {activeTab === "overview" && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, color: "text-primary" },
+                { label: "Total Revenue", value: `৳${totalRevenue.toLocaleString()}`, color: "text-primary" },
                 { label: "Total Orders", value: `${orders.length}`, color: "text-accent" },
                 { label: "Products", value: `${products.length}`, color: "text-foreground" },
               ].map((stat) => (
-                <div key={stat.label} className="glass rounded-2xl p-6">
+                <div key={stat.label} className="bg-card border border-border rounded-2xl p-6">
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className={`font-display text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
                 </div>
@@ -110,12 +99,11 @@ const Admin = () => {
           )}
 
           {activeTab === "products" && (
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
                     <th className="text-left px-6 py-4 font-medium text-muted-foreground">Product</th>
-                    <th className="text-left px-6 py-4 font-medium text-muted-foreground">Category</th>
                     <th className="text-left px-6 py-4 font-medium text-muted-foreground">Price</th>
                     <th className="text-left px-6 py-4 font-medium text-muted-foreground">Stock</th>
                     <th className="text-right px-6 py-4 font-medium text-muted-foreground">Action</th>
@@ -127,8 +115,7 @@ const Admin = () => {
                           <img src={p.image} alt={p.title} className="w-10 h-10 rounded-lg object-cover" />
                           <span className="font-medium text-foreground">{p.title}</span>
                         </td>
-                        <td className="px-6 py-4 text-muted-foreground">{p.category}</td>
-                        <td className="px-6 py-4 text-foreground font-medium">${p.price.toFixed(2)}</td>
+                        <td className="px-6 py-4 text-foreground font-medium">৳{p.price.toLocaleString()}</td>
                         <td className="px-6 py-4 text-muted-foreground">{p.stock_quantity}</td>
                         <td className="px-6 py-4 text-right">
                           <button onClick={() => handleDeleteProduct(p.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /></button>
@@ -142,7 +129,7 @@ const Admin = () => {
           )}
 
           {activeTab === "orders" && (
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
@@ -169,7 +156,7 @@ const Admin = () => {
                             o.payment_status === "paid" ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
                           }`}>{o.payment_status}</span>
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-foreground">${Number(o.total).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-right font-medium text-foreground">৳{Number(o.total).toLocaleString()}</td>
                       </tr>
                     ))}
                     {orders.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No orders yet</td></tr>}
@@ -180,7 +167,7 @@ const Admin = () => {
           )}
 
           {activeTab === "customers" && (
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
@@ -206,7 +193,7 @@ const Admin = () => {
           )}
 
           {activeTab === "coupons" && (
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
@@ -221,7 +208,7 @@ const Admin = () => {
                       <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                         <td className="px-6 py-4 font-medium text-foreground">{c.code}</td>
                         <td className="px-6 py-4 text-muted-foreground">{c.discount_type}</td>
-                        <td className="px-6 py-4 text-foreground">{c.discount_type === "percentage" ? `${c.discount_value}%` : `$${Number(c.discount_value).toFixed(2)}`}</td>
+                        <td className="px-6 py-4 text-foreground">{c.discount_type === "percentage" ? `${c.discount_value}%` : `৳${Number(c.discount_value).toLocaleString()}`}</td>
                         <td className="px-6 py-4 text-muted-foreground">{c.used_count}/{c.max_uses || "∞"}</td>
                         <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.is_active ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>{c.is_active ? "Active" : "Inactive"}</span></td>
                       </tr>
@@ -233,8 +220,14 @@ const Admin = () => {
             </div>
           )}
 
+          {activeTab === "payments" && (
+            <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
+              <PaymentSettings />
+            </div>
+          )}
+
           {activeTab === "add" && (
-            <div className="glass rounded-2xl p-8 space-y-6">
+            <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 space-y-6">
               <h2 className="font-display text-xl font-semibold text-foreground">Add New Product</h2>
               <div className="space-y-4">
                 <div><label className="text-sm text-muted-foreground">Product Name</label><input value={newProduct.title} onChange={e => setNewProduct(p => ({ ...p, title: e.target.value }))} placeholder="Product title" className="w-full mt-1 px-4 py-3 rounded-xl bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" /></div>
@@ -249,7 +242,7 @@ const Admin = () => {
                 </div>
                 <div><label className="text-sm text-muted-foreground">Image URL</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className="w-full mt-1 px-4 py-3 rounded-xl bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" /></div>
                 <div><label className="text-sm text-muted-foreground">Description</label><textarea rows={4} value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} placeholder="Product description..." className="w-full mt-1 px-4 py-3 rounded-xl bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" /></div>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleAddProduct} type="button" className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleAddProduct} type="button" className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm">
                   Add Product
                 </motion.button>
               </div>

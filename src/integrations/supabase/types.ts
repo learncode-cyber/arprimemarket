@@ -246,6 +246,119 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          created_at: string
+          deposit_link: string | null
+          display_name: string
+          display_name_ar: string | null
+          display_name_bn: string | null
+          icon_name: string | null
+          id: string
+          instructions: string | null
+          instructions_ar: string | null
+          instructions_bn: string | null
+          is_active: boolean
+          method_key: string
+          method_type: string
+          network: string | null
+          sort_order: number
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          deposit_link?: string | null
+          display_name: string
+          display_name_ar?: string | null
+          display_name_bn?: string | null
+          icon_name?: string | null
+          id?: string
+          instructions?: string | null
+          instructions_ar?: string | null
+          instructions_bn?: string | null
+          is_active?: boolean
+          method_key: string
+          method_type: string
+          network?: string | null
+          sort_order?: number
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          deposit_link?: string | null
+          display_name?: string
+          display_name_ar?: string | null
+          display_name_bn?: string | null
+          icon_name?: string | null
+          id?: string
+          instructions?: string | null
+          instructions_ar?: string | null
+          instructions_bn?: string | null
+          is_active?: boolean
+          method_key?: string
+          method_type?: string
+          network?: string | null
+          sort_order?: number
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          currency: string
+          id: string
+          order_id: string
+          payment_method_key: string
+          status: string
+          transaction_reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          order_id: string
+          payment_method_key: string
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          order_id?: string
+          payment_method_key?: string
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
