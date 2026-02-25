@@ -1,22 +1,27 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
-export type LangCode = "en" | "bn" | "ar";
+export type LangCode = "en" | "bn" | "ar" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt";
 
 export interface LangConfig {
   code: LangCode;
   name: string;
   nativeName: string;
-  flag: string;
   dir: "ltr" | "rtl";
 }
 
 export const languages: LangConfig[] = [
-  { code: "en", name: "English", nativeName: "English", flag: "🇺🇸", dir: "ltr" },
-  { code: "bn", name: "Bangla", nativeName: "বাংলা", flag: "🇧🇩", dir: "ltr" },
-  { code: "ar", name: "Arabic", nativeName: "العربية", flag: "🇸🇦", dir: "rtl" },
+  { code: "en", name: "English", nativeName: "English", dir: "ltr" },
+  { code: "bn", name: "Bangla", nativeName: "বাংলা", dir: "ltr" },
+  { code: "ar", name: "Arabic", nativeName: "العربية", dir: "rtl" },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr" },
+  { code: "es", name: "Spanish", nativeName: "Español", dir: "ltr" },
+  { code: "fr", name: "French", nativeName: "Français", dir: "ltr" },
+  { code: "de", name: "German", nativeName: "Deutsch", dir: "ltr" },
+  { code: "zh", name: "Chinese", nativeName: "中文", dir: "ltr" },
+  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr" },
+  { code: "pt", name: "Portuguese", nativeName: "Português", dir: "ltr" },
 ];
 
-// Translation keys
 type TranslationKey =
   | "home" | "products" | "cart" | "login" | "search" | "addToCart" | "viewCart"
   | "shopNow" | "viewAll" | "featured" | "bestSelling" | "newArrivals" | "trending"
@@ -150,7 +155,60 @@ const translations: Record<LangCode, Record<TranslationKey, string>> = {
     exploreElectronics: "استكشف الإلكترونيات", shopHome: "تسوق المنزل",
     dashboard: "لوحة التحكم", signOut: "تسجيل الخروج", adminPanel: "لوحة الإدارة", rating: "تقييم",
   },
+  // Fallback languages — use English translations as base
+  hi: {} as any,
+  es: {} as any,
+  fr: {} as any,
+  de: {} as any,
+  zh: {} as any,
+  ja: {} as any,
+  pt: {} as any,
 };
+
+// Fill missing languages with English fallback
+const enKeys = Object.keys(translations.en) as TranslationKey[];
+(["hi", "es", "fr", "de", "zh", "ja", "pt"] as LangCode[]).forEach(code => {
+  const partial: Record<string, string> = {};
+  enKeys.forEach(k => { partial[k] = translations.en[k]; });
+  translations[code] = partial as Record<TranslationKey, string>;
+});
+
+// Add key translations for popular languages
+Object.assign(translations.hi, {
+  home: "होम", products: "उत्पाद", cart: "कार्ट", login: "लॉगिन",
+  shopNow: "अभी खरीदें", addToCart: "कार्ट में जोड़ें", checkout: "चेकआउट",
+  featured: "विशेष उत्पाद", search: "खोजें", continueShopping: "खरीदारी जारी रखें",
+});
+Object.assign(translations.es, {
+  home: "Inicio", products: "Productos", cart: "Carrito", login: "Iniciar sesión",
+  shopNow: "Comprar ahora", addToCart: "Añadir al carrito", checkout: "Finalizar compra",
+  featured: "Productos destacados", search: "Buscar", continueShopping: "Seguir comprando",
+});
+Object.assign(translations.fr, {
+  home: "Accueil", products: "Produits", cart: "Panier", login: "Connexion",
+  shopNow: "Acheter maintenant", addToCart: "Ajouter au panier", checkout: "Commander",
+  featured: "Produits vedettes", search: "Rechercher", continueShopping: "Continuer vos achats",
+});
+Object.assign(translations.de, {
+  home: "Startseite", products: "Produkte", cart: "Warenkorb", login: "Anmelden",
+  shopNow: "Jetzt kaufen", addToCart: "In den Warenkorb", checkout: "Zur Kasse",
+  featured: "Empfohlene Produkte", search: "Suchen", continueShopping: "Weiter einkaufen",
+});
+Object.assign(translations.zh, {
+  home: "首页", products: "产品", cart: "购物车", login: "登录",
+  shopNow: "立即购买", addToCart: "加入购物车", checkout: "结账",
+  featured: "精选产品", search: "搜索", continueShopping: "继续购物",
+});
+Object.assign(translations.ja, {
+  home: "ホーム", products: "製品", cart: "カート", login: "ログイン",
+  shopNow: "今すぐ購入", addToCart: "カートに追加", checkout: "チェックアウト",
+  featured: "注目の製品", search: "検索", continueShopping: "買い物を続ける",
+});
+Object.assign(translations.pt, {
+  home: "Início", products: "Produtos", cart: "Carrinho", login: "Entrar",
+  shopNow: "Comprar agora", addToCart: "Adicionar ao carrinho", checkout: "Finalizar",
+  featured: "Produtos em destaque", search: "Pesquisar", continueShopping: "Continuar comprando",
+});
 
 interface LanguageContextType {
   lang: LangConfig;
@@ -182,7 +240,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Set dir on mount
   useState(() => {
     document.documentElement.dir = lang.dir;
     document.documentElement.lang = lang.code;

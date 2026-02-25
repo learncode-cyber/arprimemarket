@@ -5,20 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const SUPPORTED = ["BDT", "USD", "EUR", "GBP", "CAD", "AED", "SAR", "INR", "MYR", "AUD"];
+
 const FALLBACK_RATES: Record<string, number> = {
-  BDT: 1,
-  USD: 0.0083,
-  CAD: 0.012,
-  AED: 0.031,
+  BDT: 1, USD: 0.0083, EUR: 0.0077, GBP: 0.0066, CAD: 0.012,
+  AED: 0.031, SAR: 0.031, INR: 0.70, MYR: 0.037, AUD: 0.013,
 };
 
-serve(async (req) => {
+  serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Use exchangerate-api.com free tier (no key needed for open access)
     const res = await fetch("https://open.er-api.com/v6/latest/BDT", {
       signal: AbortSignal.timeout(5000),
     });
@@ -33,12 +32,10 @@ serve(async (req) => {
       throw new Error("Invalid response from exchange rate API");
     }
 
-    const rates: Record<string, number> = {
-      BDT: 1,
-      USD: data.rates.USD || FALLBACK_RATES.USD,
-      CAD: data.rates.CAD || FALLBACK_RATES.CAD,
-      AED: data.rates.AED || FALLBACK_RATES.AED,
-    };
+    const rates: Record<string, number> = {};
+    SUPPORTED.forEach((code) => {
+      rates[code] = data.rates[code] || FALLBACK_RATES[code] || 1;
+    });
 
     return new Response(JSON.stringify({ rates, source: "live", timestamp: data.time_last_update_utc }), {
       status: 200,
