@@ -561,6 +561,180 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_orders: {
+        Row: {
+          created_at: string
+          external_order_id: string | null
+          forwarded_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          shipping_carrier: string | null
+          status: string
+          supplier_id: string
+          tracking_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_order_id?: string | null
+          forwarded_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          shipping_carrier?: string | null
+          status?: string
+          supplier_id: string
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_order_id?: string | null
+          forwarded_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          shipping_carrier?: string | null
+          status?: string
+          supplier_id?: string
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_products: {
+        Row: {
+          created_at: string
+          external_id: string
+          external_image_url: string | null
+          external_price: number
+          external_stock: number
+          external_title: string
+          external_url: string | null
+          id: string
+          is_imported: boolean
+          last_synced_at: string | null
+          product_id: string | null
+          supplier_id: string
+          sync_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          external_image_url?: string | null
+          external_price?: number
+          external_stock?: number
+          external_title: string
+          external_url?: string | null
+          id?: string
+          is_imported?: boolean
+          last_synced_at?: string | null
+          product_id?: string | null
+          supplier_id: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          external_image_url?: string | null
+          external_price?: number
+          external_stock?: number
+          external_title?: string
+          external_url?: string | null
+          id?: string
+          is_imported?: boolean
+          last_synced_at?: string | null
+          product_id?: string | null
+          supplier_id?: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          api_key_name: string | null
+          api_type: string
+          api_url: string | null
+          auto_sync: boolean
+          base_url: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          markup_percentage: number
+          name: string
+          notes: string | null
+          sync_interval_hours: number
+          updated_at: string
+        }
+        Insert: {
+          api_key_name?: string | null
+          api_type?: string
+          api_url?: string | null
+          auto_sync?: boolean
+          base_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          markup_percentage?: number
+          name: string
+          notes?: string | null
+          sync_interval_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          api_key_name?: string | null
+          api_type?: string
+          api_url?: string | null
+          auto_sync?: boolean
+          base_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          markup_percentage?: number
+          name?: string
+          notes?: string | null
+          sync_interval_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

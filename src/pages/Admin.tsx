@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users, Wallet, Truck } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Plus, Trash2, Tag, Users, Wallet, Truck, Store } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import PaymentSettings from "@/components/admin/PaymentSettings";
 import OrderManagement from "@/components/admin/OrderManagement";
 import ShippingManagement from "@/components/admin/ShippingManagement";
+import SupplierManagement from "@/components/admin/SupplierManagement";
 
 const adminTabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const adminTabs = [
   { id: "coupons", label: "Coupons", icon: Tag },
   { id: "payments", label: "Payments", icon: Wallet },
   { id: "shipping", label: "Shipping", icon: Truck },
+  { id: "suppliers", label: "Suppliers", icon: Store },
   { id: "add", label: "Add Product", icon: Plus },
 ];
 
@@ -199,6 +201,10 @@ const Admin = () => {
             <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
               <ShippingManagement />
             </div>
+          )}
+
+          {activeTab === "suppliers" && (
+            <SupplierManagement />
           )}
 
           {activeTab === "add" && (
