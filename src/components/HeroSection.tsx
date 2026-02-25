@@ -1,68 +1,61 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const HeroSection = () => {
   return (
-    <section className="relative overflow-hidden">
-      {/* Background glow orbs */}
-      <div className="absolute top-10 left-1/4 w-48 sm:w-96 h-48 sm:h-96 rounded-full bg-primary/10 blur-3xl animate-glow-pulse pointer-events-none" />
-      <div className="absolute top-20 right-1/4 w-40 sm:w-80 h-40 sm:h-80 rounded-full bg-accent/10 blur-3xl animate-glow-pulse pointer-events-none" style={{ animationDelay: "1.5s" }} />
+    <section className="relative overflow-hidden bg-gradient-to-b from-secondary/50 to-background">
+      {/* Soft decorative blobs */}
+      <div className="absolute top-0 right-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[200px] sm:w-[400px] h-[200px] sm:h-[400px] rounded-full bg-primary/3 blur-3xl pointer-events-none" />
 
-      <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-36 relative">
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32 relative">
+        <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
+          <motion.span
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.4 }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] sm:text-xs font-semibold tracking-wide uppercase mb-5 sm:mb-6"
           >
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full glass text-[11px] sm:text-xs font-medium text-muted-foreground mb-6 sm:mb-8">
-              <Sparkles className="w-3 h-3 text-primary" />
-              Welcome to the future of shopping
-            </span>
-          </motion.div>
+            New Collection 2026
+          </motion.span>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-display text-3xl sm:text-5xl md:text-7xl font-bold leading-tight tracking-tight"
+            transition={{ duration: 0.4, delay: 0.08 }}
+            className="font-display text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-foreground"
           >
-            Shop the
-            <span className="text-gradient-primary"> Extraordinary</span>
+            Discover Premium
+            <br />
+            <span className="text-gradient-primary">Products</span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-4 sm:mt-6 text-sm sm:text-lg text-muted-foreground max-w-lg leading-relaxed"
+            transition={{ duration: 0.4, delay: 0.16 }}
+            className="mt-4 sm:mt-5 text-sm sm:text-base text-muted-foreground max-w-md leading-relaxed"
           >
-            Discover premium products curated for those who demand excellence.
-            AR Prime Market — where quality meets innovation.
+            Curated collection of premium quality products. Shop with confidence at AR Prime Market.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-6 sm:mt-10 flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
+            transition={{ duration: 0.4, delay: 0.24 }}
+            className="mt-7 sm:mt-8 flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
           >
             <Link to="/products" className="w-full sm:w-auto">
-              <motion.span
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary transition-shadow touch-manipulation"
-              >
-                Explore Store
-                <ArrowRight className="w-4 h-4" />
-              </motion.span>
+              <span className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-7 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
+                Shop Now <ArrowRight className="w-4 h-4" />
+              </span>
             </Link>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl glass font-medium text-sm text-foreground transition-shadow touch-manipulation"
-            >
-              Learn More
-            </motion.button>
+            <Link to="/products?category=Electronics" className="w-full sm:w-auto">
+              <span className="inline-flex items-center justify-center w-full sm:w-auto px-7 py-3 rounded-xl border border-border bg-card text-foreground font-semibold text-sm transition-all hover:bg-secondary active:scale-[0.98] touch-manipulation">
+                Browse Categories
+              </span>
+            </Link>
           </motion.div>
         </div>
       </div>

@@ -34,37 +34,21 @@ const Products = () => {
     setCategory(cat);
     setPage(1);
     const params = new URLSearchParams(searchParams);
-    if (cat === "All") {
-      params.delete("category");
-    } else {
-      params.set("category", cat);
-    }
+    if (cat === "All") params.delete("category");
+    else params.set("category", cat);
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
   return (
-    <section className="container max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 sm:mb-10"
-      >
-        <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-1">
-          Products
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Browse our curated collection
-        </p>
+      <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5 sm:mb-8">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Products</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Browse our curated collection</p>
       </motion.header>
 
       {/* Search & Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="flex flex-col gap-3 mb-6 sm:mb-8"
-      >
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="flex flex-col gap-3 mb-5 sm:mb-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
@@ -72,7 +56,7 @@ const Products = () => {
             placeholder="Search products..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-10 pr-4 py-3 rounded-xl glass text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 touch-manipulation"
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
           />
         </div>
 
@@ -82,10 +66,10 @@ const Products = () => {
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all touch-manipulation active:scale-95 ${
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all touch-manipulation active:scale-95 ${
                 category === cat
                   ? "bg-primary text-primary-foreground"
-                  : "glass text-muted-foreground hover:text-foreground"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {cat}
@@ -94,34 +78,34 @@ const Products = () => {
         </div>
       </motion.div>
 
-      {/* Product Grid */}
+      {/* Grid */}
       {isLoading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-7 h-7 animate-spin text-primary" />
         </div>
       ) : paginated.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
           {paginated.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>
       ) : (
         <div className="text-center py-20">
-          <p className="text-muted-foreground">No products found</p>
+          <p className="text-muted-foreground text-sm">No products found</p>
         </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <nav className="flex justify-center gap-2 mt-8 sm:mt-12" aria-label="Pagination">
+        <nav className="flex justify-center gap-1.5 mt-8 sm:mt-10" aria-label="Pagination">
           {Array.from({ length: totalPages }).map((_, i) => (
             <button
               key={i}
               onClick={() => setPage(i + 1)}
-              className={`w-10 h-10 rounded-xl text-sm font-medium transition-all touch-manipulation active:scale-95 ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-all touch-manipulation active:scale-95 ${
                 page === i + 1
                   ? "bg-primary text-primary-foreground"
-                  : "glass text-muted-foreground hover:text-foreground"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
               aria-current={page === i + 1 ? "page" : undefined}
             >
