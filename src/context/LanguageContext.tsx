@@ -10,9 +10,9 @@ export interface LangConfig {
 }
 
 export const languages: LangConfig[] = [
+  { code: "ar", name: "Arabic", nativeName: "العربية", dir: "rtl" },
   { code: "en", name: "English", nativeName: "English", dir: "ltr" },
   { code: "bn", name: "Bangla", nativeName: "বাংলা", dir: "ltr" },
-  { code: "ar", name: "Arabic", nativeName: "العربية", dir: "rtl" },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr" },
   { code: "es", name: "Spanish", nativeName: "Español", dir: "ltr" },
   { code: "fr", name: "French", nativeName: "Français", dir: "ltr" },
