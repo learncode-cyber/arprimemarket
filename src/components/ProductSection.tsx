@@ -4,6 +4,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Product } from "@/hooks/useProductData";
 import { ProductCard } from "./ProductCard";
+import { ProductCardSkeleton } from "./ProductCardSkeleton";
 
 interface ProductSectionProps {
   title: string;
@@ -11,6 +12,7 @@ interface ProductSectionProps {
   products: Product[];
   viewAllLink?: string;
   scrollable?: boolean;
+  loading?: boolean;
 }
 
 export const ProductSection = ({
@@ -19,6 +21,7 @@ export const ProductSection = ({
   products,
   viewAllLink = "/products",
   scrollable = false,
+  loading = false,
 }: ProductSectionProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +31,7 @@ export const ProductSection = ({
     scrollRef.current.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
   };
 
-  if (products.length === 0) return null;
+  if (!loading && products.length === 0) return null;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -59,7 +62,23 @@ export const ProductSection = ({
         </div>
       </motion.div>
 
-      {scrollable ? (
+      {loading ? (
+        scrollable ? (
+          <div className="flex gap-3 sm:gap-4 overflow-hidden">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="min-w-[45%] sm:min-w-[30%] lg:min-w-[23%] xl:min-w-[19%]">
+                <ProductCardSkeleton />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        )
+      ) : scrollable ? (
         <div
           ref={scrollRef}
           className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:-mx-0 sm:px-0 snap-x snap-mandatory"
