@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { FloatingCard } from "@/components/FloatingCard";
-import { products } from "@/lib/dummyData";
+import { useProducts } from "@/hooks/useProductData";
 
 const features = [
   { icon: Sparkles, title: "Curated Selection", description: "Every product hand-picked for quality and design excellence." },
@@ -21,7 +21,9 @@ const categoryImages = [
 ];
 
 const Index = () => {
-  const featured = products.slice(0, 4);
+  const { data: products = [] } = useProducts();
+  const featured = products.filter(p => p.is_featured).slice(0, 4);
+  const displayProducts = featured.length > 0 ? featured : products.slice(0, 4);
 
   return (
     <div className="relative overflow-hidden">
@@ -54,7 +56,7 @@ const Index = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featured.map((p, i) => (
+          {displayProducts.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>

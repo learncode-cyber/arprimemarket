@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Product } from "@/lib/dummyData";
+import { Product } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
 import { ShoppingCart, Star, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -31,9 +31,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.preventDefault();
-            }}
+            onClick={(e) => { e.preventDefault(); }}
             className="absolute top-3 right-3 p-2 rounded-full glass opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <Heart className="w-4 h-4 text-foreground" />
