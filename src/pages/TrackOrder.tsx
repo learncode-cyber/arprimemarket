@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Package, Truck, CheckCircle, Clock, MapPin, ArrowRight, ShieldCheck, RotateCcw, Phone, Loader2, XCircle, PackageCheck } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, Clock, MapPin, ArrowRight, ShieldCheck, RotateCcw, Phone, Loader2, XCircle, PackageCheck, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -27,7 +27,9 @@ const TrackOrder = () => {
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [supplierOrders, setSupplierOrders] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const l = (en: string, bn: string, ar: string) => lang.code === "bn" ? bn : lang.code === "ar" || lang.code === "sa" ? ar : en;
 
@@ -36,6 +38,7 @@ const TrackOrder = () => {
     setLoading(true);
     setError("");
     setOrder(null);
+    setSupplierOrders([]);
 
     const { data, error: err } = await supabase
       .from("orders")
@@ -50,13 +53,47 @@ const TrackOrder = () => {
     }
 
     setOrder(data);
-    const { data: itemsData } = await supabase.from("order_items").select("*").eq("order_id", data.id);
-    setItems(itemsData || []);
+    setLastUpdate(new Date());
+
+    const [itemsRes, supplierRes] = await Promise.all([
+      supabase.from("order_items").select("*").eq("order_id", data.id),
+      supabase.from("supplier_orders").select("*, suppliers(name)").eq("order_id", data.id),
+    ]);
+    setItems(itemsRes.data || []);
+    setSupplierOrders(supplierRes.data || []);
     setLoading(false);
   };
 
+  // Real-time subscription for order updates
+  useEffect(() => {
+    if (!order?.id) return;
+
+    const channel = supabase
+      .channel(`order-track-${order.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${order.id}` }, (payload) => {
+        setOrder((prev: any) => ({ ...prev, ...payload.new }));
+        setLastUpdate(new Date());
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "supplier_orders", filter: `order_id=eq.${order.id}` }, async () => {
+        const { data } = await supabase.from("supplier_orders").select("*, suppliers(name)").eq("order_id", order.id);
+        setSupplierOrders(data || []);
+        setLastUpdate(new Date());
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [order?.id]);
+
   const currentIdx = order ? allStatuses.indexOf(order.status) : -1;
   const isCancelled = order?.status === "cancelled";
+
+  const estimatedDelivery = order ? (() => {
+    const created = new Date(order.created_at);
+    const method = order.shipping_method;
+    const days = method === "express" ? 3 : method === "priority" ? 5 : 7;
+    const est = new Date(created.getTime() + days * 24 * 60 * 60 * 1000);
+    return est;
+  })() : null;
 
   return (
     <div className="container max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
@@ -116,6 +153,14 @@ const TrackOrder = () => {
       <AnimatePresence mode="wait">
         {order && (
           <motion.div key={order.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-5">
+            {/* Real-time indicator */}
+            {lastUpdate && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                {l("Live tracking", "লাইভ ট্র্যাকিং", "تتبع مباشر")} · {l("Updated", "আপডেট", "تحديث")} {lastUpdate.toLocaleTimeString()}
+              </div>
+            )}
+
             {/* Order Info Card */}
             <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -126,17 +171,23 @@ const TrackOrder = () => {
                     {new Date(order.created_at).toLocaleDateString(lang.code === "bn" ? "bn-BD" : lang.code === "ar" ? "ar-SA" : "en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold ${statusMeta[order.status]?.bg || "bg-muted"} text-white`}>
-                  {(() => { const Icon = statusMeta[order.status]?.icon || Clock; return <Icon className="w-3.5 h-3.5" />; })()}
-                  {statusMeta[order.status]?.label[lang.code] || statusMeta[order.status]?.label.en || order.status}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold ${statusMeta[order.status]?.bg || "bg-muted"} text-white`}>
+                    {(() => { const Icon = statusMeta[order.status]?.icon || Clock; return <Icon className="w-3.5 h-3.5" />; })()}
+                    {statusMeta[order.status]?.label[lang.code] || statusMeta[order.status]?.label.en || order.status}
+                  </span>
+                  {estimatedDelivery && !isCancelled && order.status !== "delivered" && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {l("Est. delivery", "আনুমানিক ডেলিভারি", "التسليم المتوقع")}: {estimatedDelivery.toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Timeline */}
               {!isCancelled && (
                 <div className="relative">
                   <div className="flex items-center justify-between relative">
-                    {/* Progress bar background */}
                     <div className="absolute top-5 left-[10%] right-[10%] h-1 bg-muted rounded-full" />
                     <div
                       className="absolute top-5 left-[10%] h-1 bg-primary rounded-full transition-all duration-700"
@@ -176,6 +227,46 @@ const TrackOrder = () => {
                 </div>
               )}
             </div>
+
+            {/* Supplier Shipping Updates */}
+            {supplierOrders.length > 0 && (
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <h4 className="font-display font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-primary" />
+                  {l("Shipping Updates", "শিপিং আপডেট", "تحديثات الشحن")}
+                </h4>
+                <div className="space-y-3">
+                  {supplierOrders.map((so: any) => (
+                    <div key={so.id} className="p-3 rounded-xl bg-muted/30 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-foreground">{so.suppliers?.name || "Supplier"}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          so.status === "delivered" ? "bg-green-500/10 text-green-600" :
+                          so.status === "shipped" || so.status === "in_transit" ? "bg-blue-500/10 text-blue-600" :
+                          so.status === "failed" ? "bg-destructive/10 text-destructive" :
+                          "bg-muted text-muted-foreground"
+                        }`}>
+                          {so.status}
+                        </span>
+                      </div>
+                      {so.tracking_number && (
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{l("Tracking", "ট্র্যাকিং", "تتبع")}:</span>
+                          <span className="font-mono text-xs font-bold text-primary">{so.tracking_number}</span>
+                          {so.shipping_carrier && <span className="text-[10px] text-muted-foreground">({so.shipping_carrier})</span>}
+                        </div>
+                      )}
+                      {so.forwarded_at && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {l("Forwarded", "ফরোয়ার্ড", "تمت الإحالة")}: {new Date(so.forwarded_at).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Tracking & Shipping */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
