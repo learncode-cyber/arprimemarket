@@ -24,17 +24,15 @@ export const Footer = () => {
       { label: t("blog"), href: "#" },
     ],
     [t("supportNav")]: [
-      { label: t("helpCenter"), href: "#" },
-      { label: t("returnsRefunds"), href: "#" },
-      { label: t("shippingInfo"), href: "#" },
-      { label: t("trackOrder"), href: "#" },
-      { label: t("contactUs"), href: "#" },
+      { label: t("returnsRefunds"), href: "/refund-policy" },
+      { label: t("trackOrder"), href: "/track-order" },
+      { label: t("contactUs"), href: "mailto:support@arprimemarket.com" },
     ],
     [t("policies")]: [
-      { label: t("privacyPolicy"), href: "#" },
-      { label: t("termsOfService"), href: "#" },
-      { label: t("cookiePolicy"), href: "#" },
-      { label: t("disclaimer"), href: "#" },
+      { label: t("privacyPolicy"), href: "/privacy-policy" },
+      { label: t("termsOfService"), href: "/terms" },
+      { label: t("returnsRefunds"), href: "/refund-policy" },
+      { label: t("cookiePolicy"), href: "/privacy-policy#cookies" },
     ],
   };
 
@@ -102,7 +100,11 @@ export const Footer = () => {
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a href={link.href} className="text-xs text-muted-foreground hover:text-primary transition-colors touch-manipulation">{link.label}</a>
+                    {link.href.startsWith("/") ? (
+                      <Link to={link.href} className="text-xs text-muted-foreground hover:text-primary transition-colors touch-manipulation">{link.label}</Link>
+                    ) : (
+                      <a href={link.href} className="text-xs text-muted-foreground hover:text-primary transition-colors touch-manipulation">{link.label}</a>
+                    )}
                   </li>
                 ))}
               </ul>

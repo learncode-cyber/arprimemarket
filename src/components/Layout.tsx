@@ -2,6 +2,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { ScrollToTop } from "./ScrollToTop";
 import { FloatingWhatsApp } from "./FloatingWhatsApp";
+import { CookieConsent } from "./CookieConsent";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
@@ -30,6 +31,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <Footer />
       <FloatingWhatsApp />
       <ScrollToTop />
+      <CookieConsent />
     </div>
   );
 };

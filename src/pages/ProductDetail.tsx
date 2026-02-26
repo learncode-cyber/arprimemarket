@@ -70,7 +70,7 @@ const ProductDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="bg-card border border-border rounded-2xl overflow-hidden aspect-square">
-          <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+          <img src={product.image} alt={product.title} className="w-full h-full object-cover" loading="eager" decoding="async" fetchPriority="high" />
         </motion.div>
 
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.08 }} className="flex flex-col justify-center space-y-4 sm:space-y-5">
