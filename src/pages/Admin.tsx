@@ -63,7 +63,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate("/");
+      navigate("/login");
       toast.error("Admin access required");
     }
   }, [user, isAdmin, loading, navigate]);
