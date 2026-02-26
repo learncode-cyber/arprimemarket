@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.backup]
 verify_jwt = false
+
+[functions.api-gateway]
+verify_jwt = false
+
+[functions.supplier-sync]
+verify_jwt = false
