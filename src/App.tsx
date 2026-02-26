@@ -24,6 +24,13 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import RefundPolicy from "./pages/RefundPolicy";
+import About from "./pages/About";
+import Careers from "./pages/Careers";
+import Press from "./pages/Press";
+import Blog from "./pages/Blog";
+import Support from "./pages/Support";
+import Contact from "./pages/Contact";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +73,13 @@ const App = () => (
                         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<TermsOfService />} />
                         <Route path="/refund-policy" element={<RefundPolicy />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/careers" element={<Careers />} />
+                        <Route path="/press" element={<Press />} />
+                        <Route path="/blog" element={<Blog />} />
+                        <Route path="/support" element={<Support />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/cookie-policy" element={<CookiePolicy />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
