@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2 } from "lucide-react";
+import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2, Share2 } from "lucide-react";
+import { ShareButtons } from "@/components/SocialLinks";
 import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
@@ -126,6 +127,9 @@ const ProductDetail = () => {
               <Heart className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
+
+          {/* Share Buttons */}
+          <ShareButtons url={`/products/${product.slug}`} title={product.title} />
         </motion.div>
       </div>
     </div>
