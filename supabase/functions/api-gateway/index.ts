@@ -408,7 +408,12 @@ Deno.serve(async (req) => {
 
   } catch (err: unknown) {
     const duration = Date.now() - startTime;
-    const message = err instanceof Error ? err.message : "Internal server error";
+    const message = err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null && "message" in err
+        ? String((err as Record<string, unknown>).message)
+        : JSON.stringify(err) || "Internal server error";
+    console.error("[api-gateway] Caught error:", message, err);
     await logEvent({
       ts: new Date().toISOString(),
       level: "error",
