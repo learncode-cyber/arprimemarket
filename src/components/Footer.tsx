@@ -1,14 +1,8 @@
 import { Link } from "react-router-dom";
-import { Github, Twitter, Instagram, Facebook, Mail, MapPin, Phone, CreditCard, Smartphone, Banknote, ShieldCheck } from "lucide-react";
+import { Mail, MapPin, Phone, CreditCard, Smartphone, Banknote, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-
-const socialLinks = [
-  { icon: Facebook, href: "#", label: "Facebook" },
-  { icon: Instagram, href: "#", label: "Instagram" },
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Github, href: "#", label: "Github" },
-];
+import { SocialLinksRow } from "./SocialLinks";
 
 const paymentMethods = [
   { icon: CreditCard, label: "Visa/Mastercard" },
@@ -94,12 +88,11 @@ export const Footer = () => {
                 <MapPin className="w-3.5 h-3.5" /> Dhaka, Bangladesh
               </span>
             </div>
-            <div className="flex gap-2 pt-1">
-              {socialLinks.map((social) => (
-                <a key={social.label} href={social.href} aria-label={social.label} className="p-2 rounded-lg bg-secondary hover:bg-primary hover:text-primary-foreground text-muted-foreground transition-all duration-200 touch-manipulation">
-                  <social.icon className="w-4 h-4" />
-                </a>
-              ))}
+
+            {/* Social Links */}
+            <div className="pt-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Follow Us</p>
+              <SocialLinksRow size="md" variant="branded" />
             </div>
           </div>
 

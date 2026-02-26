@@ -1,6 +1,7 @@
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { ScrollToTop } from "./ScrollToTop";
+import { FloatingWhatsApp } from "./FloatingWhatsApp";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
@@ -27,6 +28,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </motion.main>
       </AnimatePresence>
       <Footer />
+      <FloatingWhatsApp />
       <ScrollToTop />
     </div>
   );

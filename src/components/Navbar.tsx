@@ -6,6 +6,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { CartDrawer } from "./CartDrawer";
 import { CurrencySelector } from "./CurrencySelector";
 import { LanguageSelector } from "./LanguageSelector";
+import { SocialLinksRow } from "./SocialLinks";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -148,6 +149,11 @@ export const Navbar = () => {
                     </button>
                   </>
                 )}
+                {/* Social Links in Mobile Menu */}
+                <div className="px-4 pt-3 mt-1 border-t border-border">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Follow Us</p>
+                  <SocialLinksRow size="sm" variant="branded" />
+                </div>
               </div>
             </motion.div>
           )}
