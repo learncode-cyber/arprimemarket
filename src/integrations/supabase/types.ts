@@ -205,6 +205,50 @@ export type Database = {
         }
         Relationships: []
       }
+      order_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_resolved: boolean | null
+          message: string | null
+          order_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          title: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean | null
+          message?: string | null
+          order_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean | null
+          message?: string | null
+          order_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -258,10 +302,13 @@ export type Database = {
       }
       orders: {
         Row: {
+          auto_forwarded: boolean | null
           coupon_id: string | null
           created_at: string
           currency: string
+          delivered_at: string | null
           discount_amount: number
+          forwarded_at: string | null
           id: string
           is_dropship: boolean | null
           notes: string | null
@@ -269,6 +316,7 @@ export type Database = {
           payment_method: string | null
           payment_reference: string | null
           payment_status: string
+          processing_errors: Json | null
           shipping_address: string | null
           shipping_city: string | null
           shipping_cost: number
@@ -288,10 +336,13 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          auto_forwarded?: boolean | null
           coupon_id?: string | null
           created_at?: string
           currency?: string
+          delivered_at?: string | null
           discount_amount?: number
+          forwarded_at?: string | null
           id?: string
           is_dropship?: boolean | null
           notes?: string | null
@@ -299,6 +350,7 @@ export type Database = {
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
+          processing_errors?: Json | null
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_cost?: number
@@ -318,10 +370,13 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          auto_forwarded?: boolean | null
           coupon_id?: string | null
           created_at?: string
           currency?: string
+          delivered_at?: string | null
           discount_amount?: number
+          forwarded_at?: string | null
           id?: string
           is_dropship?: boolean | null
           notes?: string | null
@@ -329,6 +384,7 @@ export type Database = {
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
+          processing_errors?: Json | null
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_cost?: number

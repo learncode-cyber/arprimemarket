@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.supplier-sync]
 verify_jwt = false
+
+[functions.order-processor]
+verify_jwt = false
