@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square } from "lucide-react";
+import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, ImagePlus, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
@@ -18,6 +18,8 @@ const ProductManagement = () => {
   const [aiContent, setAiContent] = useState<Record<string, any>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; current: string; running: boolean } | null>(null);
+  const [imageEnhancing, setImageEnhancing] = useState<string | null>(null);
+  const [enhancedImages, setEnhancedImages] = useState<Record<string, string>>({});
   const [newProduct, setNewProduct] = useState({
     title: "", price: "", compare_at_price: "", category_id: "", image_url: "",
     description: "", stock_quantity: "0", sku: "", tags: "", weight: "",
@@ -199,6 +201,38 @@ const ProductManagement = () => {
     }
   };
 
+  // AI Image Enhancement
+  const enhanceImage = async (product: Product) => {
+    if (!product.image) { toast.error("No image to enhance"); return; }
+    setImageEnhancing(product.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("image-enhance", {
+        body: { action: "enhance", image_url: product.image, product_title: product.title },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+      setEnhancedImages(prev => ({ ...prev, [product.id]: data.enhanced_image }));
+      toast.success("Image enhanced! Review and apply below.");
+    } catch (err: any) {
+      toast.error(err.message || "Image enhancement failed");
+    } finally {
+      setImageEnhancing(null);
+    }
+  };
+
+  const applyEnhancedImage = async (productId: string) => {
+    const imageData = enhancedImages[productId];
+    if (!imageData) return;
+    // For now store the base64 directly (in production you'd upload to storage)
+    const { error } = await supabase.from("products").update({ image_url: imageData }).eq("id", productId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Enhanced image applied!");
+      setEnhancedImages(prev => { const n = { ...prev }; delete n[productId]; return n; });
+      refetch();
+    }
+  };
+
   const lowStockCount = products.filter(p => p.stock_quantity <= 5).length;
 
   return (
@@ -376,6 +410,14 @@ const ProductManagement = () => {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
+                            onClick={() => enhanceImage(p)}
+                            disabled={imageEnhancing === p.id}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                            title="AI Enhance Image"
+                          >
+                            {imageEnhancing === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
                             onClick={() => generateAIContent(p)}
                             disabled={aiGenerating === p.id || bulkProgress?.running}
                             className="p-1.5 rounded-lg text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
@@ -405,6 +447,49 @@ const ProductManagement = () => {
           </table>
         </div>
       </div>
+
+      {/* Enhanced Image Preview Panels */}
+      <AnimatePresence>
+        {Object.entries(enhancedImages).map(([productId, imageData]) => {
+          const product = products.find(p => p.id === productId);
+          if (!product) return null;
+          return (
+            <motion.div
+              key={`img-${productId}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="bg-card border-2 border-primary/20 rounded-2xl p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-primary" />
+                  Enhanced Image — {product.title}
+                </h3>
+                <button onClick={() => setEnhancedImages(prev => { const n = { ...prev }; delete n[productId]; return n; })} className="p-1 rounded-lg hover:bg-secondary">
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Original</p>
+                  <img src={product.image} alt="Original" className="w-full h-48 object-contain rounded-xl bg-secondary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Enhanced</p>
+                  <img src={imageData} alt="Enhanced" className="w-full h-48 object-contain rounded-xl bg-secondary" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => applyEnhancedImage(productId)} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">Apply Enhanced Image</button>
+                <button onClick={() => enhanceImage(product)} disabled={imageEnhancing === productId} className="py-2 px-4 rounded-xl bg-secondary text-muted-foreground text-xs font-medium flex items-center gap-1.5 disabled:opacity-50">
+                  {imageEnhancing === productId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Retry
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
 
       {/* AI Content Preview Panels */}
       <AnimatePresence>
