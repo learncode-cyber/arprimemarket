@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 // ─── Security Service ───
 export const securityService = {
