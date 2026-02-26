@@ -79,8 +79,8 @@ export const Footer = () => {
               <a href="mailto:support@arprimemarket.com" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
                 <Mail className="w-3.5 h-3.5" /> support@arprimemarket.com
               </a>
-              <a href="tel:+8801700000000" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
-                <Phone className="w-3.5 h-3.5" /> +880 1700-000000
+              <a href="tel:+8801910521565" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                <Phone className="w-3.5 h-3.5" /> +880 1910-521565
               </a>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MapPin className="w-3.5 h-3.5" /> Dhaka, Bangladesh
