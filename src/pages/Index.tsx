@@ -7,6 +7,7 @@ import { ProductSection } from "@/components/ProductSection";
 import FlashSaleTimer from "@/components/FlashSaleTimer";
 import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
+import PromotionsBanner from "@/components/PromotionsBanner";
 import { useProducts } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
@@ -33,6 +34,7 @@ const Index = () => {
       <SEOHead url="/" jsonLd={organizationSchema()} />
       <SEOHead jsonLd={websiteSchema()} />
       <HeroBanner />
+      <PromotionsBanner />
       <FlashSaleTimer />
       <TrustBadges />
 
