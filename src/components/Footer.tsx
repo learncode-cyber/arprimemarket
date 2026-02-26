@@ -178,6 +178,12 @@ export const Footer = () => {
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               Made with <Heart className="w-3 h-3 text-primary fill-primary" /> {t("allRightsReserved")}
             </p>
+            <p className="text-[10px] text-muted-foreground">
+              Design & Development by{" "}
+              <a href="https://abdullahraiyan.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                Abdullah Raiyan
+              </a>
+            </p>
           </div>
         </div>
       </div>
