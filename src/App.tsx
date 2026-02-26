@@ -64,7 +64,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <Routes>
-                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/ar" element={<Admin />} />
                   <Route path="*" element={
                     <Layout>
                       <Routes>

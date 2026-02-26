@@ -82,7 +82,7 @@ export const Navbar = () => {
             </button>
 
             {user && isAdmin && (
-              <Link to="/admin" className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
+              <Link to="/ar" className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
                 <Shield className="w-[18px] h-[18px]" />
               </Link>
             )}
@@ -135,7 +135,7 @@ export const Navbar = () => {
                   </Link>
                 ))}
                 {user && isAdmin && (
-                  <Link to="/admin" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation">
+                  <Link to="/ar" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all touch-manipulation">
                     {t("adminPanel")}
                   </Link>
                 )}

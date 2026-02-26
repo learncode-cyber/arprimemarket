@@ -9,7 +9,7 @@ export const FloatingActionMenu = () => {
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setShowScroll(window.scrollY > 400);
+    const onScroll = () => setShowScroll(window.scrollY > 300);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -26,27 +26,10 @@ export const FloatingActionMenu = () => {
 
   return (
     <>
-      {/* Scroll to top — sits below the FAB */}
-      <AnimatePresence>
-        {showScroll && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.6 }}
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="fixed bottom-[7.5rem] right-4 z-40 w-10 h-10 rounded-full bg-secondary text-foreground border border-border shadow-md flex items-center justify-center hover:bg-accent active:scale-90 transition-all touch-manipulation"
-            aria-label="Scroll to top"
-          >
-            <ArrowUp className="w-4 h-4" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
       {/* Expanded options */}
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -55,27 +38,27 @@ export const FloatingActionMenu = () => {
               className="fixed inset-0 z-40"
             />
 
-            {/* WhatsApp option */}
+            {/* WhatsApp */}
             <motion.button
-              initial={{ opacity: 0, y: 16, scale: 0.8 }}
+              initial={{ opacity: 0, y: 12, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.8 }}
-              transition={{ delay: 0.05 }}
+              exit={{ opacity: 0, y: 12, scale: 0.85 }}
+              transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.05 }}
               onClick={handleWhatsApp}
-              className="fixed bottom-[8.5rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 hover:brightness-110 active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[8rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#25D366] active:scale-95 transition-all touch-manipulation"
             >
               <MessageCircle className="w-4 h-4" />
               <span className="text-xs font-semibold whitespace-nowrap">WhatsApp Support</span>
             </motion.button>
 
-            {/* Chat with AI option */}
+            {/* Chat with AI */}
             <motion.button
-              initial={{ opacity: 0, y: 16, scale: 0.8 }}
+              initial={{ opacity: 0, y: 12, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.8 }}
-              transition={{ delay: 0.1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.85 }}
+              transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.1 }}
               onClick={handleChat}
-              className="fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-card border border-border text-foreground shadow-lg hover:bg-accent active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
             >
               <Bot className="w-4 h-4 text-primary" />
               <span className="text-xs font-semibold whitespace-nowrap">Chat with AI</span>
@@ -84,13 +67,30 @@ export const FloatingActionMenu = () => {
         )}
       </AnimatePresence>
 
-      {/* Main FAB button */}
+      {/* Scroll to top — below the FAB */}
+      <AnimatePresence>
+        {showScroll && !open && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.7 }}
+            transition={{ type: "spring", stiffness: 300, damping: 22 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="fixed bottom-[5.5rem] right-[1.125rem] z-40 w-9 h-9 rounded-full bg-secondary/80 backdrop-blur-xl border border-border/40 text-foreground shadow-md flex items-center justify-center hover:bg-accent active:scale-90 transition-all touch-manipulation"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Main FAB */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.8, type: "spring", stiffness: 260, damping: 20 }}
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:brightness-110 active:scale-90 transition-all touch-manipulation"
+        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full bg-primary/90 backdrop-blur-xl border border-primary/30 text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary active:scale-90 transition-all touch-manipulation"
         aria-label="Help menu"
       >
         <AnimatePresence mode="wait">
@@ -106,7 +106,7 @@ export const FloatingActionMenu = () => {
         </AnimatePresence>
       </motion.button>
 
-      {/* Chat Widget as modal */}
+      {/* Chat modal */}
       {showChat && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6">
           <motion.div
