@@ -59,6 +59,98 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          performed_by: string | null
+          scan_result_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          performed_by?: string | null
+          scan_result_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          performed_by?: string | null
+          scan_result_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_activity_log_scan_result_id_fkey"
+            columns: ["scan_result_id"]
+            isOneToOne: false
+            referencedRelation: "ai_scan_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_scan_results: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          auto_fix_available: boolean
+          auto_fix_query: string | null
+          category: string
+          created_at: string
+          description: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          metadata: Json | null
+          scan_type: string
+          severity: string
+          status: string
+          suggestion: string | null
+          title: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          auto_fix_available?: boolean
+          auto_fix_query?: string | null
+          category?: string
+          created_at?: string
+          description: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          metadata?: Json | null
+          scan_type?: string
+          severity?: string
+          status?: string
+          suggestion?: string | null
+          title: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          auto_fix_available?: boolean
+          auto_fix_query?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          metadata?: Json | null
+          scan_type?: string
+          severity?: string
+          status?: string
+          suggestion?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
