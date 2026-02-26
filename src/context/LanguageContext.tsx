@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 
 export type LangCode = "en" | "bn" | "ar" | "sa" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt";
 
@@ -224,8 +224,23 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 const STORAGE_KEY = "ar-pm-lang";
+const GEO_DETECTED_KEY = "ar-pm-geo-detected";
+
+const countryToLang: Record<string, LangCode> = {
+  AE: "ar", SA: "sa", BH: "ar", QA: "ar", KW: "ar", OM: "ar",
+  US: "en", GB: "en", AU: "en", CA: "en",
+  BD: "bn",
+  IN: "hi",
+  MX: "es", ES: "es", AR: "es", CO: "es",
+  FR: "fr",
+  DE: "de", AT: "de", CH: "de",
+  CN: "zh", TW: "zh", HK: "zh",
+  JP: "ja",
+  BR: "pt", PT: "pt",
+};
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
+  const geoFetched = useRef(false);
   const [lang, setLangState] = useState<LangConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as LangCode | null;
     if (saved) {
@@ -240,9 +255,41 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     if (found) {
       setLangState(found);
       localStorage.setItem(STORAGE_KEY, code);
+      localStorage.setItem(GEO_DETECTED_KEY, "manual");
       document.documentElement.dir = found.dir;
       document.documentElement.lang = code;
     }
+  }, []);
+
+  // Geo-detection on first visit only
+  useEffect(() => {
+    if (geoFetched.current) return;
+    geoFetched.current = true;
+    
+    const alreadySet = localStorage.getItem(STORAGE_KEY);
+    if (alreadySet) return; // User already has a preference
+
+    const detectGeo = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        const countryCode = data?.country_code;
+        if (countryCode && countryToLang[countryCode]) {
+          const langCode = countryToLang[countryCode];
+          const found = languages.find(l => l.code === langCode);
+          if (found) {
+            setLangState(found);
+            localStorage.setItem(STORAGE_KEY, langCode);
+            localStorage.setItem(GEO_DETECTED_KEY, "auto");
+            document.documentElement.dir = found.dir;
+            document.documentElement.lang = langCode;
+          }
+        }
+      } catch {
+        // Silently fail — use default
+      }
+    };
+    detectGeo();
   }, []);
 
   useState(() => {

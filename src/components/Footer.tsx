@@ -163,9 +163,10 @@ export const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-6 border-t border-border/50">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-8 sm:mt-12 pt-6 border-t border-border/50">
+          <div className="flex flex-col items-center gap-4 text-center">
+            {/* Payment icons — always centered */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="text-[11px] text-muted-foreground mr-1 font-medium">{t("weAccept")}</span>
               {paymentMethods.map((pm) => (
                 <div
@@ -173,13 +174,15 @@ export const Footer = () => {
                   className="rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-border/20"
                   title={pm.label}
                 >
-                  <pm.icon className="w-10 h-7 sm:w-12 sm:h-8" />
+                  <pm.icon className="w-9 h-6 sm:w-12 sm:h-8" />
                 </div>
               ))}
             </div>
+            {/* Copyright */}
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               Made with <Heart className="w-3 h-3 text-primary fill-primary" /> {t("allRightsReserved")}
             </p>
+            {/* Developer credit */}
             <p className="text-[10px] text-muted-foreground">
               Design & Development by{" "}
               <a href="https://abdullahraiyan.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
