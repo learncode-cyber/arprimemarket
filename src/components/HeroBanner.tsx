@@ -15,7 +15,7 @@ export const HeroBanner = () => {
       description: t("heroDesc1"),
       cta: t("shopNow"),
       link: "/products",
-      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80",
+      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80&auto=format&fit=crop",
       accent: "from-primary/80",
     },
     {
@@ -25,7 +25,7 @@ export const HeroBanner = () => {
       description: t("heroDesc2"),
       cta: t("exploreElectronics"),
       link: "/products?category=Electronics",
-      image: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=1200&q=80",
+      image: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=1200&q=80&auto=format&fit=crop",
       accent: "from-foreground/70",
     },
     {
@@ -35,7 +35,7 @@ export const HeroBanner = () => {
       description: t("heroDesc3"),
       cta: t("shopHome"),
       link: "/products?category=Home",
-      image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80",
+      image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80&auto=format&fit=crop",
       accent: "from-foreground/60",
     },
   ];
@@ -55,7 +55,16 @@ export const HeroBanner = () => {
     <section className="relative w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1] overflow-hidden bg-secondary">
       <AnimatePresence mode="wait">
         <motion.div key={slide.id} initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.6, ease: "easeInOut" }} className="absolute inset-0">
-          <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" loading={current === 0 ? "eager" : "lazy"} />
+          <div className="absolute inset-0 bg-muted animate-pulse" />
+          <img
+            src={slide.image}
+            alt={slide.title}
+            className="w-full h-full object-cover relative z-[1]"
+            loading={current === 0 ? "eager" : "lazy"}
+            decoding={current === 0 ? "sync" : "async"}
+            fetchPriority={current === 0 ? "high" : "auto"}
+            onLoad={(e) => { (e.currentTarget.previousElementSibling as HTMLElement)?.classList.add('hidden'); }}
+          />
           <div className={`absolute inset-0 bg-gradient-to-r ${slide.accent} via-transparent to-transparent`} />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/40 via-transparent to-transparent" />
         </motion.div>

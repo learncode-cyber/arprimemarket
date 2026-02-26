@@ -72,13 +72,14 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const fetchedRef = useRef(false);
   const manuallySetRef = useRef(false);
 
+  const defaultCurrency = currencies.find(c => c.code === "USD") || currencies[0];
   const [currency, setCurrency] = useState<CurrencyConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const found = currencies.find(c => c.code === saved);
       if (found) return found;
     }
-    return currencies.find(c => c.code === "USD") || currencies[0];
+    return defaultCurrency;
   });
 
   // Auto-switch currency when language changes

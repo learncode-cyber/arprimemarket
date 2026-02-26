@@ -10,10 +10,10 @@ export interface LangConfig {
 }
 
 export const languages: LangConfig[] = [
-  { code: "ar", name: "Arabic (UAE)", nativeName: "العربية (الإمارات)", dir: "rtl" },
-  { code: "sa", name: "Arabic (Saudi)", nativeName: "العربية (السعودية)", dir: "rtl" },
   { code: "en", name: "English", nativeName: "English", dir: "ltr" },
   { code: "bn", name: "Bangla", nativeName: "বাংলা", dir: "ltr" },
+  { code: "ar", name: "Arabic (UAE)", nativeName: "العربية (الإمارات)", dir: "rtl" },
+  { code: "sa", name: "Arabic (Saudi)", nativeName: "العربية (السعودية)", dir: "rtl" },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr" },
   { code: "es", name: "Spanish", nativeName: "Español", dir: "ltr" },
   { code: "fr", name: "French", nativeName: "Français", dir: "ltr" },
@@ -241,13 +241,14 @@ const countryToLang: Record<string, LangCode> = {
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const geoFetched = useRef(false);
+  const defaultLang = languages.find(l => l.code === "en") || languages[0];
   const [lang, setLangState] = useState<LangConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as LangCode | null;
     if (saved) {
       const found = languages.find(l => l.code === saved);
       if (found) return found;
     }
-    return languages[0];
+    return defaultLang;
   });
 
   const setLang = useCallback((code: LangCode) => {
@@ -274,19 +275,20 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
         const data = await res.json();
         const countryCode = data?.country_code;
-        if (countryCode && countryToLang[countryCode]) {
-          const langCode = countryToLang[countryCode];
-          const found = languages.find(l => l.code === langCode);
-          if (found) {
-            setLangState(found);
-            localStorage.setItem(STORAGE_KEY, langCode);
-            localStorage.setItem(GEO_DETECTED_KEY, "auto");
-            document.documentElement.dir = found.dir;
-            document.documentElement.lang = langCode;
-          }
+        // Only auto-detect for mapped countries; unmapped countries stay on English
+        const langCode = countryCode ? countryToLang[countryCode] : undefined;
+        // Use detected language, or fall back to English
+        const finalCode: LangCode = langCode || "en";
+        const found = languages.find(l => l.code === finalCode);
+        if (found) {
+          setLangState(found);
+          localStorage.setItem(STORAGE_KEY, finalCode);
+          localStorage.setItem(GEO_DETECTED_KEY, "auto");
+          document.documentElement.dir = found.dir;
+          document.documentElement.lang = finalCode;
         }
       } catch {
-        // Silently fail — use default
+        // Silently fail — default is already English
       }
     };
     detectGeo();
