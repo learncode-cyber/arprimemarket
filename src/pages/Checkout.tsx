@@ -14,6 +14,7 @@ import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
+import { api } from "@/lib/api";
 
 const shippingSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -105,29 +106,16 @@ const Checkout = () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", couponCode.trim().toUpperCase())
-        .eq("is_active", true)
-        .single();
+      const res = await api.coupons.validate(couponCode.trim(), subtotal);
 
-      if (error || !data) {
-        toast({ title: lang.code === "bn" ? "কুপন পাওয়া যায়নি" : "Invalid coupon", variant: "destructive" });
+      if (res.error || !res.data?.valid) {
+        toast({ title: res.error || (lang.code === "bn" ? "কুপন পাওয়া যায়নি" : "Invalid coupon"), variant: "destructive" });
+        setCouponLoading(false);
         return;
       }
 
-      if (data.min_order_amount && subtotal < Number(data.min_order_amount)) {
-        toast({ title: lang.code === "bn" ? "ন্যূনতম অর্ডার পূরণ হয়নি" : "Minimum order not met", variant: "destructive" });
-        return;
-      }
-
-      const discount = data.discount_type === "percentage"
-        ? (subtotal * Number(data.discount_value)) / 100
-        : Number(data.discount_value);
-
-      setCouponDiscount(Math.min(discount, subtotal));
-      setAppliedCoupon(data.code);
+      setCouponDiscount(res.data.calculated_discount);
+      setAppliedCoupon(res.data.code);
       toast({ title: lang.code === "bn" ? "কুপন প্রয়োগ হয়েছে!" : "Coupon applied!" });
     } catch {
       toast({ title: "Error", variant: "destructive" });
