@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy } from "lucide-react";
+import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ const ProductManagement = () => {
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState<string | null>(null);
   const [aiContent, setAiContent] = useState<Record<string, any>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; current: string; running: boolean } | null>(null);
   const [newProduct, setNewProduct] = useState({
     title: "", price: "", compare_at_price: "", category_id: "", image_url: "",
     description: "", stock_quantity: "0", sku: "", tags: "", weight: "",
@@ -26,6 +28,19 @@ const ProductManagement = () => {
     const matchCat = categoryFilter === "all" || p.category_id === categoryFilter;
     return matchSearch && matchCat;
   });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map(p => p.id)));
+  };
 
   const handleAdd = async () => {
     if (!newProduct.title || !newProduct.price) { toast.error("Title and price required"); return; }
@@ -83,7 +98,7 @@ const ProductManagement = () => {
     setSaving(false);
   };
 
-  // AI Content Generation
+  // Single AI Content Generation
   const generateAIContent = async (product: Product) => {
     setAiGenerating(product.id);
     try {
@@ -98,12 +113,10 @@ const ProductManagement = () => {
           price: product.price,
         },
       });
-
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
-
       setAiContent(prev => ({ ...prev, [product.id]: data.content }));
-      toast.success("AI content generated! Review and apply below.");
+      toast.success("AI content generated!");
       refetch();
     } catch (err: any) {
       toast.error(err.message || "AI generation failed");
@@ -112,14 +125,78 @@ const ProductManagement = () => {
     }
   };
 
+  // Bulk AI Content Generation
+  const bulkGenerateAI = useCallback(async () => {
+    const selectedProducts = products.filter(p => selectedIds.has(p.id));
+    if (!selectedProducts.length) { toast.error("No products selected"); return; }
+
+    setBulkProgress({ total: selectedProducts.length, done: 0, current: selectedProducts[0].title, running: true });
+    let succeeded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < selectedProducts.length; i++) {
+      const p = selectedProducts[i];
+      setBulkProgress(prev => prev ? { ...prev, done: i, current: p.title } : null);
+
+      try {
+        const cat = categories.find(c => c.id === p.category_id);
+        const { data, error } = await supabase.functions.invoke("ai-content", {
+          body: {
+            action: "generate",
+            product_id: p.id,
+            title: p.title,
+            current_description: p.description,
+            category: cat?.name || "",
+            price: p.price,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        setAiContent(prev => ({ ...prev, [p.id]: data.content }));
+        succeeded++;
+      } catch {
+        failed++;
+      }
+
+      // Small delay to avoid rate limiting
+      if (i < selectedProducts.length - 1) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    setBulkProgress(prev => prev ? { ...prev, done: selectedProducts.length, running: false } : null);
+    refetch();
+    toast.success(`Bulk generation complete: ${succeeded} succeeded, ${failed} failed`);
+    setSelectedIds(new Set());
+
+    // Auto-close progress after 3s
+    setTimeout(() => setBulkProgress(null), 3000);
+  }, [selectedIds, products, categories, refetch]);
+
   const applyAIContent = async (productId: string, field: string, value: any) => {
     const updateData: any = {};
     if (field === "description") updateData.description = value;
     if (field === "tags") updateData.tags = value;
-
     const { error } = await supabase.from("products").update(updateData).eq("id", productId);
     if (error) toast.error(error.message);
     else { toast.success(`${field} applied!`); refetch(); }
+  };
+
+  const applyAllAIContent = async (productId: string) => {
+    const content = aiContent[productId];
+    if (!content) return;
+    const { error } = await supabase.from("products").update({
+      description: content.description,
+      tags: content.tags,
+    }).eq("id", productId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("All AI content applied!");
+      setAiContent(prev => { const n = { ...prev }; delete n[productId]; return n; });
+      refetch();
+    }
   };
 
   const lowStockCount = products.filter(p => p.stock_quantity <= 5).length;
@@ -141,6 +218,39 @@ const ProductManagement = () => {
         ))}
       </div>
 
+      {/* Bulk Progress Bar */}
+      <AnimatePresence>
+        {bulkProgress && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-card border-2 border-primary/20 rounded-2xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Bulk AI Generation
+              </h4>
+              <span className="text-xs text-muted-foreground">{bulkProgress.done}/{bulkProgress.total}</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-primary rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {bulkProgress.running ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating: <span className="text-foreground font-medium">{bulkProgress.current}</span>
+                </span>
+              ) : (
+                <span className="text-green-600 font-medium">✓ Complete!</span>
+              )}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
@@ -151,6 +261,16 @@ const ProductManagement = () => {
           <option value="all">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        {selectedIds.size > 0 && (
+          <button
+            onClick={bulkGenerateAI}
+            disabled={bulkProgress?.running}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary/90 text-primary-foreground text-sm font-medium touch-manipulation disabled:opacity-50"
+          >
+            {bulkProgress?.running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            AI Generate ({selectedIds.size})
+          </button>
+        )}
         <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
           <Plus className="w-4 h-4" /> Add Product
         </button>
@@ -195,6 +315,11 @@ const ProductManagement = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
+                <th className="text-left px-3 py-3 w-8">
+                  <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {selectedIds.size === filtered.length && filtered.length > 0 ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+                  </button>
+                </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Product</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Category</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Price</th>
@@ -204,9 +329,9 @@ const ProductManagement = () => {
             </thead>
             <tbody>
               {filtered.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                <tr key={p.id} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""}`}>
                   {editingId === p.id ? (
-                    <td className="px-4 py-3" colSpan={5}>
+                    <td className="px-4 py-3" colSpan={6}>
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Title" />
@@ -226,6 +351,11 @@ const ProductManagement = () => {
                     </td>
                   ) : (
                     <>
+                      <td className="px-3 py-3">
+                        <button onClick={() => toggleSelect(p.id)} className="text-muted-foreground hover:text-foreground transition-colors">
+                          {selectedIds.has(p.id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <img src={p.image} alt={p.title} className="w-10 h-10 rounded-lg object-cover bg-secondary" />
@@ -247,7 +377,7 @@ const ProductManagement = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => generateAIContent(p)}
-                            disabled={aiGenerating === p.id}
+                            disabled={aiGenerating === p.id || bulkProgress?.running}
                             className="p-1.5 rounded-lg text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                             title="AI Generate Content"
                           >
@@ -269,7 +399,7 @@ const ProductManagement = () => {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">No products found</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">No products found</td></tr>
               )}
             </tbody>
           </table>
@@ -294,9 +424,12 @@ const ProductManagement = () => {
                   <Sparkles className="w-4 h-4 text-primary" />
                   AI Content — {product.title}
                 </h3>
-                <button onClick={() => setAiContent(prev => { const n = { ...prev }; delete n[productId]; return n; })} className="p-1 rounded-lg hover:bg-secondary">
-                  <X className="w-4 h-4 text-muted-foreground" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => applyAllAIContent(productId)} className="text-[10px] px-3 py-1 rounded-lg bg-primary text-primary-foreground font-medium">Apply All</button>
+                  <button onClick={() => setAiContent(prev => { const n = { ...prev }; delete n[productId]; return n; })} className="p-1 rounded-lg hover:bg-secondary">
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
               </div>
 
               {/* Description */}
@@ -326,7 +459,7 @@ const ProductManagement = () => {
                     <label className="text-xs font-medium text-muted-foreground">Description (AR)</label>
                     <button onClick={() => { navigator.clipboard.writeText(content.description_ar); toast.success("Copied!"); }} className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground font-medium flex items-center gap-1"><Copy className="w-3 h-3" /> Copy</button>
                   </div>
-                  <p className="text-xs text-foreground bg-muted/30 rounded-xl p-3 leading-relaxed dir-rtl" dir="rtl">{content.description_ar}</p>
+                  <p className="text-xs text-foreground bg-muted/30 rounded-xl p-3 leading-relaxed" dir="rtl">{content.description_ar}</p>
                 </div>
               )}
 
