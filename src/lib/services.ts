@@ -80,6 +80,79 @@ export const backupService = {
   },
 };
 
+// ─── Email Service ───
+export const emailService = {
+  async sendOrderConfirmation(order: {
+    email: string; name: string; order_number: string;
+    items: { title: string; quantity: number; total: number }[];
+    subtotal: number; shipping_cost: number; total: number;
+  }) {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: { action: "order_confirmation", order },
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Order confirmation email failed:", err);
+      return null;
+    }
+  },
+
+  async sendShippingUpdate(order: {
+    email: string; name: string; order_number: string;
+    tracking_number?: string; carrier?: string;
+    address?: string; city?: string;
+  }) {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: { action: "shipping_update", order },
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Shipping update email failed:", err);
+      return null;
+    }
+  },
+
+  async sendDeliveryConfirmation(order: {
+    email: string; name: string; order_number: string;
+  }) {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: { action: "delivery_confirmation", order },
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Delivery confirmation email failed:", err);
+      return null;
+    }
+  },
+};
+
+// ─── Image Enhancement Service ───
+export const imageService = {
+  async enhanceImage(imageUrl: string, productTitle?: string) {
+    const { data, error } = await supabase.functions.invoke("image-enhance", {
+      body: { action: "enhance", image_url: imageUrl, product_title: productTitle },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.enhanced_image as string;
+  },
+
+  async generateImage(productTitle: string) {
+    const { data, error } = await supabase.functions.invoke("image-enhance", {
+      body: { action: "generate", product_title: productTitle },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.generated_image as string;
+  },
+};
+
 // ─── Performance Utilities ───
 export const performanceUtils = {
   // Image URL optimizer - adds width/quality params for Unsplash
