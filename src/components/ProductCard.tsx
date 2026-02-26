@@ -31,15 +31,17 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
     >
       <Link to={`/products/${product.id}`} className="block" aria-label={`View ${product.title}`}>
         <div className="relative aspect-square overflow-hidden bg-secondary">
+          <div className="absolute inset-0 bg-muted animate-pulse" />
           <img
             src={performanceUtils.optimizeImageUrl(product.image, 400)}
             srcSet={performanceUtils.generateSrcSet(product.image) || undefined}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             alt={product.title}
-            className="w-full h-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-110 relative z-[1]"
             loading="lazy"
             decoding="async"
-            onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
+            onLoad={(e) => { (e.currentTarget.previousElementSibling as HTMLElement)?.classList.add('hidden'); }}
+            onError={(e) => { e.currentTarget.src = "/placeholder.svg"; (e.currentTarget.previousElementSibling as HTMLElement)?.classList.add('hidden'); }}
           />
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {discount > 0 && (
