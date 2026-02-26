@@ -11,7 +11,7 @@ export const socialLinks = [
   { icon: Facebook, href: "https://facebook.com/share/16VHrWkGmh", label: "Facebook", color: "hover:bg-[#1877F2] hover:text-white" },
   { icon: Instagram, href: "https://instagram.com/arprimemarket?igsh=OW4ybXU0Ym56YXNy", label: "Instagram", color: "hover:bg-gradient-to-tr hover:from-[#f09433] hover:via-[#e6683c] hover:to-[#bc1888] hover:text-white" },
   { icon: Twitter, href: "https://x.com/ARPrime05?t=q5NQJv5cMZmHwigjbrba-A&s=09", label: "X (Twitter)", color: "hover:bg-foreground hover:text-background" },
-  { icon: MessageCircle, href: "https://whatsapp.com/channel/0029VbBPPzo4IBhLyYfL7H1C", label: "WhatsApp", color: "hover:bg-[#25D366] hover:text-white" },
+  { icon: MessageCircle, href: "https://wa.me/8801910521565", label: "WhatsApp", color: "hover:bg-[#25D366] hover:text-white" },
   { icon: Send, href: "https://t.me/arprimemarketofficial", label: "Telegram", color: "hover:bg-[#0088cc] hover:text-white" },
   { icon: TikTokIcon, href: "https://tiktok.com/@ar.prime5", label: "TikTok", color: "hover:bg-foreground hover:text-background" },
 ];
