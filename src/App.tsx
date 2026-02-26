@@ -28,15 +28,22 @@ import About from "./pages/About";
 import Careers from "./pages/Careers";
 import Press from "./pages/Press";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Support from "./pages/Support";
 import Contact from "./pages/Contact";
 import CookiePolicy from "./pages/CookiePolicy";
+import HelpCenter from "./pages/HelpCenter";
+import HelpArticle from "./pages/HelpArticle";
+import FAQ from "./pages/FAQ";
+import Tickets from "./pages/Tickets";
+import NewTicket from "./pages/NewTicket";
+import TicketDetail from "./pages/TicketDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,        // 5 min stale time
-      gcTime: 30 * 60 * 1000,            // 30 min garbage collection
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
@@ -77,9 +84,16 @@ const App = () => (
                         <Route path="/careers" element={<Careers />} />
                         <Route path="/press" element={<Press />} />
                         <Route path="/blog" element={<Blog />} />
+                        <Route path="/blog/:slug" element={<BlogPost />} />
                         <Route path="/support" element={<Support />} />
                         <Route path="/contact" element={<Contact />} />
                         <Route path="/cookie-policy" element={<CookiePolicy />} />
+                        <Route path="/help" element={<HelpCenter />} />
+                        <Route path="/help/:slug" element={<HelpArticle />} />
+                        <Route path="/faq" element={<FAQ />} />
+                        <Route path="/tickets" element={<Tickets />} />
+                        <Route path="/tickets/new" element={<NewTicket />} />
+                        <Route path="/tickets/:id" element={<TicketDetail />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
