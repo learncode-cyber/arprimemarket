@@ -7,9 +7,12 @@ export interface Supplier {
   api_type: string;
   api_url: string | null;
   api_key_name: string | null;
+  api_key_secret: string | null;
   base_url: string | null;
+  webhook_url: string | null;
   is_active: boolean;
   auto_sync: boolean;
+  auto_forward_orders: boolean;
   sync_interval_hours: number;
   last_synced_at: string | null;
   markup_percentage: number;
@@ -27,9 +30,14 @@ export interface SupplierProduct {
   external_price: number;
   external_stock: number;
   external_image_url: string | null;
+  external_images: string[];
+  external_variants: any[];
+  external_description: string | null;
+  external_category: string | null;
   is_imported: boolean;
   last_synced_at: string | null;
   sync_status: string;
+  import_errors: any;
 }
 
 export interface SupplierOrder {
@@ -44,6 +52,29 @@ export interface SupplierOrder {
   forwarded_at: string | null;
 }
 
+export interface SyncLog {
+  id: string;
+  supplier_id: string;
+  action: string;
+  status: string;
+  items_processed: number;
+  items_failed: number;
+  error_details: any[];
+  started_at: string;
+  completed_at: string | null;
+  suppliers?: { name: string };
+}
+
+// ─── Supplier sync API calls ───
+export async function invokeSupplierSync(action: string, params: Record<string, unknown> = {}) {
+  const { data, error } = await supabase.functions.invoke("supplier-sync", {
+    body: { action, ...params },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +82,7 @@ export function useSuppliers() {
   const fetchSuppliers = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from("suppliers").select("*").order("created_at", { ascending: false });
-    setSuppliers((data as Supplier[]) || []);
+    setSuppliers((data as unknown as Supplier[]) || []);
     setLoading(false);
   }, []);
 
@@ -87,7 +118,7 @@ export function useSupplierProducts(supplierId?: string) {
     let query = supabase.from("supplier_products").select("*").order("created_at", { ascending: false });
     if (supplierId) query = query.eq("supplier_id", supplierId);
     const { data } = await query;
-    setProducts((data as SupplierProduct[]) || []);
+    setProducts((data as unknown as SupplierProduct[]) || []);
     setLoading(false);
   }, [supplierId]);
 
@@ -100,10 +131,12 @@ export function useSupplierProducts(supplierId?: string) {
     const { data: product, error: pErr } = await supabase.from("products").insert({
       title: sp.external_title,
       slug,
+      description: sp.external_description || null,
       price: Math.round(price),
       supplier_price: sp.external_price,
       supplier_url: sp.external_url,
       image_url: sp.external_image_url,
+      images: sp.external_images || [],
       stock_quantity: sp.external_stock,
       is_active: true,
       category_id: categoryId || null,
@@ -142,22 +175,21 @@ export function useSupplierOrders() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from("supplier_orders").select("*").order("created_at", { ascending: false });
-    setOrders((data as SupplierOrder[]) || []);
+    setOrders((data as unknown as SupplierOrder[]) || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const forwardOrder = async (orderId: string, supplierId: string) => {
-    const { error } = await supabase.from("supplier_orders").insert({
-      order_id: orderId,
-      supplier_id: supplierId,
-      status: "pending",
-    } as any);
-    if (error) throw error;
-    
-    await supabase.from("orders").update({ is_dropship: true } as any).eq("id", orderId);
+    await invokeSupplierSync("forward_order", { order_id: orderId, supplier_id: supplierId });
     fetchOrders();
+  };
+
+  const syncOrderStatuses = async (supplierId?: string) => {
+    const result = await invokeSupplierSync("sync_order_status", supplierId ? { supplier_id: supplierId } : {});
+    fetchOrders();
+    return result;
   };
 
   const updateSupplierOrder = async (id: string, updates: Partial<SupplierOrder>) => {
@@ -165,5 +197,25 @@ export function useSupplierOrders() {
     fetchOrders();
   };
 
-  return { orders, loading, fetchOrders, forwardOrder, updateSupplierOrder };
+  return { orders, loading, fetchOrders, forwardOrder, syncOrderStatuses, updateSupplierOrder };
+}
+
+export function useSyncLogs(supplierId?: string) {
+  const [logs, setLogs] = useState<SyncLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await invokeSupplierSync("get_sync_logs", supplierId ? { supplier_id: supplierId } : {});
+      setLogs(data || []);
+    } catch {
+      setLogs([]);
+    }
+    setLoading(false);
+  }, [supplierId]);
+
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  return { logs, loading, fetchLogs };
 }
