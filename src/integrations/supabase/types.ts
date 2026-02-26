@@ -882,13 +882,18 @@ export type Database = {
       supplier_products: {
         Row: {
           created_at: string
+          external_category: string | null
+          external_description: string | null
           external_id: string
           external_image_url: string | null
+          external_images: string[] | null
           external_price: number
           external_stock: number
           external_title: string
           external_url: string | null
+          external_variants: Json | null
           id: string
+          import_errors: Json | null
           is_imported: boolean
           last_synced_at: string | null
           product_id: string | null
@@ -898,13 +903,18 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          external_category?: string | null
+          external_description?: string | null
           external_id: string
           external_image_url?: string | null
+          external_images?: string[] | null
           external_price?: number
           external_stock?: number
           external_title: string
           external_url?: string | null
+          external_variants?: Json | null
           id?: string
+          import_errors?: Json | null
           is_imported?: boolean
           last_synced_at?: string | null
           product_id?: string | null
@@ -914,13 +924,18 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          external_category?: string | null
+          external_description?: string | null
           external_id?: string
           external_image_url?: string | null
+          external_images?: string[] | null
           external_price?: number
           external_stock?: number
           external_title?: string
           external_url?: string | null
+          external_variants?: Json | null
           id?: string
+          import_errors?: Json | null
           is_imported?: boolean
           last_synced_at?: string | null
           product_id?: string | null
@@ -945,11 +960,60 @@ export type Database = {
           },
         ]
       }
+      supplier_sync_logs: {
+        Row: {
+          action: string
+          completed_at: string | null
+          created_at: string
+          error_details: Json | null
+          id: string
+          items_failed: number
+          items_processed: number
+          started_at: string
+          status: string
+          supplier_id: string
+        }
+        Insert: {
+          action?: string
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          id?: string
+          items_failed?: number
+          items_processed?: number
+          started_at?: string
+          status?: string
+          supplier_id: string
+        }
+        Update: {
+          action?: string
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          id?: string
+          items_failed?: number
+          items_processed?: number
+          started_at?: string
+          status?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_sync_logs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           api_key_name: string | null
+          api_key_secret: string | null
           api_type: string
           api_url: string | null
+          auto_forward_orders: boolean | null
           auto_sync: boolean
           base_url: string | null
           created_at: string
@@ -961,11 +1025,14 @@ export type Database = {
           notes: string | null
           sync_interval_hours: number
           updated_at: string
+          webhook_url: string | null
         }
         Insert: {
           api_key_name?: string | null
+          api_key_secret?: string | null
           api_type?: string
           api_url?: string | null
+          auto_forward_orders?: boolean | null
           auto_sync?: boolean
           base_url?: string | null
           created_at?: string
@@ -977,11 +1044,14 @@ export type Database = {
           notes?: string | null
           sync_interval_hours?: number
           updated_at?: string
+          webhook_url?: string | null
         }
         Update: {
           api_key_name?: string | null
+          api_key_secret?: string | null
           api_type?: string
           api_url?: string | null
+          auto_forward_orders?: boolean | null
           auto_sync?: boolean
           base_url?: string | null
           created_at?: string
@@ -993,6 +1063,7 @@ export type Database = {
           notes?: string | null
           sync_interval_hours?: number
           updated_at?: string
+          webhook_url?: string | null
         }
         Relationships: []
       }

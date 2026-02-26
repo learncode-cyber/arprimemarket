@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Store, Package, ShoppingCart, Plus, Trash2, RefreshCw, Upload, ExternalLink, Loader2, ChevronDown, Settings, Zap } from "lucide-react";
-import { useSuppliers, useSupplierProducts, useSupplierOrders, Supplier, SupplierProduct } from "@/hooks/useSupplier";
+import { Store, Package, ShoppingCart, Plus, Trash2, RefreshCw, Upload, ExternalLink, Loader2, Settings, Zap, Clock, AlertTriangle, CheckCircle, Key, ArrowUpDown } from "lucide-react";
+import { useSuppliers, useSupplierProducts, useSupplierOrders, useSyncLogs, invokeSupplierSync, Supplier, SupplierProduct } from "@/hooks/useSupplier";
 import { useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 
-type SubTab = "suppliers" | "products" | "orders";
+type SubTab = "suppliers" | "products" | "orders" | "logs";
 
 const SupplierManagement = () => {
   const [subTab, setSubTab] = useState<SubTab>("suppliers");
@@ -13,12 +13,12 @@ const SupplierManagement = () => {
 
   return (
     <div className="space-y-5">
-      {/* Sub tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {([
           { id: "suppliers" as SubTab, label: "Suppliers", icon: Store },
           { id: "products" as SubTab, label: "Products", icon: Package },
-          { id: "orders" as SubTab, label: "Supplier Orders", icon: ShoppingCart },
+          { id: "orders" as SubTab, label: "Orders", icon: ShoppingCart },
+          { id: "logs" as SubTab, label: "Sync Logs", icon: Clock },
         ]).map(tab => (
           <button
             key={tab.id}
@@ -48,6 +48,11 @@ const SupplierManagement = () => {
             <SupplierOrdersTab />
           </motion.div>
         )}
+        {subTab === "logs" && (
+          <motion.div key="logs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <SyncLogsTab supplierId={selectedSupplier} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -57,7 +62,11 @@ const SupplierManagement = () => {
 const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => void }) => {
   const { suppliers, loading, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", api_type: "manual", api_url: "", base_url: "", markup_percentage: "30", notes: "" });
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: "", api_type: "manual", api_url: "", base_url: "",
+    markup_percentage: "30", notes: "", api_key_secret: "", auto_forward_orders: false,
+  });
 
   const handleAdd = async () => {
     if (!form.name) { toast.error("Supplier name required"); return; }
@@ -69,21 +78,32 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
         base_url: form.base_url || null,
         markup_percentage: parseFloat(form.markup_percentage) || 30,
         notes: form.notes || null,
+        api_key_secret: form.api_key_secret || null,
+        auto_forward_orders: form.auto_forward_orders,
       });
       toast.success("Supplier added");
-      setForm({ name: "", api_type: "manual", api_url: "", base_url: "", markup_percentage: "30", notes: "" });
+      setForm({ name: "", api_type: "manual", api_url: "", base_url: "", markup_percentage: "30", notes: "", api_key_secret: "", auto_forward_orders: false });
       setShowAdd(false);
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleToggle = async (s: Supplier) => {
-    await updateSupplier(s.id, { is_active: !s.is_active });
-    toast.success(`${s.name} ${s.is_active ? "disabled" : "enabled"}`);
+  const handleAutoImport = async (supplier: Supplier) => {
+    if (!supplier.api_url) { toast.error("No API URL configured"); return; }
+    setSyncing(supplier.id);
+    try {
+      const result = await invokeSupplierSync("auto_import", { supplier_id: supplier.id });
+      toast.success(`Imported ${result.processed} products${result.failed > 0 ? `, ${result.failed} failed` : ""}`);
+    } catch (err: any) { toast.error(err.message); }
+    setSyncing(null);
   };
 
-  const handleToggleSync = async (s: Supplier) => {
-    await updateSupplier(s.id, { auto_sync: !s.auto_sync });
-    toast.success(`Auto-sync ${s.auto_sync ? "disabled" : "enabled"} for ${s.name}`);
+  const handleSyncAll = async (supplier: Supplier, action: string) => {
+    setSyncing(supplier.id);
+    try {
+      const result = await invokeSupplierSync(action, { supplier_id: supplier.id });
+      toast.success(`${action}: ${result.synced || result.imported || 0} items processed`);
+    } catch (err: any) { toast.error(err.message); }
+    setSyncing(null);
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -99,7 +119,6 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
         </button>
       </div>
 
-      {/* Add Form */}
       <AnimatePresence>
         {showAdd && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
@@ -115,16 +134,25 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
                     <option value="manual">Manual</option>
                     <option value="aliexpress">AliExpress API</option>
                     <option value="cj">CJ Dropshipping</option>
-                    <option value="custom">Custom API</option>
+                    <option value="custom">Custom REST API</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">API / Base URL</label>
+                  <label className="text-xs text-muted-foreground">API URL</label>
                   <input value={form.api_url} onChange={e => setForm(p => ({ ...p, api_url: e.target.value }))} placeholder="https://api.supplier.com" className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Markup %</label>
                   <input type="number" value={form.markup_percentage} onChange={e => setForm(p => ({ ...p, markup_percentage: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground flex items-center gap-1"><Key className="w-3 h-3" /> API Key Secret Name</label>
+                  <input value={form.api_key_secret} onChange={e => setForm(p => ({ ...p, api_key_secret: e.target.value }))} placeholder="SUPPLIER_API_KEY" className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Name of the secret stored in backend environment</p>
+                </div>
+                <div className="flex items-center gap-2 mt-5">
+                  <input type="checkbox" checked={form.auto_forward_orders} onChange={e => setForm(p => ({ ...p, auto_forward_orders: e.target.checked }))} className="rounded" />
+                  <label className="text-xs text-muted-foreground">Auto-forward orders to supplier</label>
                 </div>
               </div>
               <div>
@@ -140,39 +168,66 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
         )}
       </AnimatePresence>
 
-      {/* Suppliers List */}
       <div className="space-y-3">
         {suppliers.map(s => (
-          <div key={s.id} className="bg-card border border-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium text-sm text-foreground">{s.name}</h4>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${s.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {s.is_active ? "Active" : "Inactive"}
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">
-                  {s.api_type}
-                </span>
+          <div key={s.id} className="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-medium text-sm text-foreground">{s.name}</h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${s.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    {s.is_active ? "Active" : "Inactive"}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">{s.api_type}</span>
+                  {s.api_key_secret && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent"><Key className="w-2.5 h-2.5 inline mr-0.5" />API Key Set</span>}
+                  {s.auto_forward_orders && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto-Forward</span>}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Markup: {Number(s.markup_percentage)}% ·
+                  {s.auto_sync ? ` Auto-sync ${s.sync_interval_hours}h` : " Manual"} ·
+                  {s.last_synced_at ? ` Last: ${new Date(s.last_synced_at).toLocaleDateString()}` : " Never synced"}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Markup: {Number(s.markup_percentage)}% · 
-                {s.auto_sync ? ` Auto-sync every ${s.sync_interval_hours}h` : " Manual sync"} ·
-                {s.last_synced_at ? ` Last: ${new Date(s.last_synced_at).toLocaleDateString()}` : " Never synced"}
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button onClick={() => onSelectSupplier(s.id)} className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation flex items-center gap-1">
-                <Package className="w-3 h-3" /> Products
-              </button>
-              <button onClick={() => handleToggleSync(s)} className={`p-1.5 rounded-lg transition-colors touch-manipulation ${s.auto_sync ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`} title="Toggle auto-sync">
-                <Zap className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => handleToggle(s)} className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors touch-manipulation" title="Toggle active">
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => { deleteSupplier(s.id); toast.success("Deleted"); }} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors touch-manipulation">
-                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                {s.api_url && (
+                  <>
+                    <button
+                      onClick={() => handleAutoImport(s)}
+                      disabled={syncing === s.id}
+                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {syncing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      Fetch Products
+                    </button>
+                    <button
+                      onClick={() => handleSyncAll(s, "sync_stock")}
+                      disabled={syncing === s.id}
+                      className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <ArrowUpDown className="w-3 h-3" /> Sync Stock
+                    </button>
+                    <button
+                      onClick={() => handleSyncAll(s, "sync_prices")}
+                      disabled={syncing === s.id}
+                      className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <ArrowUpDown className="w-3 h-3" /> Sync Prices
+                    </button>
+                  </>
+                )}
+                <button onClick={() => onSelectSupplier(s.id)} className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation flex items-center gap-1">
+                  <Package className="w-3 h-3" /> Products
+                </button>
+                <button onClick={() => updateSupplier(s.id, { auto_sync: !s.auto_sync })} className={`p-1.5 rounded-lg transition-colors touch-manipulation ${s.auto_sync ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`} title="Toggle auto-sync">
+                  <Zap className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => updateSupplier(s.id, { is_active: !s.is_active })} className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors touch-manipulation" title="Toggle active">
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => { deleteSupplier(s.id); toast.success("Deleted"); }} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors touch-manipulation">
+                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -189,10 +244,10 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
   const { suppliers } = useSuppliers();
   const [activeSupplier, setActiveSupplier] = useState(supplierId || "");
   const { products, loading, importProduct, addSupplierProduct, deleteSupplierProduct } = useSupplierProducts(activeSupplier || undefined);
-  const { data: categories = [] } = useCategories();
   const [showAdd, setShowAdd] = useState(false);
   const [importing, setImporting] = useState<string | null>(null);
-  const [form, setForm] = useState({ external_id: "", external_title: "", external_price: "", external_stock: "0", external_url: "", external_image_url: "" });
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [form, setForm] = useState({ external_id: "", external_title: "", external_price: "", external_stock: "0", external_url: "", external_image_url: "", external_description: "" });
 
   const supplier = suppliers.find(s => s.id === activeSupplier);
 
@@ -207,9 +262,10 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
         external_stock: parseInt(form.external_stock) || 0,
         external_url: form.external_url || null,
         external_image_url: form.external_image_url || null,
+        external_description: form.external_description || null,
       });
-      toast.success("Product added to import queue");
-      setForm({ external_id: "", external_title: "", external_price: "", external_stock: "0", external_url: "", external_image_url: "" });
+      toast.success("Product added");
+      setForm({ external_id: "", external_title: "", external_price: "", external_stock: "0", external_url: "", external_image_url: "", external_description: "" });
       setShowAdd(false);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -225,15 +281,13 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
   };
 
   const handleBulkImport = async () => {
-    if (!supplier) return;
-    const pending = products.filter(p => !p.is_imported);
-    if (pending.length === 0) { toast.info("No products to import"); return; }
-    for (const sp of pending) {
-      try {
-        await importProduct(sp, Number(supplier.markup_percentage));
-      } catch {}
-    }
-    toast.success(`${pending.length} products imported!`);
+    if (!activeSupplier) { toast.error("Select a supplier"); return; }
+    setBulkImporting(true);
+    try {
+      const result = await invokeSupplierSync("bulk_import", { supplier_id: activeSupplier });
+      toast.success(`Imported ${result.imported}/${result.total} products${result.failed > 0 ? `, ${result.failed} failed` : ""}`);
+    } catch (err: any) { toast.error(err.message); }
+    setBulkImporting(false);
   };
 
   return (
@@ -249,8 +303,8 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
           </select>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleBulkImport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation">
-            <Upload className="w-3 h-3" /> Bulk Import
+          <button onClick={handleBulkImport} disabled={bulkImporting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50">
+            {bulkImporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />} Bulk Import
           </button>
           <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium touch-manipulation">
             <Plus className="w-3.5 h-3.5" /> Add Product
@@ -258,7 +312,6 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
         </div>
       </div>
 
-      {/* Add Product Form */}
       <AnimatePresence>
         {showAdd && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
@@ -289,6 +342,10 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
                   <input value={form.external_image_url} onChange={e => setForm(p => ({ ...p, external_image_url: e.target.value }))} placeholder="https://..." className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Description</label>
+                <textarea value={form.external_description} onChange={e => setForm(p => ({ ...p, external_description: e.target.value }))} rows={2} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
               <div className="flex gap-2">
                 <button onClick={handleAddProduct} className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">Add to Queue</button>
                 <button onClick={() => setShowAdd(false)} className="px-5 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-medium">Cancel</button>
@@ -298,7 +355,6 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
         )}
       </AnimatePresence>
 
-      {/* Products List */}
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
       ) : (
@@ -323,6 +379,9 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-foreground truncate max-w-[200px]">{sp.external_title}</p>
                           <p className="text-[10px] text-muted-foreground">ID: {sp.external_id}</p>
+                          {sp.import_errors && (
+                            <p className="text-[10px] text-destructive flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" /> {sp.import_errors?.error}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -330,19 +389,17 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
                     <td className="px-4 py-3 text-muted-foreground">{sp.external_stock}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        sp.sync_status === "error" ? "bg-destructive/10 text-destructive" :
                         sp.is_imported ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
                       }`}>
-                        {sp.is_imported ? "Imported" : "Pending"}
+                        {sp.sync_status === "error" ? "Error" : sp.is_imported ? "Imported" : "Pending"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {!sp.is_imported && (
-                          <button
-                            onClick={() => handleImport(sp)}
-                            disabled={importing === sp.id}
-                            className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors touch-manipulation disabled:opacity-50"
-                          >
+                          <button onClick={() => handleImport(sp)} disabled={importing === sp.id}
+                            className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors touch-manipulation disabled:opacity-50">
                             {importing === sp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Import"}
                           </button>
                         )}
@@ -359,7 +416,7 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
                   </tr>
                 ))}
                 {products.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No supplier products. Add products above or sync from supplier API.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No supplier products. Add products above or fetch from supplier API.</td></tr>
                 )}
               </tbody>
             </table>
@@ -372,18 +429,34 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
 
 // ─── Supplier Orders Tab ───
 const SupplierOrdersTab = () => {
-  const { orders, loading, updateSupplierOrder } = useSupplierOrders();
+  const { orders, loading, updateSupplierOrder, syncOrderStatuses } = useSupplierOrders();
   const { suppliers } = useSuppliers();
+  const [syncing, setSyncing] = useState(false);
 
   const statusOptions = ["pending", "forwarded", "processing", "shipped", "delivered", "cancelled"];
+
+  const handleSyncStatuses = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncOrderStatuses();
+      toast.success(`Synced ${result.synced} order statuses`);
+    } catch (err: any) { toast.error(err.message); }
+    setSyncing(false);
+  };
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-4">
-      <h3 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
-        <ShoppingCart className="w-4 h-4 text-primary" /> Supplier Orders ({orders.length})
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
+          <ShoppingCart className="w-4 h-4 text-primary" /> Supplier Orders ({orders.length})
+        </h3>
+        <button onClick={handleSyncStatuses} disabled={syncing}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50">
+          {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Sync Statuses
+        </button>
+      </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -405,29 +478,18 @@ const SupplierOrdersTab = () => {
                     <td className="px-4 py-3 text-xs font-medium text-foreground">{o.order_id.slice(0, 8)}...</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{supplier?.name || "—"}</td>
                     <td className="px-4 py-3">
-                      <input
-                        defaultValue={o.external_order_id || ""}
-                        onBlur={e => updateSupplierOrder(o.id, { external_order_id: e.target.value || null })}
-                        placeholder="Enter ID"
-                        className="w-28 px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                      />
+                      <input defaultValue={o.external_order_id || ""} onBlur={e => updateSupplierOrder(o.id, { external_order_id: e.target.value || null })}
+                        placeholder="Enter ID" className="w-28 px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        defaultValue={o.status}
-                        onChange={e => { updateSupplierOrder(o.id, { status: e.target.value }); toast.success("Status updated"); }}
-                        className="px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                      >
+                      <select defaultValue={o.status} onChange={e => { updateSupplierOrder(o.id, { status: e.target.value }); toast.success("Updated"); }}
+                        className="px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50">
                         {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-3">
-                      <input
-                        defaultValue={o.tracking_number || ""}
-                        onBlur={e => updateSupplierOrder(o.id, { tracking_number: e.target.value || null })}
-                        placeholder="Tracking #"
-                        className="w-28 px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                      />
+                      <input defaultValue={o.tracking_number || ""} onBlur={e => updateSupplierOrder(o.id, { tracking_number: e.target.value || null })}
+                        placeholder="Tracking #" className="w-28 px-2 py-1 rounded-lg bg-secondary text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
                     </td>
                   </tr>
                 );
@@ -438,6 +500,71 @@ const SupplierOrdersTab = () => {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Sync Logs Tab ───
+const SyncLogsTab = ({ supplierId }: { supplierId?: string }) => {
+  const { logs, loading, fetchLogs } = useSyncLogs(supplierId);
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case "success": return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
+      case "partial": return <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />;
+      case "failed": return <AlertTriangle className="w-3.5 h-3.5 text-destructive" />;
+      default: return <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />;
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
+          <Clock className="w-4 h-4 text-primary" /> Sync Logs
+        </h3>
+        <button onClick={fetchLogs} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {logs.map(log => (
+          <div key={log.id} className="bg-card border border-border rounded-xl p-3 flex items-start gap-3">
+            <div className="mt-0.5">{statusIcon(log.status)}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-foreground">{log.action.replace(/_/g, " ")}</span>
+                <span className="text-[10px] text-muted-foreground">{(log as any).suppliers?.name || ""}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  log.status === "success" ? "bg-green-500/10 text-green-600" :
+                  log.status === "partial" ? "bg-yellow-500/10 text-yellow-600" :
+                  log.status === "failed" ? "bg-destructive/10 text-destructive" :
+                  "bg-muted text-muted-foreground"
+                }`}>{log.status}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {log.items_processed} processed · {log.items_failed} failed ·
+                {log.started_at && ` ${new Date(log.started_at).toLocaleString()}`}
+                {log.completed_at && ` → ${new Date(log.completed_at).toLocaleTimeString()}`}
+              </p>
+              {log.error_details && Array.isArray(log.error_details) && log.error_details.length > 0 && (
+                <div className="mt-1 text-[10px] text-destructive/80 bg-destructive/5 rounded p-1.5 max-h-20 overflow-auto">
+                  {log.error_details.slice(0, 5).map((e: any, i: number) => (
+                    <p key={i}>{e.externalId || e.product_id || e.order_id || ""}: {e.error}</p>
+                  ))}
+                  {log.error_details.length > 5 && <p>...and {log.error_details.length - 5} more</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {logs.length === 0 && (
+          <div className="text-center py-8 text-sm text-muted-foreground">No sync logs yet. Run a sync operation to see logs here.</div>
+        )}
       </div>
     </div>
   );
