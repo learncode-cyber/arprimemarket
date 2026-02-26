@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
-  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database
+  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ import ReferralManagement from "@/components/admin/ReferralManagement";
 import CampaignManagement from "@/components/admin/CampaignManagement";
 import BackupManagement from "@/components/admin/BackupManagement";
 import APIHealthDashboard from "@/components/admin/APIHealthDashboard";
+import InventoryManagement from "@/components/admin/InventoryManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +36,7 @@ const adminTabs = [
   { id: "payments", label: "Payments", icon: Wallet },
   { id: "shipping", label: "Shipping", icon: Truck },
   { id: "suppliers", label: "Suppliers", icon: Store },
+  { id: "inventory", label: "Inventory", icon: Warehouse },
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
   { id: "backup", label: "System", icon: Database },
@@ -177,6 +179,7 @@ const Admin = () => {
                 </div>
               )}
               {activeTab === "suppliers" && <SupplierManagement />}
+              {activeTab === "inventory" && <InventoryManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
               {activeTab === "seo" && <SEOManagement />}
               {activeTab === "backup" && (

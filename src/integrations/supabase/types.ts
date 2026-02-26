@@ -878,6 +878,60 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_adjustments: {
+        Row: {
+          adjusted_by: string | null
+          adjustment_type: string
+          created_at: string
+          id: string
+          new_quantity: number
+          previous_quantity: number
+          product_id: string
+          quantity_change: number
+          reason: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          adjusted_by?: string | null
+          adjustment_type?: string
+          created_at?: string
+          id?: string
+          new_quantity?: number
+          previous_quantity?: number
+          product_id: string
+          quantity_change: number
+          reason?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          adjusted_by?: string | null
+          adjustment_type?: string
+          created_at?: string
+          id?: string
+          new_quantity?: number
+          previous_quantity?: number
+          product_id?: string
+          quantity_change?: number
+          reason?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustments_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_orders: {
         Row: {
           created_at: string
@@ -1171,6 +1225,93 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      warehouse_stock: {
+        Row: {
+          bin_location: string | null
+          id: string
+          product_id: string
+          quantity: number
+          reorder_level: number | null
+          reserved_quantity: number
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          bin_location?: string | null
+          id?: string
+          product_id: string
+          quantity?: number
+          reorder_level?: number | null
+          reserved_quantity?: number
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          bin_location?: string | null
+          id?: string
+          product_id?: string
+          quantity?: number
+          reorder_level?: number | null
+          reserved_quantity?: number
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          address: string | null
+          city: string | null
+          code: string
+          country: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          code: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          code?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
