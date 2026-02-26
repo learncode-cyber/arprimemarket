@@ -21,6 +21,7 @@ import PromotionManagement from "@/components/admin/PromotionManagement";
 import ReferralManagement from "@/components/admin/ReferralManagement";
 import CampaignManagement from "@/components/admin/CampaignManagement";
 import BackupManagement from "@/components/admin/BackupManagement";
+import APIHealthDashboard from "@/components/admin/APIHealthDashboard";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -178,7 +179,12 @@ const Admin = () => {
               {activeTab === "suppliers" && <SupplierManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
               {activeTab === "seo" && <SEOManagement />}
-              {activeTab === "backup" && <BackupManagement />}
+              {activeTab === "backup" && (
+                <div className="space-y-6">
+                  <APIHealthDashboard />
+                  <BackupManagement />
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
