@@ -227,17 +227,11 @@ const STORAGE_KEY = "ar-pm-lang";
 const GEO_DETECTED_KEY = "ar-pm-geo-detected";
 
 const countryToLang: Record<string, LangCode> = {
-  AE: "ar", SA: "sa", BH: "ar", QA: "ar", KW: "ar", OM: "ar",
-  US: "en", GB: "en", AU: "en", CA: "en",
-  BD: "bn",
-  IN: "hi",
-  MX: "es", ES: "es", AR: "es", CO: "es",
-  FR: "fr",
-  DE: "de", AT: "de", CH: "de",
-  CN: "zh", TW: "zh", HK: "zh",
-  JP: "ja",
-  BR: "pt", PT: "pt",
+  AE: "ar",
+  SA: "sa",
 };
+
+const CURRENCY_STORAGE_KEY = "ar-pm-currency";
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const geoFetched = useRef(false);
@@ -262,35 +256,45 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Geo-detection on first visit only
+  // Geo-detection with strict fallback override
   useEffect(() => {
     if (geoFetched.current) return;
     geoFetched.current = true;
-    
-    const alreadySet = localStorage.getItem(STORAGE_KEY);
-    if (alreadySet) return; // User already has a preference
+
+    const applyGeoDefaults = (countryCode?: string) => {
+      const normalizedCode = countryCode?.toUpperCase();
+      const isMiddleEast = normalizedCode === "SA" || normalizedCode === "AE";
+      const langCode: LangCode = isMiddleEast
+        ? (countryToLang[normalizedCode!] || "ar")
+        : "en";
+      const currencyCode = isMiddleEast
+        ? (normalizedCode === "SA" ? "SAR" : "AED")
+        : "USD";
+
+      const found = languages.find(l => l.code === langCode);
+      if (!found) return;
+
+      setLangState(found);
+      localStorage.setItem(STORAGE_KEY, langCode);
+      localStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
+      localStorage.setItem(GEO_DETECTED_KEY, "auto");
+      document.documentElement.dir = found.dir;
+      document.documentElement.lang = langCode;
+    };
+
+    // Immediate strict fallback for this release
+    applyGeoDefaults();
 
     const detectGeo = async () => {
       try {
         const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
         const data = await res.json();
-        const countryCode = data?.country_code;
-        // Only auto-detect for mapped countries; unmapped countries stay on English
-        const langCode = countryCode ? countryToLang[countryCode] : undefined;
-        // Use detected language, or fall back to English
-        const finalCode: LangCode = langCode || "en";
-        const found = languages.find(l => l.code === finalCode);
-        if (found) {
-          setLangState(found);
-          localStorage.setItem(STORAGE_KEY, finalCode);
-          localStorage.setItem(GEO_DETECTED_KEY, "auto");
-          document.documentElement.dir = found.dir;
-          document.documentElement.lang = finalCode;
-        }
+        applyGeoDefaults(data?.country_code);
       } catch {
-        // Silently fail — default is already English
+        // Keep strict default (English/USD) on failure
       }
     };
+
     detectGeo();
   }, []);
 
