@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
-  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse
+  Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
+  BookOpen, HelpCircle, MessageCircle, Ticket
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,11 @@ import CampaignManagement from "@/components/admin/CampaignManagement";
 import BackupManagement from "@/components/admin/BackupManagement";
 import APIHealthDashboard from "@/components/admin/APIHealthDashboard";
 import InventoryManagement from "@/components/admin/InventoryManagement";
+import BlogManagement from "@/components/admin/BlogManagement";
+import HelpCenterManagement from "@/components/admin/HelpCenterManagement";
+import FAQManagement from "@/components/admin/FAQManagement";
+import ChatManagement from "@/components/admin/ChatManagement";
+import TicketManagement from "@/components/admin/TicketManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,6 +43,11 @@ const adminTabs = [
   { id: "shipping", label: "Shipping", icon: Truck },
   { id: "suppliers", label: "Suppliers", icon: Store },
   { id: "inventory", label: "Inventory", icon: Warehouse },
+  { id: "blog", label: "Blog", icon: BookOpen },
+  { id: "helpcenter", label: "Help Center", icon: HelpCircle },
+  { id: "faq", label: "FAQ", icon: HelpCircle },
+  { id: "chat", label: "Live Chat", icon: MessageCircle },
+  { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
   { id: "backup", label: "System", icon: Database },
@@ -180,6 +191,11 @@ const Admin = () => {
               )}
               {activeTab === "suppliers" && <SupplierManagement />}
               {activeTab === "inventory" && <InventoryManagement />}
+              {activeTab === "blog" && <BlogManagement />}
+              {activeTab === "helpcenter" && <HelpCenterManagement />}
+              {activeTab === "faq" && <FAQManagement />}
+              {activeTab === "chat" && <ChatManagement />}
+              {activeTab === "tickets" && <TicketManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
               {activeTab === "seo" && <SEOManagement />}
               {activeTab === "backup" && (
