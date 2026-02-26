@@ -228,6 +228,11 @@ const Checkout = () => {
         category: i.product.category, quantity: i.quantity,
       })));
 
+      // Trigger auto supplier forwarding (fire-and-forget)
+      supabase.functions.invoke("order-processor", {
+        body: { action: "process_order", order_id: order.id },
+      }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
+
       clearCart();
       setOrderPlaced(order.order_number);
       toast({ title: lang.code === "bn" ? "অর্ডার সম্পন্ন!" : "Order placed!", description: `${order.order_number}` });
