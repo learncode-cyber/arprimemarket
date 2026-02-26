@@ -21,21 +21,21 @@ export const Footer = () => {
 
   const footerSections = {
     [t("about")]: [
-      { label: t("ourStory"), href: "#" },
-      { label: t("careers"), href: "#" },
-      { label: t("press"), href: "#" },
-      { label: t("blog"), href: "#" },
+      { label: t("ourStory"), href: "/about" },
+      { label: t("careers"), href: "/careers" },
+      { label: t("press"), href: "/press" },
+      { label: t("blog"), href: "/blog" },
     ],
     [t("supportNav")]: [
       { label: t("returnsRefunds"), href: "/refund-policy" },
       { label: t("trackOrder"), href: "/track-order" },
-      { label: t("contactUs"), href: "mailto:support@arprimemarket.com" },
+      { label: t("contactUs"), href: "/contact" },
     ],
     [t("policies")]: [
       { label: t("privacyPolicy"), href: "/privacy-policy" },
       { label: t("termsOfService"), href: "/terms" },
       { label: t("returnsRefunds"), href: "/refund-policy" },
-      { label: t("cookiePolicy"), href: "/privacy-policy#cookies" },
+      { label: t("cookiePolicy"), href: "/cookie-policy" },
     ],
   };
 
