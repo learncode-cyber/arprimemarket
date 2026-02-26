@@ -25,7 +25,7 @@ async function sendEmail(apiKey: string, payload: EmailPayload) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "AR Prime Market <noreply@arprimemarket.com>",
+      from: "AR Prime Market <onboarding@resend.dev>",
       to: [payload.to],
       subject: payload.subject,
       html: payload.html,
