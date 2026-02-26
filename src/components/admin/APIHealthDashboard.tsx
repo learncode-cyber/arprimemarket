@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Activity, Server, Database, Clock, RefreshCw, Loader2, CheckCircle, AlertTriangle, Wifi } from "lucide-react";
+import { Activity, Server, Database, Clock, RefreshCw, Loader2, CheckCircle, AlertTriangle, Wifi, Play, Pause } from "lucide-react";
 import { api } from "@/lib/api";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface HealthData {
   status: string;
@@ -17,17 +18,31 @@ interface PingResult {
   error?: string;
 }
 
+interface HistoryPoint {
+  time: string;
+  health: number;
+  "products.list": number;
+  "categories.list": number;
+  "products.detail": number;
+}
+
+const MAX_HISTORY = 20;
+
 const APIHealthDashboard = () => {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [pings, setPings] = useState<PingResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [countdown, setCountdown] = useState(30);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const runHealthCheck = useCallback(async () => {
     setRefreshing(true);
     const results: PingResult[] = [];
 
-    // Health endpoint
     const t0 = performance.now();
     const hRes = await api.health();
     results.push({
@@ -38,7 +53,6 @@ const APIHealthDashboard = () => {
     });
     if (hRes.data) setHealth(hRes.data);
 
-    // Products list
     const t1 = performance.now();
     const pRes = await api.products.list({ limit: 1 });
     results.push({
@@ -48,7 +62,6 @@ const APIHealthDashboard = () => {
       error: pRes.error || undefined,
     });
 
-    // Categories
     const t2 = performance.now();
     const cRes = await api.categories.list();
     results.push({
@@ -58,7 +71,6 @@ const APIHealthDashboard = () => {
       error: cRes.error || undefined,
     });
 
-    // Product detail
     const t3 = performance.now();
     const dRes = await api.products.detail("premium-cotton-tshirt");
     results.push({
@@ -71,9 +83,42 @@ const APIHealthDashboard = () => {
     setPings(results);
     setLoading(false);
     setRefreshing(false);
+
+    // Add to history
+    const now = new Date();
+    const timeLabel = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const point: HistoryPoint = {
+      time: timeLabel,
+      health: results.find(r => r.route === "health")?.latencyMs ?? 0,
+      "products.list": results.find(r => r.route === "products.list")?.latencyMs ?? 0,
+      "categories.list": results.find(r => r.route === "categories.list")?.latencyMs ?? 0,
+      "products.detail": results.find(r => r.route === "products.detail")?.latencyMs ?? 0,
+    };
+    setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), point]);
+    setCountdown(30);
   }, []);
 
   useEffect(() => { runHealthCheck(); }, [runHealthCheck]);
+
+  // Auto-refresh logic
+  useEffect(() => {
+    if (autoRefresh) {
+      setCountdown(30);
+      intervalRef.current = setInterval(() => {
+        runHealthCheck();
+      }, 30_000);
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => (prev <= 1 ? 30 : prev - 1));
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [autoRefresh, runHealthCheck]);
 
   const handleClearCache = async () => {
     const res = await api.cache.invalidate();
@@ -99,7 +144,15 @@ const APIHealthDashboard = () => {
         <h3 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" /> API Gateway Health
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Auto-refresh toggle */}
+          <button onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium touch-manipulation flex items-center gap-1 transition-colors ${
+              autoRefresh ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-border"
+            }`}>
+            {autoRefresh ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            {autoRefresh ? `Auto (${countdown}s)` : "Auto"}
+          </button>
           <button onClick={handleClearCache}
             className="px-3 py-1.5 rounded-xl bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation flex items-center gap-1">
             <Database className="w-3 h-3" /> Clear Cache
@@ -150,6 +203,38 @@ const APIHealthDashboard = () => {
         </motion.div>
       </div>
 
+      {/* Historical Latency Chart */}
+      {history.length > 1 && (
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-primary" /> Latency History (last {history.length} checks)
+          </h4>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="time" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} unit="ms" />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "12px",
+                    fontSize: "11px",
+                  }}
+                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                />
+                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                <Line type="monotone" dataKey="health" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="health" />
+                <Line type="monotone" dataKey="products.list" stroke="hsl(var(--accent))" strokeWidth={2} dot={false} name="products.list" />
+                <Line type="monotone" dataKey="categories.list" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} name="categories.list" />
+                <Line type="monotone" dataKey="products.detail" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} dot={false} name="products.detail" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       {/* Endpoint Pings */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
@@ -195,7 +280,7 @@ const APIHealthDashboard = () => {
       {/* Last Check */}
       {health?.timestamp && (
         <p className="text-[10px] text-muted-foreground text-center">
-          Last checked: {new Date(health.timestamp).toLocaleString()}
+          Last checked: {new Date(health.timestamp).toLocaleString()} {autoRefresh && "• Auto-refresh enabled"}
         </p>
       )}
     </div>
