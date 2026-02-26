@@ -21,6 +21,9 @@ import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
 import TrackOrder from "./pages/TrackOrder";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import RefundPolicy from "./pages/RefundPolicy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +63,9 @@ const App = () => (
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/checkout" element={<Checkout />} />
                         <Route path="/track-order" element={<TrackOrder />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <Route path="/terms" element={<TermsOfService />} />
+                        <Route path="/refund-policy" element={<RefundPolicy />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>

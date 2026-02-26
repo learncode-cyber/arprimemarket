@@ -298,6 +298,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -924,6 +931,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_adjustments_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -1059,6 +1073,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
             referencedColumns: ["id"]
           },
           {
@@ -1268,6 +1289,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "warehouse_stock_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -1342,11 +1370,97 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wishlists_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      products_public: {
+        Row: {
+          barcode: string | null
+          category_id: string | null
+          compare_at_price: number | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          images: string[] | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          price: number | null
+          rating: number | null
+          review_count: number | null
+          sku: string | null
+          slug: string | null
+          stock_quantity: number | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+          weight: number | null
+        }
+        Insert: {
+          barcode?: string | null
+          category_id?: string | null
+          compare_at_price?: number | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          price?: number | null
+          rating?: number | null
+          review_count?: number | null
+          sku?: string | null
+          slug?: string | null
+          stock_quantity?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Update: {
+          barcode?: string | null
+          category_id?: string | null
+          compare_at_price?: number | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          price?: number | null
+          rating?: number | null
+          review_count?: number | null
+          sku?: string | null
+          slug?: string | null
+          stock_quantity?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
