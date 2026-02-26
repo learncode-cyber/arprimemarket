@@ -1,14 +1,17 @@
 import { Link } from "react-router-dom";
-import { Mail, MapPin, Phone, CreditCard, Smartphone, Banknote, ShieldCheck, Heart, ArrowUp } from "lucide-react";
+import { Mail, MapPin, Phone, Heart } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SocialLinksRow } from "./SocialLinks";
+import { VisaIcon, MastercardIcon, BinancePayIcon, BkashIcon, NagadIcon, CodIcon } from "./PaymentIcons";
 
 const paymentMethods = [
-  { icon: CreditCard, label: "Visa/Mastercard" },
-  { icon: Smartphone, label: "bKash" },
-  { icon: Banknote, label: "Cash on Delivery" },
-  { icon: ShieldCheck, label: "Secure" },
+  { icon: VisaIcon, label: "Visa" },
+  { icon: MastercardIcon, label: "Mastercard" },
+  { icon: BkashIcon, label: "bKash" },
+  { icon: NagadIcon, label: "Nagad" },
+  { icon: BinancePayIcon, label: "Binance Pay" },
+  { icon: CodIcon, label: "Cash on Delivery" },
 ];
 
 export const Footer = () => {
@@ -162,16 +165,15 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-border/50">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground mr-1.5 font-medium">{t("weAccept")}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-muted-foreground mr-1 font-medium">{t("weAccept")}</span>
               {paymentMethods.map((pm) => (
                 <div
                   key={pm.label}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-secondary/70 text-muted-foreground hover:bg-secondary transition-colors border border-border/30"
+                  className="rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-border/20"
                   title={pm.label}
                 >
-                  <pm.icon className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-medium hidden sm:inline">{pm.label}</span>
+                  <pm.icon className="w-10 h-7 sm:w-12 sm:h-8" />
                 </div>
               ))}
             </div>
