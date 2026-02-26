@@ -6,7 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export const ChatWidget = () => {
+interface ChatWidgetProps {
+  embedded?: boolean;
+}
+
+export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -83,77 +87,53 @@ export const ChatWidget = () => {
     setSending(false);
   };
 
-  return (
-    <>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 right-4 sm:right-6 w-80 sm:w-96 bg-card border border-border rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
-            style={{ maxHeight: "70vh" }}
-          >
-            <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
-              <div>
-                <p className="text-sm font-semibold">Live Chat</p>
-                <p className="text-[10px] opacity-80">We typically reply in minutes</p>
-              </div>
-              <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-primary-foreground/10 transition-colors">
-                <Minimize2 className="w-4 h-4" />
-              </button>
+  // If embedded, just render the chat content without the floating wrapper
+  if (embedded) {
+    return (
+      <div className="flex flex-col h-full">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
+          {!user ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-2">Please sign in to chat</p>
+              <a href="/login" className="text-primary text-sm font-medium">Sign In →</a>
             </div>
-
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px] max-h-[400px]">
-              {!user ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-2">Please sign in to chat</p>
-                  <a href="/login" className="text-primary text-sm font-medium">Sign In →</a>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">👋 Hi! How can we help?</p>
-                </div>
-              ) : (
-                messages.map((m) => (
-                  <div key={m.id} className={`flex ${m.sender_type === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
-                      m.sender_type === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-foreground rounded-bl-sm"
-                    }`}>
-                      {m.content}
-                      <p className={`text-[9px] mt-0.5 ${m.sender_type === "user" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                        {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+          ) : messages.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">👋 Hi! How can we help?</p>
             </div>
-
-            {user && (
-              <div className="p-3 border-t border-border flex gap-2">
-                <Input
-                  placeholder="Type a message..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                  className="text-sm h-9"
-                />
-                <Button size="sm" onClick={handleSend} disabled={!message.trim() || sending} className="h-9 px-3">
-                  <Send className="w-3.5 h-3.5" />
-                </Button>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} className={`flex ${m.sender_type === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
+                  m.sender_type === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-foreground rounded-bl-sm"
+                }`}>
+                  {m.content}
+                  <p className={`text-[9px] mt-0.5 ${m.sender_type === "user" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
               </div>
-            )}
-          </motion.div>
+            ))
+          )}
+        </div>
+        {user && (
+          <div className="p-3 border-t border-border flex gap-2">
+            <Input
+              placeholder="Type a message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              className="text-sm h-9"
+            />
+            <Button size="sm" onClick={handleSend} disabled={!message.trim() || sending} className="h-9 px-3">
+              <Send className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
+    );
+  }
 
-      <button
-        onClick={() => setOpen(!open)}
-        className="fixed bottom-4 right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-      >
-        {open ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
-      </button>
-    </>
-  );
+  // Original floating widget (kept for backwards compatibility but not used in Layout anymore)
+  return null;
 };

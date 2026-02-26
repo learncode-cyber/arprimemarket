@@ -1,10 +1,8 @@
 import { useEffect } from "react";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
-import { ScrollToTop } from "./ScrollToTop";
-import { FloatingWhatsApp } from "./FloatingWhatsApp";
+import { FloatingActionMenu } from "./FloatingActionMenu";
 import { CookieConsent } from "./CookieConsent";
-import { ChatWidget } from "./ChatWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
@@ -35,9 +33,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </motion.main>
       </AnimatePresence>
       <Footer />
-      <FloatingWhatsApp />
-      <ChatWidget />
-      <ScrollToTop />
+      <FloatingActionMenu />
       <CookieConsent />
     </div>
   );
