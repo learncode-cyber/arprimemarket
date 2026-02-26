@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
   Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
-  BookOpen, HelpCircle, MessageCircle, Ticket
+  BookOpen, HelpCircle, MessageCircle, Ticket, Brain
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,7 @@ import HelpCenterManagement from "@/components/admin/HelpCenterManagement";
 import FAQManagement from "@/components/admin/FAQManagement";
 import ChatManagement from "@/components/admin/ChatManagement";
 import TicketManagement from "@/components/admin/TicketManagement";
+import AIAssistantDashboard from "@/components/admin/AIAssistantDashboard";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -50,6 +51,7 @@ const adminTabs = [
   { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
+  { id: "ai-assistant", label: "AI Assistant", icon: Brain },
   { id: "backup", label: "System", icon: Database },
 ];
 
@@ -198,6 +200,7 @@ const Admin = () => {
               {activeTab === "tickets" && <TicketManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
               {activeTab === "seo" && <SEOManagement />}
+              {activeTab === "ai-assistant" && <AIAssistantDashboard />}
               {activeTab === "backup" && (
                 <div className="space-y-6">
                   <APIHealthDashboard />
