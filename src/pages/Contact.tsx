@@ -7,23 +7,32 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
     setSubmitting(true);
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.functions.invoke("send-email", {
+        body: { action: "contact_form", ...form },
+      });
+      if (error) throw error;
       toast.success("Message sent! We'll respond within 24 hours.");
       setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to send. Please email us directly.");
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (

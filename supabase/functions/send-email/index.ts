@@ -133,6 +133,33 @@ function deliveryConfirmationTemplate(order: any): EmailPayload {
   };
 }
 
+function contactFormTemplate(data: { name: string; email: string; subject?: string; message: string }): EmailPayload {
+  return {
+    to: "biz.arprimemarket@gmail.com",
+    subject: data.subject ? `[Contact Form] ${data.subject}` : `[Contact Form] New message from ${data.name}`,
+    html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<div style="max-width:600px;margin:0 auto;padding:20px">
+  <div style="background:linear-gradient(135deg,#ec4899,#f43f5e);border-radius:16px 16px 0 0;padding:24px;text-align:center">
+    <h1 style="color:#ffffff;margin:0;font-size:20px">📩 New Contact Form Message</h1>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:24px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;width:80px"><strong>Name:</strong></td><td style="padding:8px 0;font-size:14px;color:#1e293b">${data.name}</td></tr>
+      <tr><td style="padding:8px 0;color:#6b7280;font-size:14px"><strong>Email:</strong></td><td style="padding:8px 0;font-size:14px"><a href="mailto:${data.email}" style="color:#ec4899">${data.email}</a></td></tr>
+      ${data.subject ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px"><strong>Subject:</strong></td><td style="padding:8px 0;font-size:14px;color:#1e293b">${data.subject}</td></tr>` : ""}
+    </table>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0"/>
+    <p style="margin:0 0 8px;color:#6b7280;font-size:13px"><strong>Message:</strong></p>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#374151">${data.message.replace(/\n/g, "<br/>")}</p>
+  </div>
+  <p style="text-align:center;color:#9ca3af;font-size:11px;margin-top:16px">Sent from AR Prime Market Contact Form</p>
+</div>
+</body></html>`,
+  };
+}
+
 // ─── Main Router ───
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -145,6 +172,15 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     switch (action) {
+      case "contact_form": {
+        if (!body.name || !body.email || !body.message) {
+          return json({ error: "name, email, and message are required" }, 400);
+        }
+        const payload = contactFormTemplate(body);
+        const result = await sendEmail(RESEND_API_KEY, payload);
+        return json({ success: true, id: result.id });
+      }
+
       case "order_confirmation": {
         const payload = orderConfirmationTemplate(body.order);
         const result = await sendEmail(RESEND_API_KEY, payload);
