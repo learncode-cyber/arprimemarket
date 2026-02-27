@@ -30,7 +30,7 @@ export const FloatingActionMenu = () => {
   }, []);
 
   const handleWhatsApp = () => {
-    const waText = encodeURIComponent("Hello Support Team, I'm contacting you from [Prime Market 🛒]. I have a query regarding...");
+    const waText = encodeURIComponent("🚀 [AR Prime Market Support Request] 🛒\n\nHello AR Prime Market Team,\n\nI am interested in a product/service from your site. Here are my details:\n\n- Topic: [Type your query here]\n- Platform: Prime Market Web\n\nLooking forward to a quick chat! Thanks.");
     window.open(`https://wa.me/8801910521565?text=${waText}`, "_blank");
     setOpen(false);
   };
@@ -42,8 +42,8 @@ export const FloatingActionMenu = () => {
 
   const handleEmail = () => {
     const email = "biz.arprimemarket@gmail.com";
-    const subject = "[Prime Market Inquiry] - Customer Support Request";
-    const body = "Hello Raiyan & Support Team,\n\nThis is an inquiry from Prime Market 🛒.\n\nI would like to know about: [Please type your question here]\n\nThank you.";
+    const subject = "🛒 Order/Inquiry: [AR Prime Market] - Customer Support Request";
+    const body = "Hello AR Prime Market Support,\n\nI am reaching out via Prime Market regarding the following:\n\n📌 Inquiry Detail: [Please describe your problem or question here]\n📍 Site URL: apm.abdullahraiyan.com\n\nPlease let me know how you can help.\n\nBest regards.";
     navigator.clipboard.writeText(email).catch(() => {});
     toast({ title: "Opening Gmail...", description: "Address copied to clipboard!" });
 
