@@ -26,8 +26,8 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim()) {
-      toast.error("Name and Phone are required");
+    if (!form.name.trim() || !form.phone.trim() || !form.email.trim()) {
+      toast.error("Name, Phone and Email are required");
       return;
     }
     setSending(true);
@@ -146,10 +146,11 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                   />
                   <input
                     type="email"
-                    placeholder="Email (optional)"
+                    placeholder="Email *"
                     value={form.email}
                     onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    required
                     maxLength={255}
                   />
                   <textarea
