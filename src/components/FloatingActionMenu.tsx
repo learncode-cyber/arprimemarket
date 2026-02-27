@@ -30,7 +30,7 @@ export const FloatingActionMenu = () => {
   }, []);
 
   const handleWhatsApp = () => {
-    const waText = encodeURIComponent("Hello! Our Support Team is here to help you. How can we assist you today?");
+    const waText = encodeURIComponent("Hello Support Team, I'm contacting you from [Prime Market 🛒]. I have a query regarding...");
     window.open(`https://wa.me/8801910521565?text=${waText}`, "_blank");
     setOpen(false);
   };
@@ -42,9 +42,10 @@ export const FloatingActionMenu = () => {
 
   const handleEmail = () => {
     const email = "biz.arprimemarket@gmail.com";
-    const subject = encodeURIComponent("Inquiry regarding Prime Market Products/Orders");
-    const body = encodeURIComponent("Hello! Our Support Team is here to help you.\n\nI have a question regarding my experience on Prime Market. Here are the details:\n\n[Please type your question here]\n\nLooking forward to your response.\n\nBest regards");
-    toast({ title: "Opening your email app..." });
+    const subject = encodeURIComponent("[Prime Market Inquiry] - Customer Support Request");
+    const body = encodeURIComponent("Hello Raiyan & Support Team,\n\nThis is an inquiry from Prime Market 🛒.\n\nI would like to know about: [Please type your question here]\n\nThank you.");
+    navigator.clipboard.writeText(email).catch(() => {});
+    toast({ title: "Opening your email app...", description: "Email address also copied to clipboard!" });
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     setOpen(false);
   };
