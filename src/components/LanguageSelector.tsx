@@ -37,7 +37,7 @@ export const LanguageSelector = () => {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
+        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
       >
         <Globe className="w-3.5 h-3.5" />
         <span className="hidden sm:inline font-medium">{lang.nativeName}</span>
@@ -51,30 +51,30 @@ export const LanguageSelector = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-1.5 w-56 bg-popover border border-border rounded-xl shadow-xl z-[60] overflow-hidden"
+            className="fixed sm:absolute top-auto sm:top-full left-2 right-2 sm:left-auto sm:right-0 bottom-2 sm:bottom-auto sm:mt-1.5 sm:w-60 bg-popover border border-border rounded-xl shadow-2xl z-[100] overflow-hidden"
           >
             {/* Search bar */}
-            <div className="p-2 border-b border-border">
+            <div className="p-2.5 sm:p-2 border-b border-border">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
                 <input
                   ref={inputRef}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search language..."
-                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full pl-9 pr-3 py-2.5 sm:py-2 rounded-lg border border-border bg-background text-sm sm:text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
               </div>
             </div>
-            <div className="max-h-64 overflow-y-auto scrollbar-hide py-1">
+            <div className="max-h-[50vh] sm:max-h-64 overflow-y-auto scrollbar-hide py-1">
               {filtered.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No language found</p>
+                <p className="text-sm sm:text-xs text-muted-foreground text-center py-4">No language found</p>
               ) : (
                 filtered.map((l) => (
                   <button
                     key={l.code}
                     onClick={() => { setLang(l.code); setOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs transition-colors touch-manipulation ${
+                    className={`w-full flex items-center gap-3 px-4 sm:px-3.5 py-3 sm:py-2.5 text-sm sm:text-xs transition-colors touch-manipulation ${
                       lang.code === l.code
                         ? "bg-primary/10 text-primary"
                         : "text-foreground hover:bg-secondary"
