@@ -37,7 +37,7 @@ export function useShipping(country: string, subtotal: number, totalWeightKg: nu
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState<string>("standard");
+  const [selectedType, setSelectedType] = useState<string>("inside_dhaka");
 
   useEffect(() => {
     const fetch = async () => {
@@ -55,7 +55,13 @@ export function useShipping(country: string, subtotal: number, totalWeightKg: nu
 
   const countryCode = COUNTRY_MAP[country] || country?.toUpperCase()?.slice(0, 2) || "BD";
   const zone = zones.find(z => z.country_code === countryCode) || zones.find(z => z.country_code === "BD");
-  const zoneRates = zone ? rates.filter(r => r.zone_id === zone.id) : [];
+  const isBD = zone?.country_code === "BD";
+  // For BD: show inside_dhaka/outside_dhaka; for others: show standard/express
+  const zoneRates = zone ? rates.filter(r => {
+    if (r.zone_id !== zone.id) return false;
+    if (isBD) return r.shipping_type === "inside_dhaka" || r.shipping_type === "outside_dhaka";
+    return r.shipping_type === "standard" || r.shipping_type === "express";
+  }) : [];
 
   const getOptions = useCallback((): ShippingOption[] => {
     if (!zone) return [];

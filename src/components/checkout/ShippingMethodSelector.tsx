@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Truck, Zap } from "lucide-react";
+import { Truck, Zap, MapPin, Navigation } from "lucide-react";
 import { ShippingOption } from "@/hooks/useShipping";
 import { useCurrency } from "@/context/CurrencyContext";
 
@@ -13,6 +13,8 @@ interface Props {
 const typeConfig: Record<string, { icon: typeof Truck; labelEn: string; labelBn: string; labelAr: string }> = {
   standard: { icon: Truck, labelEn: "Standard Shipping", labelBn: "স্ট্যান্ডার্ড শিপিং", labelAr: "الشحن العادي" },
   express: { icon: Zap, labelEn: "Express Shipping", labelBn: "এক্সপ্রেস শিপিং", labelAr: "الشحن السريع" },
+  inside_dhaka: { icon: MapPin, labelEn: "Inside Dhaka", labelBn: "ঢাকার ভিতরে", labelAr: "داخل دكا" },
+  outside_dhaka: { icon: Navigation, labelEn: "Outside Dhaka", labelBn: "ঢাকার বাইরে", labelAr: "خارج دكا" },
 };
 
 const ShippingMethodSelector = ({ options, selectedType, onSelect, tx }: Props) => {

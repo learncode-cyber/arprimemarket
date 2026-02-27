@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
+import CountrySelector from "@/components/checkout/CountrySelector";
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
@@ -420,19 +421,11 @@ const Checkout = () => {
                   ))}
                   {/* Country selector */}
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                      {tx("Country", "দেশ", "البلد")}
-                    </label>
-                    <select
+                    <CountrySelector
                       value={form.country}
-                      onChange={e => handleChange("country", e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
-                    >
-                      <option value="Bangladesh">Bangladesh</option>
-                      <option value="United States">United States</option>
-                      <option value="Canada">Canada</option>
-                      <option value="United Arab Emirates">United Arab Emirates</option>
-                    </select>
+                      onChange={(val) => handleChange("country", val)}
+                      label={tx("Country", "দেশ", "البلد")}
+                    />
                   </div>
                 </div>
 
