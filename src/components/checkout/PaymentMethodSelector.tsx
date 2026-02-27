@@ -59,13 +59,16 @@ const PaymentMethodSelector = ({ selectedKey, onSelect, shippingCountry }: Props
   // Fallback payment methods when DB returns empty (e.g. anon/guest users)
   const fallbackMethods: PaymentMethod[] = (() => {
     const base: PaymentMethod[] = [
-      { id: "fb-binance", method_type: "crypto", method_key: "binance_pay", display_name: "Binance Pay", display_name_bn: "বাইন্যান্স পে", display_name_ar: "بينانس باي", icon_name: "Coins", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay via Binance Pay", instructions_bn: "বাইন্যান্স পে দিয়ে পেমেন্ট করুন", instructions_ar: "ادفع عبر بينانس باي", network: null, sort_order: 3 },
+      { id: "fb-binance", method_type: "crypto", method_key: "binance_pay", display_name: "⭐ Binance Pay (Recommended)", display_name_bn: "⭐ বাইন্যান্স পে (প্রস্তাবিত)", display_name_ar: "⭐ بينانس باي (موصى به)", icon_name: "Coins", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay via Binance Pay — fast, secure, zero fees", instructions_bn: "বাইন্যান্স পে দিয়ে পেমেন্ট করুন — দ্রুত, নিরাপদ, শূন্য ফি", instructions_ar: "ادفع عبر بينانس باي — سريع وآمن وبدون رسوم", network: null, sort_order: 3 },
       { id: "fb-visa", method_type: "card", method_key: "visa_mastercard", display_name: "Visa / Mastercard", display_name_bn: "ভিসা / মাস্টারকার্ড", display_name_ar: "فيزا / ماستركارد", icon_name: "CreditCard", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay with card", instructions_bn: "কার্ড দিয়ে পেমেন্ট করুন", instructions_ar: "ادفع بالبطاقة", network: null, sort_order: 4 },
     ];
     if (isBangladesh) {
       base.unshift(
         { id: "fb-bkash", method_type: "mobile", method_key: "bkash", display_name: "bKash", display_name_bn: "বিকাশ", display_name_ar: "بي كاش", icon_name: "Smartphone", is_active: true, wallet_address: null, deposit_link: null, instructions: "Send payment to bKash", instructions_bn: "বিকাশে পেমেন্ট পাঠান", instructions_ar: "أرسل الدفعة عبر بي كاش", network: null, sort_order: 1 },
         { id: "fb-nagad", method_type: "mobile", method_key: "nagad", display_name: "Nagad", display_name_bn: "নগদ", display_name_ar: "ناجاد", icon_name: "Smartphone", is_active: true, wallet_address: null, deposit_link: null, instructions: "Send payment to Nagad", instructions_bn: "নগদে পেমেন্ট পাঠান", instructions_ar: "أرسل الدفعة عبر ناجاد", network: null, sort_order: 2 },
+      );
+      base.push(
+        { id: "fb-cod", method_type: "cod", method_key: "cod", display_name: "Cash on Delivery", display_name_bn: "ক্যাশ অন ডেলিভারি", display_name_ar: "الدفع عند الاستلام", icon_name: "Banknote", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay when you receive the product", instructions_bn: "পণ্য পাওয়ার সময় পেমেন্ট করুন", instructions_ar: "ادفع عند استلام المنتج", network: null, sort_order: 5 },
       );
     }
     return base;

@@ -58,7 +58,7 @@ CRITICAL RULES:
 - For order issues, ask for the order number.
 - Never share internal system details, admin info, or tech stack.
 - If you don't know something, be honest and suggest reaching out on WhatsApp for faster help.
-- Sign off naturally — you're Raiyan, not "the support team".`,
+- NEVER sign off with "- Raiyan" or any signature at the end. Your name is already shown in the chat header. Just end your message naturally.`,
             },
             ...history.map((h: any) => ({ role: h.role, content: h.content })),
             { role: "user", content: message },
