@@ -256,10 +256,14 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Geo-detection with strict fallback override
+  // Geo-detection with strict fallback override — respects manual selections
   useEffect(() => {
     if (geoFetched.current) return;
     geoFetched.current = true;
+
+    // If user manually chose a language, don't override
+    const previousDetection = localStorage.getItem(GEO_DETECTED_KEY);
+    if (previousDetection === "manual") return;
 
     const applyGeoDefaults = (countryCode?: string) => {
       const normalizedCode = countryCode?.toUpperCase();
@@ -282,8 +286,10 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
       document.documentElement.lang = langCode;
     };
 
-    // Immediate strict fallback for this release
-    applyGeoDefaults();
+    // Immediate strict fallback for first-time visitors
+    if (!previousDetection) {
+      applyGeoDefaults();
+    }
 
     const detectGeo = async () => {
       try {
