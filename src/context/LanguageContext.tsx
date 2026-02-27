@@ -227,15 +227,43 @@ const STORAGE_KEY = "ar-pm-lang";
 const GEO_DETECTED_KEY = "ar-pm-geo-detected";
 
 const countryToLang: Record<string, LangCode> = {
-  AE: "ar",
+  // Arabic-speaking
+  AE: "ar", BH: "ar", KW: "ar", OM: "ar", QA: "ar", EG: "ar", IQ: "ar", JO: "ar", LB: "ar", LY: "ar", MA: "ar", TN: "ar", DZ: "ar", SD: "ar", YE: "ar", PS: "ar", SY: "ar",
   SA: "sa",
-  BD: "en",
+  // South Asian
+  BD: "en", // Bangladesh defaults to English
+  IN: "hi", PK: "hi", NP: "hi",
+  // Spanish-speaking
+  ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es", EC: "es", GT: "es", CU: "es", BO: "es", DO: "es", HN: "es", PY: "es", SV: "es", NI: "es", CR: "es", PA: "es", UY: "es",
+  // French-speaking
+  FR: "fr", BE: "fr", CH: "fr", CA: "fr", SN: "fr", CI: "fr", ML: "fr", BF: "fr", NE: "fr", TD: "fr", GN: "fr", RW: "fr", BI: "fr", BJ: "fr", TG: "fr", CF: "fr", CG: "fr", CD: "fr", CM: "fr", GA: "fr", MG: "fr", HT: "fr",
+  // German-speaking
+  DE: "de", AT: "de", LI: "de",
+  // Chinese-speaking
+  CN: "zh", TW: "zh", HK: "zh", MO: "zh", SG: "zh",
+  // Japanese
+  JP: "ja",
+  // Portuguese-speaking
+  BR: "pt", PT: "pt", AO: "pt", MZ: "pt",
+  // English-speaking (explicit)
+  US: "en", GB: "en", AU: "en", NZ: "en", IE: "en", ZA: "en", KE: "en", NG: "en", GH: "en", PH: "en", MY: "en",
 };
 
 const countryToCurrency: Record<string, string> = {
-  AE: "AED",
-  SA: "SAR",
-  BD: "BDT",
+  // Middle East
+  AE: "AED", SA: "SAR", BH: "AED", KW: "AED", OM: "AED", QA: "AED",
+  // South Asia
+  BD: "BDT", IN: "INR", PK: "INR", NP: "INR",
+  // Americas
+  US: "USD", CA: "USD", MX: "MXN", AR: "USD", CO: "USD", CL: "USD", PE: "USD", BR: "BRL",
+  // Europe
+  FR: "EUR", DE: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", BE: "EUR", AT: "EUR", PT: "EUR", IE: "EUR", FI: "EUR", GR: "EUR",
+  CH: "CHF", LI: "CHF",
+  GB: "USD",
+  // Asia Pacific
+  CN: "CNY", TW: "CNY", HK: "CNY", JP: "JPY", SG: "USD", AU: "USD", NZ: "USD", MY: "USD", PH: "USD",
+  // Africa
+  ZA: "USD", KE: "USD", NG: "USD", GH: "USD", EG: "AED",
 };
 
 const CURRENCY_STORAGE_KEY = "ar-pm-currency";
