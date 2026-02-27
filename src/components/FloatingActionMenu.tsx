@@ -48,7 +48,7 @@ export const FloatingActionMenu = () => {
               className="fixed bottom-[8.5rem] right-4 z-50 flex items-center gap-2 px-4 h-10 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] active:scale-95 transition-all touch-manipulation"
             >
               <MessageCircle className="w-4 h-4" />
-              <span className="text-xs font-semibold whitespace-nowrap">WhatsApp Support</span>
+              <span className="text-xs font-semibold whitespace-nowrap">WhatsApp</span>
             </motion.button>
 
             {/* Chat with AI */}
@@ -90,7 +90,7 @@ export const FloatingActionMenu = () => {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.8, type: "spring", stiffness: 260, damping: 20 }}
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full bg-primary/90 backdrop-blur-xl border border-primary/30 text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary active:scale-90 transition-all touch-manipulation"
+        className={`fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full backdrop-blur-xl border flex items-center justify-center active:scale-90 transition-all touch-manipulation ${open ? "bg-card/90 border-border/50 text-foreground shadow-md hover:bg-card" : "bg-primary/90 border-primary/30 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary"}`}
         aria-label="Help menu"
       >
         <AnimatePresence mode="wait">
