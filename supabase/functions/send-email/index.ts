@@ -203,7 +203,13 @@ Deno.serve(async (req) => {
         if (!body.name || !body.email || !body.message) {
           return json({ error: "name, email, and message are required" }, 400);
         }
-        const payload = contactFormTemplate(body);
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(body.email)) {
+          return json({ error: "Invalid email format" }, 400);
+        }
+        const sanitizedName = String(body.name).slice(0, 100);
+        const sanitizedMessage = String(body.message).slice(0, 5000);
+        const payload = contactFormTemplate({ ...body, name: sanitizedName, message: sanitizedMessage });
         const result = await sendEmail(RESEND_API_KEY, payload);
         return json({ success: true, id: result.id });
       }
