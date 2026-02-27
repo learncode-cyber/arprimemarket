@@ -40,12 +40,12 @@ export const FloatingActionMenu = () => {
 
             {/* WhatsApp */}
             <motion.button
-              initial={{ opacity: 0, y: 12, scale: 0.85 }}
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.85 }}
-              transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.05 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ type: "tween", ease: "easeOut", duration: 0.2, delay: 0.03 }}
               onClick={handleWhatsApp}
-              className="fixed bottom-[8.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[8.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] active:scale-95 transition-colors touch-manipulation"
             >
               <MessageCircle className="w-4 h-4" />
               <span className="text-xs font-semibold whitespace-nowrap">WhatsApp</span>
@@ -53,10 +53,10 @@ export const FloatingActionMenu = () => {
 
             {/* Chat with AI */}
             <motion.button
-              initial={{ opacity: 0, y: 12, scale: 0.85 }}
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.85 }}
-              transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ type: "tween", ease: "easeOut", duration: 0.2, delay: 0.06 }}
               onClick={handleChat}
               className="fixed bottom-[5.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
             >
