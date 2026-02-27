@@ -251,10 +251,30 @@ Deno.serve(async (req) => {
         if (!body.to || !body.subject || !body.html) {
           return json({ error: "to, subject, and html required" }, 400);
         }
+
+        // Validate recipient email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(body.to)) {
+          return json({ error: "Invalid recipient email" }, 400);
+        }
+
+        // Strip dangerous tags (script, iframe, object, embed, form, on* attributes)
+        const sanitizedHtml = String(body.html)
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+          .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, "")
+          .replace(/<object\b[^>]*>.*?<\/object>/gi, "")
+          .replace(/<embed\b[^>]*\/?>/gi, "")
+          .replace(/<form\b[^>]*>.*?<\/form>/gi, "")
+          .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+          .replace(/\son\w+\s*=\s*[^\s>]*/gi, "");
+
+        // Log custom email send for audit
+        console.log(`[AUDIT] Custom email sent by admin ${userId} to ${body.to} subject: ${String(body.subject).slice(0, 50)}`);
+
         const result = await sendEmail(RESEND_API_KEY, {
           to: body.to,
           subject: String(body.subject).slice(0, 200),
-          html: body.html,
+          html: sanitizedHtml,
         });
         return json({ success: true, id: result.id });
       }

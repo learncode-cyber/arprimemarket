@@ -62,7 +62,7 @@ const injectScript = (id: string, src: string) => {
 const injectInline = (id: string, code: string) => {
   if (injectedScripts.has(id) || document.getElementById(id)) return;
   const s = document.createElement("script");
-  s.id = id; s.innerHTML = code;
+  s.id = id; s.textContent = code;
   document.head.appendChild(s);
   injectedScripts.add(id);
 };
