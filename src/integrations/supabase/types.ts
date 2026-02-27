@@ -1875,6 +1875,54 @@ export type Database = {
       }
     }
     Views: {
+      payment_methods_public: {
+        Row: {
+          display_name: string | null
+          display_name_ar: string | null
+          display_name_bn: string | null
+          icon_name: string | null
+          id: string | null
+          instructions: string | null
+          instructions_ar: string | null
+          instructions_bn: string | null
+          is_active: boolean | null
+          method_key: string | null
+          method_type: string | null
+          network: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          display_name?: string | null
+          display_name_ar?: string | null
+          display_name_bn?: string | null
+          icon_name?: string | null
+          id?: string | null
+          instructions?: string | null
+          instructions_ar?: string | null
+          instructions_bn?: string | null
+          is_active?: boolean | null
+          method_key?: string | null
+          method_type?: string | null
+          network?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          display_name?: string | null
+          display_name_ar?: string | null
+          display_name_bn?: string | null
+          icon_name?: string | null
+          id?: string | null
+          instructions?: string | null
+          instructions_ar?: string | null
+          instructions_bn?: string | null
+          is_active?: boolean | null
+          method_key?: string | null
+          method_type?: string | null
+          network?: string | null
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       products_public: {
         Row: {
           barcode: string | null
