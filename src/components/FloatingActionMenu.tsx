@@ -38,7 +38,7 @@ export const FloatingActionMenu = () => {
   };
 
   const handleEmail = () => {
-    window.location.href = "mailto:support@abdullahraiyan.com?subject=Support Request";
+    window.location.href = "mailto:biz.arprimemarket@gmail.com?subject=Support Request";
     setOpen(false);
   };
 
