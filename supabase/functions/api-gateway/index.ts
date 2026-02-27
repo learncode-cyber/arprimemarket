@@ -339,7 +339,10 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     // Public read routes use service role for performance (bypasses RLS for public data)
-    const publicReadClient = createClient(supabaseUrl, serviceKey);
+    const publicReadClient = createClient(supabaseUrl, serviceKey, {
+      global: { headers: {} },
+      db: { schema: 'public' },
+    });
 
     // Route dispatch
     let response: Response;
@@ -408,12 +411,19 @@ Deno.serve(async (req) => {
 
   } catch (err: unknown) {
     const duration = Date.now() - startTime;
-    const message = err instanceof Error
-      ? err.message
-      : typeof err === "object" && err !== null && "message" in err
-        ? String((err as Record<string, unknown>).message)
-        : JSON.stringify(err) || "Internal server error";
-    console.error("[api-gateway] Caught error:", message, err);
+    let message = "Internal server error";
+    if (err instanceof Error) {
+      message = err.message;
+    } else if (typeof err === "object" && err !== null && "message" in err) {
+      message = String((err as Record<string, unknown>).message);
+    } else if (typeof err === "string") {
+      message = err;
+    }
+    // Detect Cloudflare/SSL errors and return a clean message
+    if (message.includes("<!DOCTYPE") || message.includes("SSL handshake") || message.includes("525")) {
+      message = "Database temporarily unavailable. Please retry.";
+    }
+    console.error("[api-gateway] Error:", message);
     await logEvent({
       ts: new Date().toISOString(),
       level: "error",
@@ -421,6 +431,6 @@ Deno.serve(async (req) => {
       durationMs: duration,
       error: message,
     });
-    return json({ error: message }, 500);
+    return json({ error: message }, 503);
   }
 });
