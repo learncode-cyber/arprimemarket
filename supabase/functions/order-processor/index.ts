@@ -344,6 +344,33 @@ async function processPendingOrders(supabase: any) {
   return { processed: results.length, results };
 }
 
+// ─── Auth helper ───
+async function requireAdmin(req: Request, supabase: any) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
+
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await userClient.auth.getClaims(token);
+  if (error || !data?.claims?.sub) throw new Error("Unauthorized");
+
+  const userId = data.claims.sub as string;
+  const { data: roleData } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (!roleData) throw new Error("Admin access required");
+  return userId;
+}
+
 // ─── Main router ───
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -354,6 +381,14 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Require admin authentication
+    try {
+      await requireAdmin(req, supabase);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Unauthorized";
+      return json({ error: msg }, msg === "Admin access required" ? 403 : 401);
+    }
 
     const body = await req.json();
     const { action, order_id, alert_id, user_id, updates } = body;

@@ -68,7 +68,12 @@ const Admin = () => {
     }
   }, [user, isAdmin, loading, navigate]);
 
-  if (loading || !isAdmin) return null;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+    </div>
+  );
+  if (!user || !isAdmin) return null;
 
   const handleTabClick = (id: string) => {
     setActiveTab(id);

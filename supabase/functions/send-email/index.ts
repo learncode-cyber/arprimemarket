@@ -160,6 +160,24 @@ function contactFormTemplate(data: { name: string; email: string; subject?: stri
   };
 }
 
+// ─── Auth helper ───
+async function requireAuth(req: Request): Promise<string> {
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await userClient.auth.getClaims(token);
+  if (error || !data?.claims?.sub) throw new Error("Unauthorized");
+  return data.claims.sub as string;
+}
+
 // ─── Main Router ───
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -170,6 +188,15 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+
+    // contact_form is public; all other actions require authentication
+    if (action !== "contact_form") {
+      try {
+        await requireAuth(req);
+      } catch {
+        return json({ error: "Authentication required" }, 401);
+      }
+    }
 
     switch (action) {
       case "contact_form": {

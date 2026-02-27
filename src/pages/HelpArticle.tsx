@@ -2,6 +2,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,7 +44,7 @@ const HelpArticle = () => {
             <span className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">{article.help_categories.name}</span>
           )}
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-6">{article.title}</h1>
-          <div className="prose prose-sm sm:prose max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: article.content }} />
+          <div className="prose prose-sm sm:prose max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content, { ALLOWED_TAGS: ['p','br','strong','em','u','a','ul','ol','li','h1','h2','h3','h4','h5','h6','img','blockquote','pre','code','table','thead','tbody','tr','th','td','hr','span','div'], ALLOWED_ATTR: ['href','target','src','alt','class','style','rel'] }) }} />
         </motion.div>
 
         <Link to="/help" className="inline-flex items-center gap-1.5 text-sm text-primary font-medium mt-10 hover:gap-2.5 transition-all">
