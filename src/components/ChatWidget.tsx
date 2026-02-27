@@ -17,34 +17,50 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Generate a guest session ID for non-logged-in users
+  const getGuestId = () => {
+    let guestId = localStorage.getItem("ar-pm-guest-chat-id");
+    if (!guestId) {
+      guestId = crypto.randomUUID();
+      localStorage.setItem("ar-pm-guest-chat-id", guestId);
+    }
+    return guestId;
+  };
+
   useEffect(() => {
-    if (!open || !user) return;
-
+    if (!embedded && !open) return;
+    // For embedded mode, always init
     const initSession = async () => {
-      const { data: existing } = await supabase
-        .from("chat_sessions")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existing) {
-        setSessionId(existing.id);
-      } else {
-        const { data: newSession } = await supabase
+      if (user) {
+        const { data: existing } = await supabase
           .from("chat_sessions")
-          .insert({ user_id: user.id, visitor_name: user.user_metadata?.full_name || "User" })
           .select("id")
-          .single();
-        if (newSession) setSessionId(newSession.id);
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) {
+          setSessionId(existing.id);
+        } else {
+          const { data: newSession } = await supabase
+            .from("chat_sessions")
+            .insert({ user_id: user.id, visitor_name: user.user_metadata?.full_name || "User" })
+            .select("id")
+            .single();
+          if (newSession) setSessionId(newSession.id);
+        }
+      } else {
+        // Guest mode - use local messages only (no DB)
+        setSessionId("guest-" + getGuestId());
       }
     };
     initSession();
-  }, [open, user]);
+  }, [open, user, embedded]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -74,30 +90,62 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!message.trim() || !sessionId || !user || sending) return;
+    if (!message.trim() || !sessionId || sending) return;
     setSending(true);
     const content = message.trim();
     setMessage("");
-    await supabase.from("chat_messages").insert({
-      session_id: sessionId,
-      sender_type: "user",
-      sender_id: user.id,
-      content,
-    });
+
+    const userMsg = { id: crypto.randomUUID(), content, sender_type: "user", created_at: new Date().toISOString() };
+
+    if (user && !sessionId.startsWith("guest-")) {
+      await supabase.from("chat_messages").insert({
+        session_id: sessionId,
+        sender_type: "user",
+        sender_id: user.id,
+        content,
+      });
+    } else {
+      // Guest mode - just add to local messages
+      setMessages(prev => [...prev, userMsg]);
+    }
+
     setSending(false);
+
+    // AI auto-reply
+    setAiLoading(true);
+    try {
+      const res = await supabase.functions.invoke("ai-assistant", {
+        body: {
+          action: "chat",
+          message: content,
+          context: { language: navigator.language || "en", history: messages.slice(-6).map(m => ({ role: m.sender_type === "user" ? "user" : "assistant", content: m.content })) },
+        },
+      });
+      const reply = res.data?.reply || res.data?.message || "I'm here to help! Please try again.";
+      const aiMsg = { id: crypto.randomUUID(), content: reply, sender_type: "agent", created_at: new Date().toISOString() };
+      
+      if (user && !sessionId.startsWith("guest-")) {
+        await supabase.from("chat_messages").insert({
+          session_id: sessionId,
+          sender_type: "agent",
+          content: reply,
+        });
+      } else {
+        setMessages(prev => [...prev, aiMsg]);
+      }
+    } catch {
+      const fallback = { id: crypto.randomUUID(), content: "Sorry, I couldn't process that. Please try again!", sender_type: "agent", created_at: new Date().toISOString() };
+      setMessages(prev => [...prev, fallback]);
+    }
+    setAiLoading(false);
   };
 
   // If embedded, just render the chat content without the floating wrapper
   if (embedded) {
     return (
       <div className="flex flex-col h-full">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
-          {!user ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-2">Please sign in to chat</p>
-              <a href="/login" className="text-primary text-sm font-medium">Sign In →</a>
-            </div>
-          ) : messages.length === 0 ? (
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
+          {messages.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">👋 Hi! How can we help?</p>
             </div>
@@ -115,9 +163,15 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               </div>
             ))
           )}
+          {aiLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] px-3 py-2 rounded-xl text-sm bg-secondary text-foreground rounded-bl-sm">
+                <span className="animate-pulse">Typing...</span>
+              </div>
+            </div>
+          )}
         </div>
-        {user && (
-          <div className="p-3 border-t border-border flex gap-2">
+        <div className="p-3 border-t border-border flex gap-2">
             <Input
               placeholder="Type a message..."
               value={message}
@@ -125,11 +179,10 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               className="text-sm h-9"
             />
-            <Button size="sm" onClick={handleSend} disabled={!message.trim() || sending} className="h-9 px-3">
+            <Button size="sm" onClick={handleSend} disabled={!message.trim() || sending || aiLoading} className="h-9 px-3">
               <Send className="w-3.5 h-3.5" />
             </Button>
           </div>
-        )}
       </div>
     );
   }

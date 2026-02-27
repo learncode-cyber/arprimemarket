@@ -1,13 +1,14 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { motion } from "framer-motion";
 import { Product } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { ShoppingCart, Star } from "lucide-react";
+import { ShoppingCart, Star, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { WishlistButton } from "@/components/WishlistButton";
 import { performanceUtils } from "@/lib/services";
+import { QuickOrderModal } from "@/components/QuickOrderModal";
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,7 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
+  const [quickOrder, setQuickOrder] = useState(false);
   const discount = product.compare_at_price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0;
@@ -84,15 +86,25 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
               </span>
             )}
           </div>
-          <button
-            onClick={(e) => { e.preventDefault(); addToCart(product); }}
-            className="p-2 sm:p-2.5 rounded-lg bg-primary text-primary-foreground active:scale-90 transition-all touch-manipulation hover:brightness-110"
-            aria-label={t("addToCart")}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => { e.preventDefault(); setQuickOrder(true); }}
+              className="p-2 sm:p-2.5 rounded-lg bg-accent text-accent-foreground active:scale-90 transition-all touch-manipulation hover:brightness-110"
+              aria-label="Order in 1-Click"
+            >
+              <Zap className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); addToCart(product); }}
+              className="p-2 sm:p-2.5 rounded-lg bg-primary text-primary-foreground active:scale-90 transition-all touch-manipulation hover:brightness-110"
+              aria-label={t("addToCart")}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
+      <QuickOrderModal open={quickOrder} onClose={() => setQuickOrder(false)} product={{ id: product.id, title: product.title, price: product.price, image: product.image }} />
     </motion.article>
   );
 });

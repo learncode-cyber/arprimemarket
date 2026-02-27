@@ -163,7 +163,7 @@ const AIAssistantDashboard = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { action: "chat", message: userMsg },
+        body: { action: "admin_chat", message: userMsg },
       });
 
       if (error) throw error;
