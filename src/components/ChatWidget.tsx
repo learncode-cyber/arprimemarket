@@ -418,7 +418,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="px-3 pt-2 flex justify-between items-center">
+      <div className="px-3 pt-2 flex items-center gap-1">
         {/* Quick order button */}
         <button
           onClick={() => setShowOrderForm(!showOrderForm)}
@@ -428,15 +428,41 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
           {showOrderForm ? "Close Form" : "Quick Order"}
         </button>
 
-        {user && (
-          <button
-            onClick={() => { setShowHistory(true); loadPastSessions(); }}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
-          >
-            <History className="w-3 h-3" />
-            History
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-1">
+          {/* New Chat button */}
+          {user ? (
+            <button
+              onClick={startNewSession}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
+            >
+              <Send className="w-3 h-3" />
+              New Chat
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setMessages([]);
+                localStorage.removeItem("ar-pm-guest-chat-messages");
+                setShowOrderForm(false);
+              }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
+            >
+              <Send className="w-3 h-3" />
+              New Chat
+            </button>
+          )}
+
+          {/* History button (logged-in users only) */}
+          {user && (
+            <button
+              onClick={() => { setShowHistory(true); loadPastSessions(); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
+            >
+              <History className="w-3 h-3" />
+              History
+            </button>
+          )}
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
