@@ -51,7 +51,7 @@ export const LanguageSelector = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed sm:absolute top-auto sm:top-full left-2 right-2 sm:left-auto sm:right-0 bottom-2 sm:bottom-auto sm:mt-1.5 sm:w-60 bg-popover border border-border rounded-xl shadow-2xl z-[100] overflow-hidden"
+            className="fixed sm:absolute inset-x-4 sm:inset-x-auto top-1/2 sm:top-full -translate-y-1/2 sm:translate-y-0 sm:right-0 sm:mt-1.5 sm:w-60 max-h-[70vh] sm:max-h-none bg-popover border border-border rounded-xl shadow-2xl z-[100] overflow-hidden"
           >
             {/* Search bar */}
             <div className="p-2.5 sm:p-2 border-b border-border">
