@@ -57,6 +57,18 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
       toast.error("Name, Phone, Email and Address are required");
       return;
     }
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    if (shippingOptions.length > 0 && !selectedShipping) {
+      toast.error("Please select a shipping method");
+      return;
+    }
+
+    const normalizedTxReference = txReference.trim();
+    const shippingMethod = selectedShipping?.rate.shipping_type || shippingType || null;
+
     setSending(true);
     try {
       const orderNumber = "ARP-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
@@ -68,8 +80,9 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
           id: orderId,
           order_number: orderNumber,
           status: "pending",
-          payment_status: paymentMethod === "cod" ? "unpaid" : "pending",
+          payment_status: "unpaid",
           payment_method: paymentMethod,
+          payment_reference: normalizedTxReference || null,
           subtotal: product.price,
           shipping_cost: shippingCost,
           total,
@@ -78,7 +91,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
           shipping_email: form.email.trim(),
           shipping_address: form.address.trim(),
           shipping_country: form.country,
-          shipping_method: shippingType,
+          shipping_method: shippingMethod,
           notes: "1-Click Quick Order (Guest)",
         });
 
@@ -105,7 +118,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
             amount: total,
             currency: "BDT",
             status: "pending",
-            transaction_reference: txReference.trim() || null,
+            transaction_reference: normalizedTxReference || null,
           });
         } catch {} // non-blocking for guest
       }

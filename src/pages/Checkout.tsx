@@ -184,7 +184,8 @@ const Checkout = () => {
           currency: "BDT",
           order_number: "TEMP",
           payment_method: paymentMethod,
-          payment_status: paymentMethod === "cod" ? "unpaid" : "pending",
+          payment_status: "unpaid",
+          payment_reference: txReference.trim() || null,
           shipping_name: form.name,
           shipping_phone: form.phone,
           shipping_email: form.email,
@@ -192,7 +193,7 @@ const Checkout = () => {
           shipping_city: form.city,
           shipping_postal_code: form.postalCode || null,
           shipping_country: form.country,
-          shipping_method: shippingType,
+          shipping_method: selectedShipping?.rate.shipping_type || shippingType || null,
         })
         .select("id, order_number")
         .single();
@@ -216,10 +217,10 @@ const Checkout = () => {
         await supabase.from("payment_transactions").insert({
           order_id: order.id,
           payment_method_key: paymentMethod,
-          amount: subtotal,
+          amount: total,
           currency: "BDT",
           status: "pending",
-          transaction_reference: txReference || null,
+          transaction_reference: txReference.trim() || null,
         });
       }
 
