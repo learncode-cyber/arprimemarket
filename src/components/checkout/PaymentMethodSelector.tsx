@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreditCard, Coins, Smartphone, Banknote, Copy, Check, ExternalLink, QrCode } from "lucide-react";
 import { usePaymentMethods, PaymentMethod } from "@/hooks/usePaymentMethods";
@@ -12,12 +12,27 @@ const iconMap: Record<string, any> = {
 interface Props {
   selectedKey: string;
   onSelect: (key: string) => void;
+  shippingCountry?: string;
 }
 
-const PaymentMethodSelector = ({ selectedKey, onSelect }: Props) => {
-  const { data: methods = [], isLoading } = usePaymentMethods(true);
+const PaymentMethodSelector = ({ selectedKey, onSelect, shippingCountry }: Props) => {
+  const { data: allMethods = [], isLoading } = usePaymentMethods(true);
   const { lang } = useLanguage();
   const [copied, setCopied] = useState(false);
+
+  // Filter COD: only show for Bangladesh
+  const isBangladesh = !shippingCountry || shippingCountry.toLowerCase().includes("bangladesh") || shippingCountry === "BD";
+  const methods = allMethods.filter(m => {
+    if (m.method_type === "cod" && !isBangladesh) return false;
+    return true;
+  });
+
+  // Auto-switch away from COD if not Bangladesh
+  useEffect(() => {
+    if (!isBangladesh && selectedKey === "cod" && methods.length > 0) {
+      onSelect(methods[0].method_key);
+    }
+  }, [isBangladesh, selectedKey, methods.length]);
 
   const getName = (m: PaymentMethod) => {
     if (lang.code === "bn" && m.display_name_bn) return m.display_name_bn;

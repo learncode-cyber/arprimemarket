@@ -470,7 +470,7 @@ const Checkout = () => {
                       {tx("Edit Address", "ঠিকানা পরিবর্তন", "تعديل العنوان")}
                     </button>
                   </div>
-                  <PaymentMethodSelector selectedKey={paymentMethod} onSelect={setPaymentMethod} />
+                  <PaymentMethodSelector selectedKey={paymentMethod} onSelect={setPaymentMethod} shippingCountry={form.country} />
 
                   {needsReference && (
                     <div className="mt-3">
@@ -634,7 +634,7 @@ const Checkout = () => {
               <div className="text-right">
                 <span className="font-display font-bold text-lg text-foreground">{formatPrice(total)}</span>
                 {currency.code !== "BDT" && (
-                  <p className="text-[10px] text-muted-foreground">≈ ৳{total.toLocaleString()} BDT</p>
+                  <p className="text-[10px] text-muted-foreground">≈ ৳{Math.round(total).toLocaleString()} BDT</p>
                 )}
               </div>
             </div>
