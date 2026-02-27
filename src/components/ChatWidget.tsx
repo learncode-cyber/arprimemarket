@@ -147,7 +147,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
           {messages.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">👋 Hi! How can we help?</p>
+              <p className="text-sm text-muted-foreground">👋 Hello! Our Support Team is here to help you. How can we assist you today?</p>
             </div>
           ) : (
             messages.map((m) => (
