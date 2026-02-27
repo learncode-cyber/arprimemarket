@@ -77,7 +77,7 @@ export const FloatingActionMenu = () => {
               className="fixed bottom-[5.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card transition-colors touch-manipulation"
             >
               <MessageSquare className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold whitespace-nowrap">Chat with AI</span>
+              <span className="text-xs font-semibold whitespace-nowrap">Chat with Raiyan</span>
             </motion.button>
           </>
         )}
@@ -139,8 +139,9 @@ export const FloatingActionMenu = () => {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary/5">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-primary" />
-                <span className="font-display font-bold text-sm">AI Assistant</span>
+                <span className="text-lg">👨‍💻</span>
+                <span className="font-display font-bold text-sm">Raiyan</span>
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               </div>
               <button onClick={() => setShowChat(false)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
