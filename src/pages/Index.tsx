@@ -14,10 +14,10 @@ import { SEOHead } from "@/components/SEOHead";
 import { organizationSchema, websiteSchema } from "@/lib/seoSchemas";
 
 const categoryImages = [
-  { name: "Electronics", image: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=400&q=80" },
-  { name: "Fashion", image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&q=80" },
-  { name: "Accessories", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80" },
-  { name: "Home", image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&q=80" },
+  { name: "Electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=85&auto=format&fit=crop" },
+  { name: "Fashion", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=85&auto=format&fit=crop" },
+  { name: "Accessories", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop" },
+  { name: "Home", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&q=85&auto=format&fit=crop" },
 ];
 
 const Index = () => {
@@ -52,9 +52,9 @@ const Index = () => {
             <motion.div key={cat.name} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
               <Link to={`/products?category=${cat.name}`} className="group block relative aspect-[4/5] rounded-2xl overflow-hidden card-hover touch-manipulation">
                 <img src={cat.image} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async" />
-                <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                  <span className="font-display font-bold text-sm sm:text-base text-white">{cat.name}</span>
+                  <span className="font-display font-bold text-sm sm:text-base text-white drop-shadow-md">{cat.name}</span>
                 </div>
               </Link>
             </motion.div>

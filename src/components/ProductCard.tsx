@@ -32,7 +32,7 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
       className="group bg-card border border-border rounded-2xl overflow-hidden card-hover flex flex-col"
     >
       <Link to={`/products/${product.id}`} className="block" aria-label={`View ${product.title}`}>
-        <div className="relative aspect-square overflow-hidden bg-secondary">
+        <div className="relative aspect-square overflow-hidden bg-white">
           <div className="absolute inset-0 bg-muted animate-pulse" />
           <img
             src={performanceUtils.optimizeImageUrl(product.image, 400)}
