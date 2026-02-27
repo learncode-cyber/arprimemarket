@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, ArrowUp, X, Bot } from "lucide-react";
+import { MessageCircle, ArrowUp, X, MessageSquare } from "lucide-react";
 import { ChatWidget } from "./ChatWidget";
 
 export const FloatingActionMenu = () => {
@@ -45,9 +45,9 @@ export const FloatingActionMenu = () => {
               exit={{ opacity: 0, y: 12, scale: 0.85 }}
               transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.05 }}
               onClick={handleWhatsApp}
-              className="fixed bottom-[8rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[8.5rem] right-4 z-50 flex items-center gap-2 px-4 h-10 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] active:scale-95 transition-all touch-manipulation"
             >
-              <MessageCircle className="w-4 h-4 text-primary" />
+              <MessageCircle className="w-4 h-4" />
               <span className="text-xs font-semibold whitespace-nowrap">WhatsApp Support</span>
             </motion.button>
 
@@ -58,9 +58,9 @@ export const FloatingActionMenu = () => {
               exit={{ opacity: 0, y: 12, scale: 0.85 }}
               transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.1 }}
               onClick={handleChat}
-              className="fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 px-4 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
             >
-              <Bot className="w-4 h-4 text-primary" />
+              <MessageSquare className="w-4 h-4 text-primary" />
               <span className="text-xs font-semibold whitespace-nowrap">Chat with AI</span>
             </motion.button>
           </>
@@ -76,10 +76,10 @@ export const FloatingActionMenu = () => {
             exit={{ opacity: 0, scale: 0.7 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="fixed bottom-[5.5rem] right-[1.125rem] z-40 w-9 h-9 rounded-full bg-secondary/80 backdrop-blur-xl border border-border/40 text-foreground shadow-md flex items-center justify-center hover:bg-accent active:scale-90 transition-all touch-manipulation"
+            className="fixed bottom-[5.5rem] right-4 z-40 w-14 h-14 rounded-full bg-secondary/80 backdrop-blur-xl border border-border/40 text-foreground shadow-md flex items-center justify-center hover:bg-accent active:scale-90 transition-all touch-manipulation"
             aria-label="Scroll to top"
           >
-            <ArrowUp className="w-4 h-4" />
+            <ArrowUp className="w-5 h-5" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -99,8 +99,8 @@ export const FloatingActionMenu = () => {
               <X className="w-5 h-5" />
             </motion.div>
           ) : (
-            <motion.div key="bot" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-              <Bot className="w-6 h-6" />
+            <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+              <MessageSquare className="w-6 h-6" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -123,7 +123,7 @@ export const FloatingActionMenu = () => {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary/5">
               <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-primary" />
+                <MessageSquare className="w-5 h-5 text-primary" />
                 <span className="font-display font-bold text-sm">AI Assistant</span>
               </div>
               <button onClick={() => setShowChat(false)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
