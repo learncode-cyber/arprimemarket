@@ -1,10 +1,21 @@
 import { MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSectionContent } from "@/hooks/useSiteContent";
 
 export const FloatingWhatsApp = () => {
+  const cmsData = useSectionContent<{ enabled: boolean; phone: string; message: string }>("whatsapp");
+  
+  const phone = cmsData?.phone || "8801910521565";
+  const message = cmsData?.message || "";
+  const enabled = cmsData?.enabled !== false;
+
+  if (!enabled) return null;
+
+  const href = `https://wa.me/${phone}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+
   return (
     <motion.a
-      href="https://wa.me/8801910521565"
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contact us on WhatsApp"

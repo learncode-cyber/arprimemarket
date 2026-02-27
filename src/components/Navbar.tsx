@@ -10,6 +10,7 @@ import { SocialLinksRow } from "./SocialLinks";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSectionContent } from "@/hooks/useSiteContent";
 
 export const Navbar = () => {
   const [hidden, setHidden] = useState(false);
@@ -22,6 +23,9 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const { scrollY } = useScroll();
   const lastY = useRef(0);
+  const cms = useSectionContent<{ brand_name?: string; logo_url?: string }>("navbar");
+  const brandName = cms?.brand_name || "Prime Market";
+  const logoUrl = cms?.logo_url || "/images/logo.png";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const diff = latest - lastY.current;
@@ -54,13 +58,13 @@ export const Navbar = () => {
       >
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
           <Link to="/" className="flex items-center gap-1.5 overflow-hidden">
-            <img src="/images/logo.png" alt="AR Prime Market" className="w-9 h-9 shrink-0 object-contain" />
+            <img src={logoUrl} alt={brandName} className="w-9 h-9 shrink-0 object-contain" />
             <motion.span
               animate={{ width: hidden ? 0 : "auto", opacity: hidden ? 0 : 1 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="font-display font-bold text-base sm:text-lg tracking-tight text-foreground whitespace-nowrap overflow-hidden"
             >
-              Prime Market
+              {brandName}
             </motion.span>
           </Link>
 

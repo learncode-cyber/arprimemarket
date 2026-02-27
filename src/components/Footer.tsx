@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SocialLinksRow } from "./SocialLinks";
 import { VisaIcon, MastercardIcon, BinancePayIcon, BkashIcon, NagadIcon, CodIcon } from "./PaymentIcons";
+import { useSectionContent } from "@/hooks/useSiteContent";
 
 const paymentMethods = [
   { icon: VisaIcon, label: "Visa" },
@@ -18,6 +19,20 @@ export const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const { t } = useLanguage();
+  const cms = useSectionContent<{
+    brand_name?: string; brand_tagline?: string; brand_description?: string;
+    email?: string; phone?: string; address?: string;
+    developer_name?: string; developer_url?: string;
+  }>("footer");
+
+  const brandName = cms?.brand_name || "Prime Market";
+  const brandTagline = cms?.brand_tagline || "Premium Shopping";
+  const brandDesc = cms?.brand_description || t("brandDesc");
+  const contactEmail = cms?.email || "support@arprimemarket.com";
+  const contactPhone = cms?.phone || "+880 1910-521565";
+  const contactAddress = cms?.address || "Dhaka, Bangladesh";
+  const devName = cms?.developer_name || "Abdullah Raiyan";
+  const devUrl = cms?.developer_url || "https://abdullahraiyan.com/";
 
   const footerSections = {
     [t("about")]: [
@@ -93,33 +108,33 @@ export const Footer = () => {
           {/* Brand Column */}
           <div className="col-span-2 space-y-5">
             <Link to="/" className="inline-flex items-center gap-2 group">
-              <img src="/images/logo.png" alt="AR Prime Market" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
+              <img src="/images/logo.png" alt={brandName} className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
               <div>
-                <span className="font-display font-bold text-lg text-foreground block leading-tight">Prime Market</span>
-                <span className="text-[10px] text-muted-foreground tracking-wide">Premium Shopping</span>
+                <span className="font-display font-bold text-lg text-foreground block leading-tight">{brandName}</span>
+                <span className="text-[10px] text-muted-foreground tracking-wide">{brandTagline}</span>
               </div>
             </Link>
 
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">{t("brandDesc")}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">{brandDesc}</p>
 
             <div className="space-y-2.5">
-              <a href="mailto:support@arprimemarket.com" className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group">
+              <a href={`mailto:${contactEmail}`} className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group">
                 <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-secondary group-hover:bg-primary/10 transition-colors">
                   <Mail className="w-3.5 h-3.5" />
                 </span>
-                support@arprimemarket.com
+                {contactEmail}
               </a>
-              <a href="tel:+8801910521565" className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group">
+              <a href={`tel:${contactPhone.replace(/\s/g, '')}`} className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group">
                 <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-secondary group-hover:bg-primary/10 transition-colors">
                   <Phone className="w-3.5 h-3.5" />
                 </span>
-                +880 1910-521565
+                {contactPhone}
               </a>
               <span className="flex items-center gap-2.5 text-xs text-muted-foreground">
                 <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-secondary">
                   <MapPin className="w-3.5 h-3.5" />
                 </span>
-                Dhaka, Bangladesh
+                {contactAddress}
               </span>
             </div>
 
@@ -185,8 +200,8 @@ export const Footer = () => {
             {/* Developer credit */}
             <p className="text-[10px] text-muted-foreground">
               Design & Development by{" "}
-              <a href="https://abdullahraiyan.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
-                Abdullah Raiyan
+              <a href={devUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                {devName}
               </a>
             </p>
           </div>
