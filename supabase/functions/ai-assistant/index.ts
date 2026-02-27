@@ -17,9 +17,9 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const body = await req.json();
-    const { action, scanResultId, fixQuery, message, context: clientContext } = body;
+    const { action, scanResultId, fixQuery, message, context: clientContext, stream: wantStream } = body;
 
-    // Public chat action - no auth required
+    // ─── PUBLIC CHAT (streaming supported) ───
     if (action === "chat") {
       if (!lovableApiKey) {
         return new Response(JSON.stringify({ error: "AI not configured" }), {
@@ -30,18 +30,7 @@ serve(async (req) => {
       const userLang = clientContext?.language || "en";
       const history = clientContext?.history || [];
 
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            {
-              role: "system",
-              content: `You are Raiyan — the founder and owner of AR Prime Market, an online ecommerce store. Customers are chatting directly with you.
+      const systemPrompt = `You are Raiyan — the founder and owner of AR Prime Market, an online ecommerce store based in Bangladesh. Customers are chatting directly with you.
 
 YOUR PERSONALITY:
 - You're a grounded, supportive friend — witty, empathetic, but direct when correcting information.
@@ -50,25 +39,73 @@ YOUR PERSONALITY:
 - Throw in occasional casual flair ("bro", "no worries", "got you covered") but stay professional.
 - Be confident about your products and services. You know your stuff.
 
+LEARNING FROM CONTEXT:
+- Pay close attention to the conversation history. If a customer mentioned an issue before, reference it.
+- If a customer seems frustrated, acknowledge it empathetically before helping.
+- Adapt your tone to match the customer's energy — casual with casual, formal with formal.
+- Remember details from the current conversation and use them naturally.
+
 CRITICAL RULES:
 - Detect the language of the user's message and ALWAYS reply in the SAME language.
 - If the user writes in Bengali, reply in Bengali (casual, friendly Bangla). If Arabic, reply in Arabic. If English, reply in English.
 - The user's browser language is: ${userLang}. Use this as a hint if the message language is ambiguous.
-- Be concise and helpful. Keep responses under 150 words.
+- Be concise and helpful. Keep responses under 150 words unless explaining something complex.
 - For order issues, ask for the order number.
 - Never share internal system details, admin info, or tech stack.
-- If you don't know something, be honest and suggest reaching out on WhatsApp for faster help.
-- NEVER sign off with "- Raiyan" or any signature at the end. Your name is already shown in the chat header. Just end your message naturally.`,
-            },
-            ...history.map((h: any) => ({ role: h.role, content: h.content })),
-            { role: "user", content: message },
-          ],
-        }),
+- If you don't know something, be honest and suggest reaching out on WhatsApp (+880 1910-521565) for faster help.
+- NEVER sign off with "- Raiyan" or any signature. Your name is already shown in the chat header.
+- Use emojis sparingly but naturally — they add warmth.
+- If asked about shipping, mention we deliver across Bangladesh and internationally.
+- If asked about payment, mention we support bKash, Nagad, Rocket, bank transfer, Binance Pay, and more.`;
+
+      const aiPayload: any = {
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...history.map((h: any) => ({ role: h.role, content: h.content })),
+          { role: "user", content: message },
+        ],
+      };
+
+      // Streaming mode
+      if (wantStream) {
+        aiPayload.stream = true;
+
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(aiPayload),
+        });
+
+        if (!aiResponse.ok) {
+          const status = aiResponse.status;
+          if (status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          if (status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        return new Response(aiResponse.body, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+
+      // Non-streaming mode (backward compatible)
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiPayload),
       });
 
       if (!aiResponse.ok) {
         const status = aiResponse.status;
-        if (status === 429) return new Response(JSON.stringify({ reply: "I'm a bit busy right now. Please try again in a moment!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 429) return new Response(JSON.stringify({ reply: "I'm a bit busy right now. Please try again in a moment! 😊" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 402) return new Response(JSON.stringify({ reply: "Sorry, our chat service is temporarily unavailable. Please try WhatsApp!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         return new Response(JSON.stringify({ reply: "Sorry, I couldn't process that. Please try again!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -80,7 +117,7 @@ CRITICAL RULES:
       });
     }
 
-    // Auth check - must be admin for all other actions
+    // ─── AUTH CHECK for admin actions ───
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader || "" } },
     });
@@ -118,7 +155,6 @@ CRITICAL RULES:
         metadata?: Record<string, unknown>;
       }> = [];
 
-      // 1. Check products health
       const { data: products, count: productCount } = await adminClient
         .from("products")
         .select("id, title, slug, image_url, description, price, stock_quantity, is_active, tags, category_id", { count: "exact" });
@@ -128,15 +164,13 @@ CRITICAL RULES:
       const outOfStock = (products || []).filter(p => p.stock_quantity <= 0 && p.is_active);
       const lowStock = (products || []).filter(p => p.stock_quantity > 0 && p.stock_quantity <= 5 && p.is_active);
       const noCategory = (products || []).filter(p => !p.category_id);
-      const noTags = (products || []).filter(p => !p.tags || p.tags.length === 0);
 
       if (noImage.length > 0) {
         findings.push({
-          category: "products",
-          severity: "warning",
+          category: "products", severity: "warning",
           title: `${noImage.length} products missing images`,
           description: `Products without images: ${noImage.slice(0, 5).map(p => p.title).join(", ")}${noImage.length > 5 ? "..." : ""}`,
-          suggestion: "Add product images to improve conversion rates. Products with images get 94% more views.",
+          suggestion: "Add product images to improve conversion rates.",
           auto_fix_available: false,
           metadata: { product_ids: noImage.map(p => p.id) },
         });
@@ -144,8 +178,7 @@ CRITICAL RULES:
 
       if (noDesc.length > 0) {
         findings.push({
-          category: "seo",
-          severity: "warning",
+          category: "seo", severity: "warning",
           title: `${noDesc.length} products with poor descriptions`,
           description: `Products with missing or very short descriptions hurt SEO rankings.`,
           suggestion: "Add detailed descriptions (100+ characters) for better search visibility.",
@@ -156,11 +189,10 @@ CRITICAL RULES:
 
       if (outOfStock.length > 0) {
         findings.push({
-          category: "inventory",
-          severity: "critical",
+          category: "inventory", severity: "critical",
           title: `${outOfStock.length} active products out of stock`,
           description: `These products are visible but have 0 stock: ${outOfStock.slice(0, 5).map(p => p.title).join(", ")}`,
-          suggestion: "Either restock or deactivate these products to avoid customer frustration.",
+          suggestion: "Either restock or deactivate these products.",
           auto_fix_available: true,
           auto_fix_query: `UPDATE products SET is_active = false WHERE stock_quantity <= 0 AND is_active = true`,
           metadata: { product_ids: outOfStock.map(p => p.id) },
@@ -169,27 +201,25 @@ CRITICAL RULES:
 
       if (lowStock.length > 0) {
         findings.push({
-          category: "inventory",
-          severity: "warning",
+          category: "inventory", severity: "warning",
           title: `${lowStock.length} products with low stock (≤5 units)`,
           description: `Low stock items: ${lowStock.slice(0, 5).map(p => `${p.title} (${p.stock_quantity})`).join(", ")}`,
-          suggestion: "Consider restocking these products soon to avoid losing sales.",
+          suggestion: "Consider restocking these products soon.",
           auto_fix_available: false,
         });
       }
 
       if (noCategory.length > 0) {
         findings.push({
-          category: "products",
-          severity: "info",
+          category: "products", severity: "info",
           title: `${noCategory.length} products without category`,
           description: "Uncategorized products won't appear in category filters.",
-          suggestion: "Assign categories to improve product discoverability.",
+          suggestion: "Assign categories to improve discoverability.",
           auto_fix_available: false,
         });
       }
 
-      // 2. Check orders health
+      // Orders health
       const { data: pendingOrders } = await adminClient
         .from("orders")
         .select("id, order_number, created_at, status, payment_status")
@@ -199,22 +229,21 @@ CRITICAL RULES:
 
       const oldPending = (pendingOrders || []).filter(o => {
         const age = Date.now() - new Date(o.created_at).getTime();
-        return age > 48 * 60 * 60 * 1000; // 48 hours
+        return age > 48 * 60 * 60 * 1000;
       });
 
       if (oldPending.length > 0) {
         findings.push({
-          category: "orders",
-          severity: "critical",
+          category: "orders", severity: "critical",
           title: `${oldPending.length} orders pending for 48+ hours`,
-          description: `Orders stuck in pending: ${oldPending.slice(0, 5).map(o => o.order_number).join(", ")}`,
-          suggestion: "Review and process these orders immediately to maintain customer satisfaction.",
+          description: `Orders stuck: ${oldPending.slice(0, 5).map(o => o.order_number).join(", ")}`,
+          suggestion: "Review and process these orders immediately.",
           auto_fix_available: false,
           metadata: { order_ids: oldPending.map(o => o.id) },
         });
       }
 
-      // 3. Check SEO health
+      // Blog SEO
       const { data: blogPosts } = await adminClient
         .from("blog_posts")
         .select("id, title, meta_title, meta_description, slug, is_published");
@@ -222,179 +251,95 @@ CRITICAL RULES:
       const noMeta = (blogPosts || []).filter(p => p.is_published && (!p.meta_title || !p.meta_description));
       if (noMeta.length > 0) {
         findings.push({
-          category: "seo",
-          severity: "warning",
+          category: "seo", severity: "warning",
           title: `${noMeta.length} blog posts missing SEO metadata`,
-          description: "Published posts without meta titles/descriptions rank poorly in search engines.",
-          suggestion: "Add meta title (50-60 chars) and meta description (150-160 chars) to each post.",
+          description: "Published posts without meta titles/descriptions rank poorly.",
+          suggestion: "Add meta title (50-60 chars) and meta description (150-160 chars).",
           auto_fix_available: false,
         });
       }
 
-      // 4. Check help center content
-      const { data: helpCats } = await adminClient.from("help_categories").select("id", { count: "exact" });
-      const { data: helpArts } = await adminClient.from("help_articles").select("id", { count: "exact" });
-      const { data: faqCats } = await adminClient.from("faq_categories").select("id", { count: "exact" });
-      const { data: faqItems } = await adminClient.from("faq_items").select("id", { count: "exact" });
-
-      if (!helpCats || helpCats.length === 0) {
-        findings.push({
-          category: "content",
-          severity: "info",
-          title: "Help Center has no categories",
-          description: "Your Help Center is empty. Customers can't find self-service answers.",
-          suggestion: "Add help categories like Orders, Payments, Shipping, Returns, and Account.",
-          auto_fix_available: false,
-        });
-      }
-
-      if (!faqCats || faqCats.length === 0) {
-        findings.push({
-          category: "content",
-          severity: "info",
-          title: "FAQ section is empty",
-          description: "An FAQ section reduces support tickets by up to 70%.",
-          suggestion: "Add common questions about orders, payments, shipping, and returns.",
-          auto_fix_available: false,
-        });
-      }
-
-      // 5. Check payment methods
-      const { data: paymentMethods } = await adminClient
-        .from("payment_methods")
-        .select("id, is_active, display_name");
-
+      // Payment & shipping checks
+      const { data: paymentMethods } = await adminClient.from("payment_methods").select("id, is_active");
       const activePayments = (paymentMethods || []).filter(p => p.is_active);
       if (activePayments.length === 0) {
         findings.push({
-          category: "payments",
-          severity: "critical",
+          category: "payments", severity: "critical",
           title: "No active payment methods",
-          description: "Customers cannot complete purchases without active payment methods.",
-          suggestion: "Enable at least one payment method in the admin panel.",
+          description: "Customers cannot complete purchases.",
+          suggestion: "Enable at least one payment method.",
           auto_fix_available: false,
         });
       }
 
-      // 6. Check shipping zones
-      const { data: shippingZones } = await adminClient
-        .from("shipping_zones")
-        .select("id, is_active");
-
+      const { data: shippingZones } = await adminClient.from("shipping_zones").select("id, is_active");
       const activeZones = (shippingZones || []).filter(z => z.is_active);
       if (activeZones.length === 0) {
         findings.push({
-          category: "shipping",
-          severity: "critical",
+          category: "shipping", severity: "critical",
           title: "No active shipping zones",
-          description: "Shipping cannot be calculated without active zones.",
-          suggestion: "Configure at least one shipping zone for your primary market.",
+          description: "Shipping cannot be calculated.",
+          suggestion: "Configure at least one shipping zone.",
           auto_fix_available: false,
         });
       }
 
-      // 7. Security checks
-      const { data: adminRoles } = await adminClient
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin");
-
-      if ((adminRoles || []).length > 3) {
-        findings.push({
-          category: "security",
-          severity: "warning",
-          title: `${(adminRoles || []).length} admin users detected`,
-          description: "Having too many admin users increases security risk.",
-          suggestion: "Review admin access and revoke unnecessary permissions.",
-          auto_fix_available: false,
-        });
-      }
-
-      // 8. Check unresolved support tickets
-      const { data: openTickets, count: ticketCount } = await adminClient
+      // Support tickets
+      const { count: ticketCount } = await adminClient
         .from("support_tickets")
-        .select("id", { count: "exact" })
+        .select("id", { count: "exact", head: true })
         .in("status", ["open", "pending"]);
 
       if (ticketCount && ticketCount > 10) {
         findings.push({
-          category: "support",
-          severity: "warning",
+          category: "support", severity: "warning",
           title: `${ticketCount} unresolved support tickets`,
-          description: "A high number of unresolved tickets indicates customer service issues.",
-          suggestion: "Prioritize ticket resolution to maintain customer satisfaction.",
+          description: "High number of unresolved tickets.",
+          suggestion: "Prioritize ticket resolution.",
           auto_fix_available: false,
         });
       }
 
-      // Use AI to generate an overall health summary
+      // AI summary
       let aiSummary = "";
       if (lovableApiKey && findings.length > 0) {
         try {
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${lovableApiKey}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-3-flash-preview",
               messages: [
-                {
-                  role: "system",
-                  content: "You are a senior ecommerce developer assistant. Analyze the scan findings and provide a concise executive summary (3-5 sentences) with prioritized action items. Be direct and actionable. Format as plain text, no markdown.",
-                },
-                {
-                  role: "user",
-                  content: `Here are the scan findings for an ecommerce website:\n${JSON.stringify(findings.map(f => ({ category: f.category, severity: f.severity, title: f.title })), null, 2)}\n\nTotal products: ${productCount || 0}\nProvide a brief health summary and top 3 priorities.`,
-                },
+                { role: "system", content: "You are a senior ecommerce assistant. Provide a concise executive summary (3-5 sentences) with prioritized actions. Plain text, no markdown." },
+                { role: "user", content: `Scan findings:\n${JSON.stringify(findings.map(f => ({ category: f.category, severity: f.severity, title: f.title })), null, 2)}\n\nTotal products: ${productCount || 0}\nProvide brief health summary and top 3 priorities.` },
               ],
             }),
           });
-
           if (aiResponse.ok) {
             const aiData = await aiResponse.json();
             aiSummary = aiData.choices?.[0]?.message?.content || "";
           }
-        } catch (e) {
-          console.error("AI summary error:", e);
-        }
+        } catch (e) { console.error("AI summary error:", e); }
       }
 
-      // Store findings in database
+      // Store findings
       if (findings.length > 0) {
-        // Clear old pending findings
-        await adminClient
-          .from("ai_scan_results")
-          .delete()
-          .eq("status", "pending");
-
-        const rows = findings.map(f => ({
-          scan_type: "full",
-          category: f.category,
-          severity: f.severity,
-          title: f.title,
-          description: f.description,
-          suggestion: f.suggestion,
-          auto_fix_available: f.auto_fix_available,
-          auto_fix_query: f.auto_fix_query || null,
-          status: "pending",
-          metadata: f.metadata || {},
-        }));
-
-        await adminClient.from("ai_scan_results").insert(rows);
+        await adminClient.from("ai_scan_results").delete().eq("status", "pending");
+        await adminClient.from("ai_scan_results").insert(findings.map(f => ({
+          scan_type: "full", category: f.category, severity: f.severity, title: f.title,
+          description: f.description, suggestion: f.suggestion, auto_fix_available: f.auto_fix_available,
+          auto_fix_query: f.auto_fix_query || null, status: "pending", metadata: f.metadata || {},
+        })));
       }
 
-      // Log the scan
       await adminClient.from("ai_activity_log").insert({
         action: "scan_completed",
-        details: `Full scan completed. Found ${findings.length} issues. Critical: ${findings.filter(f => f.severity === "critical").length}, Warnings: ${findings.filter(f => f.severity === "warning").length}, Info: ${findings.filter(f => f.severity === "info").length}`,
+        details: `Full scan: ${findings.length} issues. Critical: ${findings.filter(f => f.severity === "critical").length}, Warnings: ${findings.filter(f => f.severity === "warning").length}`,
         performed_by: user.id,
       });
 
       return new Response(JSON.stringify({
-        findings,
-        summary: aiSummary,
+        findings, summary: aiSummary,
         stats: {
           total: findings.length,
           critical: findings.filter(f => f.severity === "critical").length,
@@ -402,9 +347,7 @@ CRITICAL RULES:
           info: findings.filter(f => f.severity === "info").length,
           fixable: findings.filter(f => f.auto_fix_available).length,
         },
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ─── APPLY FIX ───
@@ -415,7 +358,6 @@ CRITICAL RULES:
         });
       }
 
-      // Verify the fix query matches what we stored
       const { data: scanResult } = await adminClient
         .from("ai_scan_results")
         .select("*")
@@ -423,36 +365,23 @@ CRITICAL RULES:
         .single();
 
       if (!scanResult || scanResult.auto_fix_query !== fixQuery) {
-        return new Response(JSON.stringify({ error: "Fix query mismatch or result not found" }), {
+        return new Response(JSON.stringify({ error: "Fix query mismatch" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Execute the fix (only pre-approved queries)
       try {
-        // For product deactivation fix
         if (fixQuery.includes("UPDATE products SET is_active = false WHERE stock_quantity <= 0")) {
-          const { data, error } = await adminClient
-            .from("products")
-            .update({ is_active: false })
-            .lte("stock_quantity", 0)
-            .eq("is_active", true);
-
-          if (error) throw error;
+          await adminClient.from("products").update({ is_active: false }).lte("stock_quantity", 0).eq("is_active", true);
         }
 
-        // Mark as applied
-        await adminClient
-          .from("ai_scan_results")
+        await adminClient.from("ai_scan_results")
           .update({ status: "applied", applied_at: new Date().toISOString(), applied_by: user.id })
           .eq("id", scanResultId);
 
-        // Log
         await adminClient.from("ai_activity_log").insert({
-          action: "fix_applied",
-          details: `Applied fix: ${scanResult.title}`,
-          scan_result_id: scanResultId,
-          performed_by: user.id,
+          action: "fix_applied", details: `Applied fix: ${scanResult.title}`,
+          scan_result_id: scanResultId, performed_by: user.id,
         });
 
         return new Response(JSON.stringify({ success: true, message: "Fix applied successfully" }), {
@@ -473,16 +402,13 @@ CRITICAL RULES:
         });
       }
 
-      await adminClient
-        .from("ai_scan_results")
+      await adminClient.from("ai_scan_results")
         .update({ status: "dismissed", dismissed_at: new Date().toISOString(), dismissed_by: user.id })
         .eq("id", scanResultId);
 
       await adminClient.from("ai_activity_log").insert({
-        action: "finding_dismissed",
-        details: `Dismissed finding: ${scanResultId}`,
-        scan_result_id: scanResultId,
-        performed_by: user.id,
+        action: "finding_dismissed", details: `Dismissed: ${scanResultId}`,
+        scan_result_id: scanResultId, performed_by: user.id,
       });
 
       return new Response(JSON.stringify({ success: true }), {
@@ -498,7 +424,6 @@ CRITICAL RULES:
         });
       }
 
-      // Gather context
       const { data: recentFindings } = await adminClient
         .from("ai_scan_results")
         .select("*")
@@ -510,30 +435,19 @@ CRITICAL RULES:
       const { count: openTickets } = await adminClient.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "pending"]);
 
       const context = {
-        totalProducts,
-        totalOrders,
-        openTickets,
+        totalProducts, totalOrders, openTickets,
         recentFindings: (recentFindings || []).slice(0, 10).map(f => ({
-          severity: f.severity,
-          title: f.title,
-          category: f.category,
-          status: f.status,
+          severity: f.severity, title: f.title, category: f.category, status: f.status,
         })),
       };
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: [
-            {
-              role: "system",
-              content: `You are a senior ecommerce developer assistant for AR Prime Market. You have access to the following site data:\n${JSON.stringify(context)}\n\nProvide concise, actionable advice. Format responses clearly. Never suggest changes that could break the site.`,
-            },
+            { role: "system", content: `You are a senior ecommerce developer assistant for AR Prime Market. Site data:\n${JSON.stringify(context)}\n\nProvide concise, actionable advice.` },
             { role: "user", content: message },
           ],
         }),
@@ -541,7 +455,7 @@ CRITICAL RULES:
 
       if (!aiResponse.ok) {
         const status = aiResponse.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Rate limited. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limited." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         return new Response(JSON.stringify({ error: "AI request failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
