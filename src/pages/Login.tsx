@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Loader2, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -12,8 +12,19 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [submitting, setSubmitting] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect logged-in users: admins → /ar, regular users → /dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      if (isAdmin) {
+        navigate("/ar", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [user, isAdmin, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,10 +53,16 @@ const Login = () => {
     setSubmitting(false);
 
     if (error) {
-      toast.error("Invalid email or password");
+      if (error.toLowerCase().includes("email not confirmed")) {
+        toast.error("Please confirm your email first. Check your inbox for a verification link.");
+      } else if (error.toLowerCase().includes("invalid login credentials")) {
+        toast.error("Invalid email or password. If you signed up with Google, use the Google button below.");
+      } else {
+        toast.error(error);
+      }
     } else {
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      // Redirect will be handled by AuthRedirect effect
     }
   };
 
