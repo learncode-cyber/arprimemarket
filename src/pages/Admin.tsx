@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
   Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
-  BookOpen, HelpCircle, MessageCircle, Ticket, Brain
+  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -30,9 +30,11 @@ import FAQManagement from "@/components/admin/FAQManagement";
 import ChatManagement from "@/components/admin/ChatManagement";
 import TicketManagement from "@/components/admin/TicketManagement";
 import AIAssistantDashboard from "@/components/admin/AIAssistantDashboard";
+import SiteContentManagement from "@/components/admin/SiteContentManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "site-content", label: "Site Content", icon: PanelLeft },
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "customers", label: "Customers", icon: Users },
@@ -179,6 +181,7 @@ const Admin = () => {
               transition={{ duration: 0.15 }}
             >
               {activeTab === "dashboard" && <AdminDashboard />}
+              {activeTab === "site-content" && <SiteContentManagement />}
               {activeTab === "products" && <ProductManagement />}
               {activeTab === "orders" && <OrderManagement />}
               {activeTab === "customers" && <CustomerManagement />}
