@@ -159,7 +159,7 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
       window.gtag("event", "purchase", { transaction_id: orderId, value, currency: "BDT", items: items.map(i => ({ item_id: i.id, item_name: i.title, price: i.price, quantity: i.quantity || 1 })) });
       const gads = getPixel("google_ads");
       if (gads?.config?.conversion_label) {
-        window.gtag("event", "conversion", { send_to: `${gads.pixel_id}/${gads.config.conversion_label}`, value, currency: "BDT", transaction_id: orderId });
+        window.gtag("event", "conversion", { send_to: `${sanitizePixelId(gads.pixel_id)}/${sanitizePixelId(String(gads.config.conversion_label || ""))}`, value, currency: "BDT", transaction_id: orderId });
       }
     }
   }, [getPixel]);
