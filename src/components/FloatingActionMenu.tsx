@@ -3,6 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, ArrowUp, X, MessageSquare } from "lucide-react";
 import { ChatWidget } from "./ChatWidget";
 
+const menuItemVariants = {
+  hidden: { opacity: 0, y: 10, scale: 0.92 },
+  visible: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 10, scale: 0.92 },
+};
+
+const smoothTransition = (delay = 0) => ({
+  type: "tween" as const,
+  ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number],
+  duration: 0.22,
+  delay,
+});
+
 export const FloatingActionMenu = () => {
   const [open, setOpen] = useState(false);
   const [showScroll, setShowScroll] = useState(false);
@@ -34,18 +47,20 @@ export const FloatingActionMenu = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-40"
             />
 
             {/* WhatsApp */}
             <motion.button
-              initial={{ opacity: 0, y: 8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ type: "tween", ease: "easeOut", duration: 0.2, delay: 0.03 }}
+              variants={menuItemVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={smoothTransition(0.04)}
               onClick={handleWhatsApp}
-              className="fixed bottom-[8.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] active:scale-95 transition-colors touch-manipulation"
+              className="fixed bottom-[8.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg hover:bg-[#25D366] transition-colors touch-manipulation"
             >
               <MessageCircle className="w-4 h-4" />
               <span className="text-xs font-semibold whitespace-nowrap">WhatsApp</span>
@@ -53,12 +68,13 @@ export const FloatingActionMenu = () => {
 
             {/* Chat with AI */}
             <motion.button
-              initial={{ opacity: 0, y: 8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ type: "tween", ease: "easeOut", duration: 0.2, delay: 0.06 }}
+              variants={menuItemVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={smoothTransition(0.08)}
               onClick={handleChat}
-              className="fixed bottom-[5.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[5.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card transition-colors touch-manipulation"
             >
               <MessageSquare className="w-4 h-4 text-primary" />
               <span className="text-xs font-semibold whitespace-nowrap">Chat with AI</span>
@@ -67,16 +83,16 @@ export const FloatingActionMenu = () => {
         )}
       </AnimatePresence>
 
-      {/* Scroll to top — below the FAB */}
+      {/* Scroll to top */}
       <AnimatePresence>
         {showScroll && !open && (
           <motion.button
-            initial={{ opacity: 0, scale: 0.7 }}
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="fixed bottom-[5.5rem] right-4 z-40 w-14 h-14 rounded-full bg-secondary/80 backdrop-blur-xl border border-border/40 text-foreground shadow-md flex items-center justify-center hover:bg-accent active:scale-90 transition-all touch-manipulation"
+            className="fixed bottom-[5.5rem] right-4 z-40 w-14 h-14 rounded-full bg-secondary/80 backdrop-blur-xl border border-border/40 text-foreground shadow-md flex items-center justify-center hover:bg-accent transition-colors touch-manipulation"
             aria-label="Scroll to top"
           >
             <ArrowUp className="w-5 h-5" />
@@ -88,9 +104,9 @@ export const FloatingActionMenu = () => {
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.8, type: "spring", stiffness: 260, damping: 20 }}
+        transition={{ delay: 0.8, type: "tween", ease: [0.34, 1.56, 0.64, 1] as [number, number, number, number], duration: 0.4 }}
         onClick={() => setOpen(!open)}
-        className={`fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full backdrop-blur-xl border flex items-center justify-center active:scale-90 transition-all touch-manipulation ${open ? "bg-card/90 border-border/50 text-foreground shadow-md hover:bg-card" : "bg-primary/90 border-primary/30 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary"}`}
+        className={`fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full backdrop-blur-xl border flex items-center justify-center transition-colors touch-manipulation ${open ? "bg-card/90 border-border/50 text-foreground shadow-md hover:bg-card" : "bg-primary/90 border-primary/30 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary"}`}
         aria-label="Help menu"
       >
         <AnimatePresence mode="wait">
