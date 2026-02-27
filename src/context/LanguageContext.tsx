@@ -229,6 +229,13 @@ const GEO_DETECTED_KEY = "ar-pm-geo-detected";
 const countryToLang: Record<string, LangCode> = {
   AE: "ar",
   SA: "sa",
+  BD: "en",
+};
+
+const countryToCurrency: Record<string, string> = {
+  AE: "AED",
+  SA: "SAR",
+  BD: "BDT",
 };
 
 const CURRENCY_STORAGE_KEY = "ar-pm-currency";
@@ -267,12 +274,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
     const applyGeoDefaults = (countryCode?: string) => {
       const normalizedCode = countryCode?.toUpperCase();
-      const isMiddleEast = normalizedCode === "SA" || normalizedCode === "AE";
-      const langCode: LangCode = isMiddleEast
-        ? (countryToLang[normalizedCode!] || "ar")
+      const langCode: LangCode = normalizedCode && countryToLang[normalizedCode]
+        ? countryToLang[normalizedCode]
         : "en";
-      const currencyCode = isMiddleEast
-        ? (normalizedCode === "SA" ? "SAR" : "AED")
+      const currencyCode = normalizedCode && countryToCurrency[normalizedCode]
+        ? countryToCurrency[normalizedCode]
         : "USD";
 
       const found = languages.find(l => l.code === langCode);
