@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ChatOrderForm from "@/components/ChatOrderForm";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessage {
   id: string;
@@ -449,7 +450,26 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
                 m.sender_type === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-foreground rounded-bl-sm"
               }`}>
-                {m.content || (
+                {m.content ? (
+                  m.sender_type === "agent" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_a]:text-primary [&_a]:underline [&_a]:font-medium [&_a]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_strong]:font-semibold">
+                      <ReactMarkdown
+                        components={{
+                          a: ({ href, children }) => (
+                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium hover:opacity-80 transition-opacity">
+                              {children}
+                            </a>
+                          ),
+                          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span>{m.content}</span>
+                  )
+                ) : (
                   <span className="inline-flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
