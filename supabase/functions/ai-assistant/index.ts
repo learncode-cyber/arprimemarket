@@ -491,12 +491,15 @@ ${productContext}`;
         .order("created_at", { ascending: false })
         .limit(20);
 
+      const { data: trackingPixels } = await adminClient.from("tracking_pixels").select("*");
+
       const { count: totalProducts } = await adminClient.from("products").select("id", { count: "exact", head: true });
       const { count: totalOrders } = await adminClient.from("orders").select("id", { count: "exact", head: true });
       const { count: openTickets } = await adminClient.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "pending"]);
 
       const context = {
         totalProducts, totalOrders, openTickets,
+        trackingPixels: (trackingPixels || []).map(p => ({ platform: p.platform, pixel_id: p.pixel_id === "placeholder" ? "not configured" : p.pixel_id, is_active: p.is_active })),
         recentFindings: (recentFindings || []).slice(0, 10).map(f => ({
           severity: f.severity, title: f.title, category: f.category, status: f.status,
         })),
@@ -508,7 +511,14 @@ ${productContext}`;
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: [
-            { role: "system", content: `You are a senior ecommerce developer assistant for AR Prime Market. Site data:\n${JSON.stringify(context)}\n\nProvide concise, actionable advice.` },
+            { role: "system", content: `You are a senior ecommerce & digital marketing assistant for AR Prime Market admin panel. You can help configure tracking pixels, analyze marketing performance, and provide marketing advice.
+
+Current tracking setup: ${JSON.stringify(context.trackingPixels)}
+Site stats: ${JSON.stringify({ totalProducts: context.totalProducts, totalOrders: context.totalOrders, openTickets: context.openTickets })}
+
+If the admin gives you a pixel ID or tracking code, help them identify which platform it belongs to and provide setup instructions. You can recommend which platforms to use for their business.
+
+Provide concise, actionable advice. Be a marketing expert.` },
             { role: "user", content: message },
           ],
         }),
@@ -527,6 +537,76 @@ ${productContext}`;
       return new Response(JSON.stringify({ reply }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ─── CONFIGURE TRACKING (AI-powered pixel setup) ───
+    if (action === "configure_tracking") {
+      if (!lovableApiKey) {
+        return new Response(JSON.stringify({ error: "AI not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: `You are a tracking pixel configuration assistant. The user will give you pixel IDs or codes. Extract them and return structured data.
+
+Supported platforms and their ID formats:
+- meta_pixel: numeric ID like 1234567890
+- google_analytics: starts with G- like G-XXXXXXXXXX
+- google_ads: starts with AW- like AW-XXXXXXXXXX (may include /conversion_label)
+- tiktok_pixel: starts with C like CXXXXXXXXXXXXXXX
+- snapchat_pixel: UUID format like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+- pinterest_tag: numeric ID
+
+Return ONLY valid JSON array. Each item: {"platform":"platform_key","pixelId":"the_id","config":{}}
+For google_ads with conversion label, put it in config: {"conversion_label":"the_label"}
+
+If you cannot identify any pixels, return: {"error":"Could not identify any tracking pixels. Please provide IDs in the format: Platform: ID"}` },
+            { role: "user", content: message },
+          ],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        return new Response(JSON.stringify({ error: "AI parsing failed" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiData = await aiResponse.json();
+      const rawReply = aiData.choices?.[0]?.message?.content || "";
+
+      try {
+        // Try to extract JSON from the response
+        const jsonMatch = rawReply.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return new Response(JSON.stringify({ pixels: parsed }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const objMatch = rawReply.match(/\{[\s\S]*"error"[\s\S]*\}/);
+        if (objMatch) {
+          const parsed = JSON.parse(objMatch[0]);
+          return new Response(JSON.stringify({ reply: parsed.error }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ reply: rawReply }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        return new Response(JSON.stringify({ reply: rawReply }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {
