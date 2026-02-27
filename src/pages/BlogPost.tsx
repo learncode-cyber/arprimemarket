@@ -2,6 +2,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, Calendar, Clock, User, ArrowLeft, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -110,7 +111,7 @@ const BlogPost = () => {
 
           {post.image_url && <img src={post.image_url} alt={post.title} className="w-full rounded-xl mb-8 aspect-[16/9] object-cover" />}
 
-          <div className="prose prose-sm sm:prose max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: post.content }} />
+          <div className="prose prose-sm sm:prose max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ALLOWED_TAGS: ['p','br','strong','em','u','a','ul','ol','li','h1','h2','h3','h4','h5','h6','img','blockquote','pre','code','table','thead','tbody','tr','th','td','hr','span','div','figure','figcaption'], ALLOWED_ATTR: ['href','target','src','alt','class','style','rel'] }) }} />
         </motion.article>
 
         {/* Comments */}
