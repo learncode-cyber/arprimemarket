@@ -35,6 +35,8 @@ async function completeLog(supabase: any, logId: string, status: string, process
 
 // ─── Supplier API adapter interface ───
 interface SupplierAdapter {
+  name: string;
+  testConnection(apiUrl: string, apiKey: string): Promise<{ ok: boolean; message: string; details?: any }>;
   fetchProducts(apiUrl: string, apiKey: string): Promise<ExternalProduct[]>;
   forwardOrder(apiUrl: string, apiKey: string, order: any): Promise<{ externalOrderId: string }>;
   getOrderStatus(apiUrl: string, apiKey: string, externalOrderId: string): Promise<{ status: string; trackingNumber?: string; carrier?: string }>;
@@ -53,16 +55,235 @@ interface ExternalProduct {
   url?: string;
 }
 
-// ─── Generic/Custom API adapter ───
-const customAdapter: SupplierAdapter = {
+// ─── CJ Dropshipping Adapter ───
+const cjAdapter: SupplierAdapter = {
+  name: "CJ Dropshipping",
+
+  async testConnection(apiUrl, apiKey) {
+    try {
+      const tokenRes = await fetch(`${apiUrl}/authentication/getAccessToken`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "", password: "", apiKey }),
+      });
+      if (!tokenRes.ok) return { ok: false, message: `CJ API returned ${tokenRes.status}` };
+      const data = await tokenRes.json();
+      if (data.result === true || data.code === 200) {
+        return { ok: true, message: "CJ Dropshipping connected successfully", details: { hasToken: true } };
+      }
+      return { ok: false, message: data.message || "Authentication failed" };
+    } catch (e: any) {
+      return { ok: false, message: `Connection failed: ${e.message}` };
+    }
+  },
+
   async fetchProducts(apiUrl, apiKey) {
-    const res = await fetch(`${apiUrl}/products`, {
+    // CJ uses token-based auth — first get token, then fetch
+    const tokenRes = await fetch(`${apiUrl}/authentication/getAccessToken`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey }),
+    });
+    const tokenData = await tokenRes.json();
+    const token = tokenData.data?.accessToken || apiKey;
+
+    const res = await fetch(`${apiUrl}/product/list`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify({ pageNum: 1, pageSize: 200 }),
+    });
+    if (!res.ok) throw new Error(`CJ product list failed: ${res.status}`);
+    const data = await res.json();
+    const products = data.data?.list || [];
+
+    return products.map((p: any) => ({
+      externalId: String(p.pid || p.productId),
+      title: p.productNameEn || p.productName || "",
+      description: p.description || p.productDescEn || "",
+      price: Number(p.sellPrice || p.productPrice || 0),
+      stock: Number(p.productStock || p.stock || 999),
+      imageUrl: p.productImage || p.bigImage || null,
+      images: (p.productImageSet || []).map((img: any) => img.imageUrl || img),
+      variants: p.variants || [],
+      category: p.categoryName || "",
+      url: p.productUrl || "",
+    }));
+  },
+
+  async forwardOrder(apiUrl, apiKey, order) {
+    const tokenRes = await fetch(`${apiUrl}/authentication/getAccessToken`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey }),
+    });
+    const tokenData = await tokenRes.json();
+    const token = tokenData.data?.accessToken || apiKey;
+
+    const res = await fetch(`${apiUrl}/shopping/order/createOrder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify({
+        orderNumber: order.order_number,
+        shippingCountryCode: order.shipping_country || "BD",
+        shippingCity: order.shipping_city,
+        shippingAddress: order.shipping_address,
+        shippingCustomerName: order.shipping_name,
+        shippingPhone: order.shipping_phone,
+        shippingZip: order.shipping_postal_code || "",
+        products: order.items.map((i: any) => ({
+          vid: i.product_id,
+          quantity: i.quantity,
+        })),
+      }),
+    });
+    if (!res.ok) throw new Error(`CJ order create failed: ${res.status}`);
+    const data = await res.json();
+    return { externalOrderId: String(data.data?.orderId || data.data?.orderNum || "unknown") };
+  },
+
+  async getOrderStatus(apiUrl, apiKey, externalOrderId) {
+    const tokenRes = await fetch(`${apiUrl}/authentication/getAccessToken`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey }),
+    });
+    const tokenData = await tokenRes.json();
+    const token = tokenData.data?.accessToken || apiKey;
+
+    const res = await fetch(`${apiUrl}/shopping/order/getOrderDetail`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify({ orderId: externalOrderId }),
+    });
+    if (!res.ok) throw new Error(`CJ order status failed: ${res.status}`);
+    const data = await res.json();
+    const order = data.data;
+
+    return {
+      status: order?.orderStatus || "unknown",
+      trackingNumber: order?.trackNumber || order?.logisticInfo?.trackNumber,
+      carrier: order?.logisticName || order?.logisticInfo?.logisticName,
+    };
+  },
+};
+
+// ─── AliExpress Adapter ───
+const aliexpressAdapter: SupplierAdapter = {
+  name: "AliExpress",
+
+  async testConnection(apiUrl, apiKey) {
+    try {
+      const res = await fetch(`${apiUrl}/api/products?limit=1`, {
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      });
+      if (res.ok) return { ok: true, message: "AliExpress API connected" };
+      return { ok: false, message: `API returned ${res.status}: ${await res.text()}` };
+    } catch (e: any) {
+      return { ok: false, message: `Connection failed: ${e.message}` };
+    }
+  },
+
+  async fetchProducts(apiUrl, apiKey) {
+    const allProducts: ExternalProduct[] = [];
+    let page = 1;
+    const maxPages = 10;
+
+    while (page <= maxPages) {
+      const res = await fetch(`${apiUrl}/api/products?page=${page}&limit=50`, {
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error(`AliExpress fetch failed: ${res.status}`);
+      const data = await res.json();
+      const products = data.products || data.data || data.items || [];
+
+      if (products.length === 0) break;
+
+      allProducts.push(...products.map((p: any) => ({
+        externalId: String(p.product_id || p.id),
+        title: p.product_title || p.title || p.name || "",
+        description: p.product_detail || p.description || "",
+        price: Number(p.target_sale_price || p.price || p.original_price || 0),
+        stock: Number(p.stock || p.inventory || 999),
+        imageUrl: p.product_main_image_url || p.image_url || p.image || null,
+        images: (p.product_small_image_urls?.string || p.images || []),
+        variants: p.variants || p.skus || [],
+        category: p.second_level_category_name || p.category || "",
+        url: p.product_detail_url || p.url || "",
+      })));
+
+      if (products.length < 50) break;
+      page++;
+    }
+
+    return allProducts;
+  },
+
+  async forwardOrder(apiUrl, apiKey, order) {
+    const res = await fetch(`${apiUrl}/api/orders`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shipping_address: {
+          name: order.shipping_name,
+          phone: order.shipping_phone,
+          address: order.shipping_address,
+          city: order.shipping_city,
+          country: order.shipping_country,
+          postal_code: order.shipping_postal_code,
+        },
+        items: order.items,
+        order_number: order.order_number,
+      }),
+    });
+    if (!res.ok) throw new Error(`AliExpress order failed: ${res.status}`);
+    const data = await res.json();
+    return { externalOrderId: String(data.order_id || data.id) };
+  },
+
+  async getOrderStatus(apiUrl, apiKey, externalOrderId) {
+    const res = await fetch(`${apiUrl}/api/orders/${externalOrderId}`, {
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     });
-    if (!res.ok) throw new Error(`Supplier API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`AliExpress status failed: ${res.status}`);
     const data = await res.json();
-    // Normalize to our format — expects { products: [...] } or direct array
-    const products = Array.isArray(data) ? data : data.products || data.data || [];
+    return {
+      status: data.order_status || data.status || "unknown",
+      trackingNumber: data.tracking_number || data.logistics_info?.tracking_number,
+      carrier: data.logistics_company || data.logistics_info?.company,
+    };
+  },
+};
+
+// ─── Generic/Custom REST API adapter ───
+const customAdapter: SupplierAdapter = {
+  name: "Custom REST API",
+
+  async testConnection(apiUrl, apiKey) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+      const res = await fetch(`${apiUrl}/products?limit=1`, { headers });
+      if (res.ok) return { ok: true, message: "API connected successfully" };
+
+      // Try alternate endpoints
+      const res2 = await fetch(`${apiUrl}/health`, { headers });
+      if (res2.ok) return { ok: true, message: "API health check passed" };
+
+      return { ok: false, message: `API returned ${res.status}` };
+    } catch (e: any) {
+      return { ok: false, message: `Connection failed: ${e.message}` };
+    }
+  },
+
+  async fetchProducts(apiUrl, apiKey) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    const res = await fetch(`${apiUrl}/products`, { headers });
+    if (!res.ok) throw new Error(`API error: ${res.status} ${await res.text()}`);
+    const data = await res.json();
+    const products = Array.isArray(data) ? data : data.products || data.data || data.items || [];
     return products.map((p: any) => ({
       externalId: String(p.id || p.external_id || p.sku),
       title: p.title || p.name,
@@ -78,9 +299,12 @@ const customAdapter: SupplierAdapter = {
   },
 
   async forwardOrder(apiUrl, apiKey, order) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
     const res = await fetch(`${apiUrl}/orders`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(order),
     });
     if (!res.ok) throw new Error(`Order forward failed: ${res.status}`);
@@ -89,9 +313,10 @@ const customAdapter: SupplierAdapter = {
   },
 
   async getOrderStatus(apiUrl, apiKey, externalOrderId) {
-    const res = await fetch(`${apiUrl}/orders/${externalOrderId}`, {
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    });
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    const res = await fetch(`${apiUrl}/orders/${externalOrderId}`, { headers });
     if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
     const data = await res.json();
     return {
@@ -102,15 +327,47 @@ const customAdapter: SupplierAdapter = {
   },
 };
 
-// ─── Adapter registry (extensible for future suppliers) ───
-function getAdapter(_apiType: string): SupplierAdapter {
-  // All types use the custom adapter for now — specific adapters can be added here
-  // e.g. case "aliexpress": return aliexpressAdapter;
-  return customAdapter;
+// ─── Manual adapter (no API) ───
+const manualAdapter: SupplierAdapter = {
+  name: "Manual",
+  async testConnection() { return { ok: true, message: "Manual supplier — no API connection needed" }; },
+  async fetchProducts() { return []; },
+  async forwardOrder() { throw new Error("Manual supplier doesn't support automatic order forwarding"); },
+  async getOrderStatus() { return { status: "unknown" }; },
+};
+
+// ─── Adapter registry ───
+function getAdapter(apiType: string): SupplierAdapter {
+  switch (apiType) {
+    case "cj": return cjAdapter;
+    case "aliexpress": return aliexpressAdapter;
+    case "custom": return customAdapter;
+    case "manual": return manualAdapter;
+    default: return customAdapter;
+  }
 }
 
-// ─── Action handlers ───
+// ─── Test Connection ───
+async function handleTestConnection(supabase: any, supplierId: string) {
+  const { data: supplier } = await supabase.from("suppliers").select("*").eq("id", supplierId).single();
+  if (!supplier) throw new Error("Supplier not found");
 
+  const adapter = getAdapter(supplier.api_type);
+  const apiKey = supplier.api_key_secret ? (Deno.env.get(supplier.api_key_secret) || "") : "";
+
+  if (supplier.api_type === "manual") {
+    return { ok: true, message: "Manual supplier — no API needed", platform: adapter.name };
+  }
+
+  if (!supplier.api_url) {
+    return { ok: false, message: "No API URL configured", platform: adapter.name };
+  }
+
+  const result = await adapter.testConnection(supplier.api_url, apiKey);
+  return { ...result, platform: adapter.name };
+}
+
+// ─── Auto Import with retry ───
 async function handleAutoImport(supabase: any, supplierId: string) {
   const { data: supplier } = await supabase.from("suppliers").select("*").eq("id", supplierId).single();
   if (!supplier) throw new Error("Supplier not found");
@@ -124,11 +381,24 @@ async function handleAutoImport(supabase: any, supplierId: string) {
   const errors: unknown[] = [];
 
   try {
-    const externalProducts = await adapter.fetchProducts(supplier.api_url, apiKey);
+    let externalProducts: ExternalProduct[] = [];
+    let retries = 0;
+    const maxRetries = 3;
+
+    while (retries < maxRetries) {
+      try {
+        externalProducts = await adapter.fetchProducts(supplier.api_url, apiKey);
+        break;
+      } catch (e: any) {
+        retries++;
+        if (retries >= maxRetries) throw e;
+        // Wait before retry (exponential backoff)
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries)));
+      }
+    }
 
     for (const ep of externalProducts) {
       try {
-        // Check if already exists
         const { data: existing } = await supabase
           .from("supplier_products")
           .select("id")
@@ -136,35 +406,27 @@ async function handleAutoImport(supabase: any, supplierId: string) {
           .eq("external_id", ep.externalId)
           .maybeSingle();
 
+        const productData = {
+          external_title: ep.title,
+          external_price: ep.price,
+          external_stock: ep.stock,
+          external_image_url: ep.imageUrl,
+          external_images: ep.images || [],
+          external_variants: ep.variants || [],
+          external_description: ep.description || null,
+          external_category: ep.category || null,
+          external_url: ep.url || null,
+          last_synced_at: new Date().toISOString(),
+          sync_status: "synced",
+        };
+
         if (existing) {
-          // Update existing
-          await supabase.from("supplier_products").update({
-            external_title: ep.title,
-            external_price: ep.price,
-            external_stock: ep.stock,
-            external_image_url: ep.imageUrl,
-            external_images: ep.images || [],
-            external_variants: ep.variants || [],
-            external_description: ep.description || null,
-            external_category: ep.category || null,
-            external_url: ep.url || null,
-            last_synced_at: new Date().toISOString(),
-            sync_status: "synced",
-          }).eq("id", existing.id);
+          await supabase.from("supplier_products").update(productData).eq("id", existing.id);
         } else {
-          // Insert new
           await supabase.from("supplier_products").insert({
             supplier_id: supplierId,
             external_id: ep.externalId,
-            external_title: ep.title,
-            external_price: ep.price,
-            external_stock: ep.stock,
-            external_image_url: ep.imageUrl,
-            external_images: ep.images || [],
-            external_variants: ep.variants || [],
-            external_description: ep.description || null,
-            external_category: ep.category || null,
-            external_url: ep.url || null,
+            ...productData,
             sync_status: "pending",
           });
         }
@@ -198,7 +460,6 @@ async function handleSyncStock(supabase: any, supplierId?: string) {
   let synced = 0, failed = 0;
   const errors: unknown[] = [];
 
-  // Group by supplier for batch efficiency
   const bySupplier = new Map<string, typeof items>();
   for (const sp of items) {
     const key = sp.supplier_id;
@@ -232,7 +493,6 @@ async function handleSyncStock(supabase: any, supplierId?: string) {
         errors.push({ supplier_id: sid, error: err instanceof Error ? err.message : "Unknown" });
       }
     } else {
-      // Manual suppliers — use stored values
       for (const sp of sps) {
         await supabase.from("products").update({ stock_quantity: sp.external_stock }).eq("id", sp.product_id);
         await supabase.from("supplier_products").update({
@@ -260,20 +520,26 @@ async function handleSyncPrices(supabase: any, supplierId?: string) {
   let synced = 0, failed = 0;
   const errors: unknown[] = [];
 
+  // Cache external products per supplier for efficiency
+  const supplierProductsCache = new Map<string, Map<string, ExternalProduct>>();
+
   for (const sp of items as any[]) {
     try {
       const markup = sp.suppliers?.markup_percentage || 30;
       let latestPrice = Number(sp.external_price);
 
-      // Try to get live price from API
       if (sp.suppliers?.api_url) {
-        try {
-          const apiKey = sp.suppliers.api_key_secret ? (Deno.env.get(sp.suppliers.api_key_secret) || "") : "";
-          const adapter = getAdapter(sp.suppliers.api_type);
-          const products = await adapter.fetchProducts(sp.suppliers.api_url, apiKey);
-          const ext = products.find(p => p.externalId === sp.external_id);
-          if (ext) latestPrice = ext.price;
-        } catch { /* use stored price as fallback */ }
+        const cacheKey = sp.supplier_id;
+        if (!supplierProductsCache.has(cacheKey)) {
+          try {
+            const apiKey = sp.suppliers.api_key_secret ? (Deno.env.get(sp.suppliers.api_key_secret) || "") : "";
+            const adapter = getAdapter(sp.suppliers.api_type);
+            const products = await adapter.fetchProducts(sp.suppliers.api_url, apiKey);
+            supplierProductsCache.set(cacheKey, new Map(products.map(p => [p.externalId, p])));
+          } catch { supplierProductsCache.set(cacheKey, new Map()); }
+        }
+        const ext = supplierProductsCache.get(cacheKey)?.get(sp.external_id);
+        if (ext) latestPrice = ext.price;
       }
 
       const newPrice = Math.round(latestPrice * (1 + markup / 100));
@@ -306,7 +572,7 @@ async function handleForwardOrder(supabase: any, orderId: string, supplierId: st
   try {
     let externalOrderId = null;
 
-    if (supplier.api_url) {
+    if (supplier.api_url && supplier.api_type !== "manual") {
       const apiKey = supplier.api_key_secret ? (Deno.env.get(supplier.api_key_secret) || "") : "";
       const adapter = getAdapter(supplier.api_type);
 
@@ -329,11 +595,21 @@ async function handleForwardOrder(supabase: any, orderId: string, supplierId: st
         currency: order.currency,
       };
 
-      const result = await adapter.forwardOrder(supplier.api_url, apiKey, forwardPayload);
-      externalOrderId = result.externalOrderId;
+      // Retry logic for order forwarding
+      let retries = 0;
+      while (retries < 3) {
+        try {
+          const result = await adapter.forwardOrder(supplier.api_url, apiKey, forwardPayload);
+          externalOrderId = result.externalOrderId;
+          break;
+        } catch (e: any) {
+          retries++;
+          if (retries >= 3) throw e;
+          await new Promise(r => setTimeout(r, 2000 * retries));
+        }
+      }
     }
 
-    // Create supplier order record
     await supabase.from("supplier_orders").insert({
       order_id: orderId,
       supplier_id: supplierId,
@@ -342,7 +618,6 @@ async function handleForwardOrder(supabase: any, orderId: string, supplierId: st
       forwarded_at: externalOrderId ? new Date().toISOString() : null,
     });
 
-    // Mark order as dropship
     await supabase.from("orders").update({
       is_dropship: true,
       supplier_order_id: externalOrderId,
@@ -353,6 +628,15 @@ async function handleForwardOrder(supabase: any, orderId: string, supplierId: st
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown";
     await completeLog(supabase, logId, "failed", 0, 1, [{ error: msg }]);
+
+    // Still create supplier order record for manual handling
+    await supabase.from("supplier_orders").insert({
+      order_id: orderId,
+      supplier_id: supplierId,
+      status: "failed",
+      notes: `Auto-forward failed: ${msg}`,
+    });
+
     throw err;
   }
 }
@@ -382,7 +666,6 @@ async function handleSyncOrderStatus(supabase: any, supplierId?: string) {
 
       await supabase.from("supplier_orders").update(updates).eq("id", so.id);
 
-      // Also update main order tracking if available
       if (status.trackingNumber) {
         await supabase.from("orders").update({ tracking_number: status.trackingNumber }).eq("id", so.order_id);
       }
@@ -457,7 +740,95 @@ async function handleBulkImport(supabase: any, supplierId: string) {
   return { imported, failed, errors, total: pending.length };
 }
 
-async function handleGetSyncLogs(supabase: any, supplierId?: string, limit = 20) {
+// ─── Webhook handler (for supplier push updates) ───
+async function handleWebhook(supabase: any, supplierId: string, payload: any) {
+  const { data: supplier } = await supabase.from("suppliers").select("*").eq("id", supplierId).single();
+  if (!supplier) throw new Error("Supplier not found");
+
+  const logId = await createLog(supabase, supplierId, "webhook_update");
+  let processed = 0, failed = 0;
+  const errors: unknown[] = [];
+
+  try {
+    const eventType = payload.event || payload.type || payload.action || "unknown";
+
+    // Product update event
+    if (eventType.includes("product") || payload.products) {
+      const products = payload.products || [payload.product || payload.data];
+      for (const p of products) {
+        try {
+          const externalId = String(p.id || p.product_id || p.external_id);
+          const { data: existing } = await supabase.from("supplier_products")
+            .select("id, product_id, is_imported")
+            .eq("supplier_id", supplierId)
+            .eq("external_id", externalId)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase.from("supplier_products").update({
+              external_price: Number(p.price || p.cost || 0),
+              external_stock: Number(p.stock || p.inventory || 0),
+              external_title: p.title || p.name || undefined,
+              last_synced_at: new Date().toISOString(),
+              sync_status: "synced",
+            }).eq("id", existing.id);
+
+            // Update linked product if imported
+            if (existing.is_imported && existing.product_id) {
+              const markup = Number(supplier.markup_percentage) || 30;
+              const newPrice = Math.round(Number(p.price || 0) * (1 + markup / 100));
+              await supabase.from("products").update({
+                stock_quantity: Number(p.stock || p.inventory || 0),
+                price: newPrice,
+                supplier_price: Number(p.price || 0),
+              }).eq("id", existing.product_id);
+            }
+            processed++;
+          }
+        } catch (err: unknown) {
+          failed++;
+          errors.push({ error: err instanceof Error ? err.message : "Unknown" });
+        }
+      }
+    }
+
+    // Order status event
+    if (eventType.includes("order") || payload.order) {
+      const orderData = payload.order || payload.data;
+      if (orderData) {
+        const externalId = String(orderData.id || orderData.order_id);
+        const { data: so } = await supabase.from("supplier_orders")
+          .select("id, order_id")
+          .eq("supplier_id", supplierId)
+          .eq("external_order_id", externalId)
+          .maybeSingle();
+
+        if (so) {
+          const updates: any = { updated_at: new Date().toISOString() };
+          if (orderData.status) updates.status = orderData.status;
+          if (orderData.tracking_number) updates.tracking_number = orderData.tracking_number;
+          if (orderData.carrier) updates.shipping_carrier = orderData.carrier;
+
+          await supabase.from("supplier_orders").update(updates).eq("id", so.id);
+
+          if (orderData.tracking_number) {
+            await supabase.from("orders").update({ tracking_number: orderData.tracking_number }).eq("id", so.order_id);
+          }
+          processed++;
+        }
+      }
+    }
+
+    await completeLog(supabase, logId, failed > 0 ? "partial" : "success", processed, failed, errors);
+    return { processed, failed, event: payload.event || "unknown" };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown";
+    await completeLog(supabase, logId, "failed", processed, failed, [{ error: msg }]);
+    throw err;
+  }
+}
+
+async function handleGetSyncLogs(supabase: any, supplierId?: string, limit = 30) {
   let query = supabase.from("supplier_sync_logs")
     .select("*, suppliers(name)")
     .order("created_at", { ascending: false })
@@ -467,6 +838,35 @@ async function handleGetSyncLogs(supabase: any, supplierId?: string, limit = 20)
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
+}
+
+// ─── Get supplier health overview ───
+async function handleGetHealth(supabase: any) {
+  const { data: suppliers } = await supabase.from("suppliers").select("id, name, api_type, is_active, last_synced_at, auto_sync");
+  const { count: totalProducts } = await supabase.from("supplier_products").select("id", { count: "exact", head: true });
+  const { count: importedProducts } = await supabase.from("supplier_products").select("id", { count: "exact", head: true }).eq("is_imported", true);
+  const { count: errorProducts } = await supabase.from("supplier_products").select("id", { count: "exact", head: true }).eq("sync_status", "error");
+  const { count: pendingOrders } = await supabase.from("supplier_orders").select("id", { count: "exact", head: true }).eq("status", "pending");
+
+  const { data: recentLogs } = await supabase.from("supplier_sync_logs")
+    .select("status")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const successRate = recentLogs?.length
+    ? Math.round((recentLogs.filter((l: any) => l.status === "success").length / recentLogs.length) * 100)
+    : 100;
+
+  return {
+    suppliers: suppliers?.length || 0,
+    activeSuppliers: suppliers?.filter((s: any) => s.is_active).length || 0,
+    totalProducts: totalProducts || 0,
+    importedProducts: importedProducts || 0,
+    errorProducts: errorProducts || 0,
+    pendingOrders: pendingOrders || 0,
+    syncSuccessRate: successRate,
+    platforms: [...new Set((suppliers || []).map((s: any) => s.api_type))],
+  };
 }
 
 // ─── Auth helper ───
@@ -480,20 +880,18 @@ async function requireAdmin(req: Request, supabase: any) {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await userClient.auth.getClaims(token);
-  if (error || !data?.claims?.sub) throw new Error("Unauthorized");
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) throw new Error("Unauthorized");
 
-  const userId = data.claims.sub as string;
   const { data: roleData } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .eq("role", "admin")
     .maybeSingle();
 
   if (!roleData) throw new Error("Admin access required");
-  return userId;
+  return user.id;
 }
 
 // ─── Main router ───
@@ -507,7 +905,16 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Require admin authentication
+    const body = await req.json();
+    const { action, supplier_id, order_id, limit } = body;
+
+    // Webhook doesn't require admin auth (uses supplier-specific validation)
+    if (action === "webhook") {
+      if (!supplier_id) return json({ error: "supplier_id required" }, 400);
+      return json(await handleWebhook(supabase, supplier_id, body.payload || body));
+    }
+
+    // All other actions require admin
     try {
       await requireAdmin(req, supabase);
     } catch (e: unknown) {
@@ -515,10 +922,11 @@ Deno.serve(async (req) => {
       return json({ error: msg }, msg === "Admin access required" ? 403 : 401);
     }
 
-    const body = await req.json();
-    const { action, supplier_id, order_id, limit } = body;
-
     switch (action) {
+      case "test_connection":
+        if (!supplier_id) return json({ error: "supplier_id required" }, 400);
+        return json(await handleTestConnection(supabase, supplier_id));
+
       case "auto_import":
         if (!supplier_id) return json({ error: "supplier_id required" }, 400);
         return json(await handleAutoImport(supabase, supplier_id));
@@ -542,6 +950,9 @@ Deno.serve(async (req) => {
 
       case "get_sync_logs":
         return json(await handleGetSyncLogs(supabase, supplier_id, limit));
+
+      case "get_health":
+        return json(await handleGetHealth(supabase));
 
       default:
         return json({ error: `Unknown action: ${action}` }, 400);

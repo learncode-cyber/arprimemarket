@@ -1,20 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Store, Package, ShoppingCart, Plus, Trash2, RefreshCw, Upload, ExternalLink, Loader2, Settings, Zap, Clock, AlertTriangle, CheckCircle, Key, ArrowUpDown } from "lucide-react";
+import { Store, Package, ShoppingCart, Plus, Trash2, RefreshCw, Upload, ExternalLink, Loader2, Settings, Zap, Clock, AlertTriangle, CheckCircle, Key, ArrowUpDown, Wifi, WifiOff, BarChart3, Globe, Shield } from "lucide-react";
 import { useSuppliers, useSupplierProducts, useSupplierOrders, useSyncLogs, invokeSupplierSync, Supplier, SupplierProduct } from "@/hooks/useSupplier";
-import { useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 
-type SubTab = "suppliers" | "products" | "orders" | "logs";
+type SubTab = "overview" | "suppliers" | "products" | "orders" | "logs";
+
+const platformInfo: Record<string, { label: string; color: string; guide: string }> = {
+  manual: { label: "Manual", color: "bg-muted text-muted-foreground", guide: "Add products manually. No API connection needed." },
+  cj: { label: "CJ Dropshipping", color: "bg-blue-500/10 text-blue-600", guide: "Enter your CJ API URL (https://developers.cjdropshipping.com/api2.0) and set your API key secret name." },
+  aliexpress: { label: "AliExpress", color: "bg-orange-500/10 text-orange-600", guide: "Use AliExpress API endpoint and your app key as the API secret." },
+  custom: { label: "Custom API", color: "bg-purple-500/10 text-purple-600", guide: "Any REST API with /products and /orders endpoints. Bearer token auth." },
+};
 
 const SupplierManagement = () => {
-  const [subTab, setSubTab] = useState<SubTab>("suppliers");
+  const [subTab, setSubTab] = useState<SubTab>("overview");
   const [selectedSupplier, setSelectedSupplier] = useState<string | undefined>();
 
   return (
     <div className="space-y-5">
       <div className="flex gap-2 flex-wrap">
         {([
+          { id: "overview" as SubTab, label: "Overview", icon: BarChart3 },
           { id: "suppliers" as SubTab, label: "Suppliers", icon: Store },
           { id: "products" as SubTab, label: "Products", icon: Package },
           { id: "orders" as SubTab, label: "Orders", icon: ShoppingCart },
@@ -33,6 +40,11 @@ const SupplierManagement = () => {
       </div>
 
       <AnimatePresence mode="wait">
+        {subTab === "overview" && (
+          <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <HealthOverview onNavigate={(tab) => setSubTab(tab)} />
+          </motion.div>
+        )}
         {subTab === "suppliers" && (
           <motion.div key="suppliers" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <SuppliersTab onSelectSupplier={(id) => { setSelectedSupplier(id); setSubTab("products"); }} />
@@ -58,11 +70,79 @@ const SupplierManagement = () => {
   );
 };
 
+// ─── Health Overview ───
+const HealthOverview = ({ onNavigate }: { onNavigate: (tab: SubTab) => void }) => {
+  const [health, setHealth] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await invokeSupplierSync("get_health");
+        setHealth(data);
+      } catch { setHealth(null); }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+
+  const stats = [
+    { label: "Suppliers", value: health?.suppliers || 0, active: health?.activeSuppliers || 0, icon: Store, tab: "suppliers" as SubTab },
+    { label: "Total Products", value: health?.totalProducts || 0, sub: `${health?.importedProducts || 0} imported`, icon: Package, tab: "products" as SubTab },
+    { label: "Errors", value: health?.errorProducts || 0, sub: "products with errors", icon: AlertTriangle, tab: "products" as SubTab },
+    { label: "Pending Orders", value: health?.pendingOrders || 0, sub: "awaiting forwarding", icon: ShoppingCart, tab: "orders" as SubTab },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <h3 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
+          <Globe className="w-4 h-4 text-primary" /> Dropshipping Overview
+        </h3>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-secondary text-xs">
+          <Shield className="w-3 h-3 text-primary" />
+          Success Rate: <span className="font-bold text-foreground">{health?.syncSuccessRate || 100}%</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map(s => (
+          <button key={s.label} onClick={() => onNavigate(s.tab)}
+            className="bg-card border border-border rounded-2xl p-4 text-left hover:border-primary/30 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <s.icon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">{s.label}</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{s.value}</p>
+            {s.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</p>}
+            {"active" in s && s.active !== undefined && <p className="text-[10px] text-primary mt-0.5">{s.active} active</p>}
+          </button>
+        ))}
+      </div>
+
+      {health?.platforms?.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Platforms:</span>
+          {health.platforms.map((p: string) => (
+            <span key={p} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${platformInfo[p]?.color || "bg-muted text-muted-foreground"}`}>
+              {platformInfo[p]?.label || p}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Suppliers Tab ───
 const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => void }) => {
   const { suppliers, loading, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
   const [showAdd, setShowAdd] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [connectionResults, setConnectionResults] = useState<Record<string, { ok: boolean; message: string }>>({});
   const [form, setForm] = useState({
     name: "", api_type: "manual", api_url: "", base_url: "",
     markup_percentage: "30", notes: "", api_key_secret: "", auto_forward_orders: false,
@@ -87,6 +167,23 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleTestConnection = async (supplier: Supplier) => {
+    setTesting(supplier.id);
+    try {
+      const result = await invokeSupplierSync("test_connection", { supplier_id: supplier.id });
+      setConnectionResults(prev => ({ ...prev, [supplier.id]: result }));
+      if (result.ok) {
+        toast.success(`✅ ${result.message}`);
+      } else {
+        toast.error(`❌ ${result.message}`);
+      }
+    } catch (err: any) {
+      setConnectionResults(prev => ({ ...prev, [supplier.id]: { ok: false, message: err.message } }));
+      toast.error(err.message);
+    }
+    setTesting(null);
+  };
+
   const handleAutoImport = async (supplier: Supplier) => {
     if (!supplier.api_url) { toast.error("No API URL configured"); return; }
     setSyncing(supplier.id);
@@ -101,7 +198,7 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
     setSyncing(supplier.id);
     try {
       const result = await invokeSupplierSync(action, { supplier_id: supplier.id });
-      toast.success(`${action}: ${result.synced || result.imported || 0} items processed`);
+      toast.success(`${action.replace(/_/g, " ")}: ${result.synced || result.imported || 0} items processed`);
     } catch (err: any) { toast.error(err.message); }
     setSyncing(null);
   };
@@ -123,32 +220,50 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
         {showAdd && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <div className="bg-muted/30 border border-border rounded-2xl p-5 space-y-3">
+              {/* Platform guide */}
+              {form.api_type !== "manual" && platformInfo[form.api_type] && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <Globe className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-foreground">{platformInfo[form.api_type].label} Setup</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{platformInfo[form.api_type].guide}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">Supplier Name *</label>
                   <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="AliExpress, CJ Dropshipping..." className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">API Type</label>
+                  <label className="text-xs text-muted-foreground">Platform Type</label>
                   <select value={form.api_type} onChange={e => setForm(p => ({ ...p, api_type: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    <option value="manual">Manual</option>
-                    <option value="aliexpress">AliExpress API</option>
+                    <option value="manual">Manual (No API)</option>
                     <option value="cj">CJ Dropshipping</option>
+                    <option value="aliexpress">AliExpress</option>
                     <option value="custom">Custom REST API</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">API URL</label>
-                  <input value={form.api_url} onChange={e => setForm(p => ({ ...p, api_url: e.target.value }))} placeholder="https://api.supplier.com" className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
+                {form.api_type !== "manual" && (
+                  <>
+                    <div>
+                      <label className="text-xs text-muted-foreground">API URL *</label>
+                      <input value={form.api_url} onChange={e => setForm(p => ({ ...p, api_url: e.target.value }))}
+                        placeholder={form.api_type === "cj" ? "https://developers.cjdropshipping.com/api2.0" : "https://api.supplier.com"}
+                        className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground flex items-center gap-1"><Key className="w-3 h-3" /> API Key Secret Name</label>
+                      <input value={form.api_key_secret} onChange={e => setForm(p => ({ ...p, api_key_secret: e.target.value }))} placeholder="SUPPLIER_API_KEY"
+                        className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Secret stored securely in backend environment</p>
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="text-xs text-muted-foreground">Markup %</label>
                   <input type="number" value={form.markup_percentage} onChange={e => setForm(p => ({ ...p, markup_percentage: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground flex items-center gap-1"><Key className="w-3 h-3" /> API Key Secret Name</label>
-                  <input value={form.api_key_secret} onChange={e => setForm(p => ({ ...p, api_key_secret: e.target.value }))} placeholder="SUPPLIER_API_KEY" className="w-full mt-1 px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Name of the secret stored in backend environment</p>
                 </div>
                 <div className="flex items-center gap-2 mt-5">
                   <input type="checkbox" checked={form.auto_forward_orders} onChange={e => setForm(p => ({ ...p, auto_forward_orders: e.target.checked }))} className="rounded" />
@@ -169,68 +284,90 @@ const SuppliersTab = ({ onSelectSupplier }: { onSelectSupplier: (id: string) => 
       </AnimatePresence>
 
       <div className="space-y-3">
-        {suppliers.map(s => (
-          <div key={s.id} className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-medium text-sm text-foreground">{s.name}</h4>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${s.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                    {s.is_active ? "Active" : "Inactive"}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">{s.api_type}</span>
-                  {s.api_key_secret && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent"><Key className="w-2.5 h-2.5 inline mr-0.5" />API Key Set</span>}
-                  {s.auto_forward_orders && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto-Forward</span>}
+        {suppliers.map(s => {
+          const connResult = connectionResults[s.id];
+          const pInfo = platformInfo[s.api_type] || platformInfo.custom;
+
+          return (
+            <div key={s.id} className="bg-card border border-border rounded-2xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-medium text-sm text-foreground">{s.name}</h4>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${s.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {s.is_active ? "Active" : "Inactive"}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${pInfo.color}`}>{pInfo.label}</span>
+                    {s.api_key_secret && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent-foreground"><Key className="w-2.5 h-2.5 inline mr-0.5" />API Key Set</span>}
+                    {s.auto_forward_orders && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto-Forward</span>}
+                    {connResult && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-0.5 ${
+                        connResult.ok ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
+                      }`}>
+                        {connResult.ok ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                        {connResult.ok ? "Connected" : "Failed"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Markup: {Number(s.markup_percentage)}% ·
+                    {s.auto_sync ? ` Auto-sync ${s.sync_interval_hours}h` : " Manual"} ·
+                    {s.last_synced_at ? ` Last: ${new Date(s.last_synced_at).toLocaleDateString()}` : " Never synced"}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Markup: {Number(s.markup_percentage)}% ·
-                  {s.auto_sync ? ` Auto-sync ${s.sync_interval_hours}h` : " Manual"} ·
-                  {s.last_synced_at ? ` Last: ${new Date(s.last_synced_at).toLocaleDateString()}` : " Never synced"}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                {s.api_url && (
-                  <>
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                  {/* Test Connection */}
+                  {s.api_type !== "manual" && (
                     <button
-                      onClick={() => handleAutoImport(s)}
-                      disabled={syncing === s.id}
-                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
-                    >
-                      {syncing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                      Fetch Products
-                    </button>
-                    <button
-                      onClick={() => handleSyncAll(s, "sync_stock")}
-                      disabled={syncing === s.id}
+                      onClick={() => handleTestConnection(s)}
+                      disabled={testing === s.id}
                       className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
                     >
-                      <ArrowUpDown className="w-3 h-3" /> Sync Stock
+                      {testing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
+                      Test
                     </button>
-                    <button
-                      onClick={() => handleSyncAll(s, "sync_prices")}
-                      disabled={syncing === s.id}
-                      className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1"
-                    >
-                      <ArrowUpDown className="w-3 h-3" /> Sync Prices
-                    </button>
-                  </>
-                )}
-                <button onClick={() => onSelectSupplier(s.id)} className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation flex items-center gap-1">
-                  <Package className="w-3 h-3" /> Products
-                </button>
-                <button onClick={() => updateSupplier(s.id, { auto_sync: !s.auto_sync })} className={`p-1.5 rounded-lg transition-colors touch-manipulation ${s.auto_sync ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`} title="Toggle auto-sync">
-                  <Zap className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => updateSupplier(s.id, { is_active: !s.is_active })} className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors touch-manipulation" title="Toggle active">
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => { deleteSupplier(s.id); toast.success("Deleted"); }} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors touch-manipulation">
-                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
+                  )}
+                  {s.api_url && (
+                    <>
+                      <button onClick={() => handleAutoImport(s)} disabled={syncing === s.id}
+                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1">
+                        {syncing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        Fetch
+                      </button>
+                      <button onClick={() => handleSyncAll(s, "sync_stock")} disabled={syncing === s.id}
+                        className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1">
+                        <ArrowUpDown className="w-3 h-3" /> Stock
+                      </button>
+                      <button onClick={() => handleSyncAll(s, "sync_prices")} disabled={syncing === s.id}
+                        className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation disabled:opacity-50 flex items-center gap-1">
+                        <ArrowUpDown className="w-3 h-3" /> Prices
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => onSelectSupplier(s.id)} className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-border transition-colors touch-manipulation flex items-center gap-1">
+                    <Package className="w-3 h-3" /> Products
+                  </button>
+                  <button onClick={() => updateSupplier(s.id, { auto_sync: !s.auto_sync })} className={`p-1.5 rounded-lg transition-colors touch-manipulation ${s.auto_sync ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`} title="Toggle auto-sync">
+                    <Zap className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => updateSupplier(s.id, { is_active: !s.is_active })} className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors touch-manipulation" title="Toggle active">
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => { deleteSupplier(s.id); toast.success("Deleted"); }} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors touch-manipulation">
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </div>
               </div>
+
+              {/* Webhook URL info for API suppliers */}
+              {s.api_type !== "manual" && s.webhook_url && (
+                <div className="text-[10px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-1.5">
+                  Webhook: <code className="text-foreground">{s.webhook_url}</code>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         {suppliers.length === 0 && (
           <div className="text-center py-8 text-sm text-muted-foreground">No suppliers yet. Add your first supplier above.</div>
         )}
@@ -390,7 +527,7 @@ const SupplierProductsTab = ({ supplierId }: { supplierId?: string }) => {
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         sp.sync_status === "error" ? "bg-destructive/10 text-destructive" :
-                        sp.is_imported ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
+                        sp.is_imported ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"
                       }`}>
                         {sp.sync_status === "error" ? "Error" : sp.is_imported ? "Imported" : "Pending"}
                       </span>
@@ -433,7 +570,7 @@ const SupplierOrdersTab = () => {
   const { suppliers } = useSuppliers();
   const [syncing, setSyncing] = useState(false);
 
-  const statusOptions = ["pending", "forwarded", "processing", "shipped", "delivered", "cancelled"];
+  const statusOptions = ["pending", "forwarded", "processing", "shipped", "delivered", "cancelled", "failed"];
 
   const handleSyncStatuses = async () => {
     setSyncing(true);
