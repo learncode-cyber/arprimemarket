@@ -122,6 +122,76 @@ Requirements:
       return json({ success: true, content: result.data });
     }
 
+    if (action === "seo_generate") {
+      if (!title) return json({ error: "Product title required" }, 400);
+      const { generate_type } = body;
+
+      const seoSystemPrompt = `You are a world-class ecommerce SEO specialist. Generate content that ranks #1 on Google. Focus on primary keywords, search intent, and conversion optimization. Write naturally — no AI-sounding phrases.`;
+
+      const seoUserPrompt = `Generate SEO-optimized content for this product:
+Title: ${title}
+Category: ${category || "General"}
+Price: ${price || "N/A"}
+Current Description: ${current_description || "None"}
+
+Generate type: ${generate_type}
+${generate_type === "title" || generate_type === "both" ? "- Create an SEO-optimized product title (30-65 chars, include primary keyword, specific specs)" : ""}
+${generate_type === "description" || generate_type === "both" ? "- Create an SEO-optimized description (150-250 words, keyword-rich but natural, include benefits, specs, and a CTA)" : ""}`;
+
+      const seoTools = [{
+        type: "function",
+        function: {
+          name: "seo_content",
+          description: "Return SEO-optimized product content",
+          parameters: {
+            type: "object",
+            properties: {
+              seo_title: { type: "string", description: "SEO-optimized product title, 30-65 chars" },
+              seo_description: { type: "string", description: "SEO-optimized product description, 150-250 words" },
+            },
+            required: generate_type === "title" ? ["seo_title"] : generate_type === "description" ? ["seo_description"] : ["seo_title", "seo_description"],
+            additionalProperties: false,
+          },
+        },
+      }];
+
+      const res = await fetch(GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: seoSystemPrompt },
+            { role: "user", content: seoUserPrompt },
+          ],
+          tools: seoTools,
+          tool_choice: { type: "function", function: { name: "seo_content" } },
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 429) return json({ error: "Rate limited. Try again shortly." }, 429);
+        if (res.status === 402) return json({ error: "AI credits exhausted." }, 402);
+        const t = await res.text();
+        console.error("AI SEO error:", res.status, t);
+        return json({ error: "AI SEO generation failed" }, 500);
+      }
+
+      const seoData = await res.json();
+      const seoToolCall = seoData.choices?.[0]?.message?.tool_calls?.[0];
+      if (!seoToolCall) return json({ error: "No SEO content generated" }, 500);
+
+      try {
+        const content = JSON.parse(seoToolCall.function.arguments);
+        return json({ success: true, content });
+      } catch {
+        return json({ error: "Failed to parse AI SEO response" }, 500);
+      }
+    }
+
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";

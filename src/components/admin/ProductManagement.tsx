@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, ImagePlus, Wand2 } from "lucide-react";
+import { SEOScoreWidget } from "@/components/admin/SEOScoreWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
@@ -332,6 +333,17 @@ const ProductManagement = () => {
               </div>
               <div><label className="text-xs text-muted-foreground">Image URL</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
               <div><label className="text-xs text-muted-foreground">Description</label><textarea rows={3} value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
+              
+              {/* SEO Score Widget */}
+              <SEOScoreWidget
+                title={newProduct.title}
+                description={newProduct.description}
+                category={categories.find(c => c.id === newProduct.category_id)?.name}
+                price={newProduct.price ? parseFloat(newProduct.price) : undefined}
+                onTitleGenerated={(t) => setNewProduct(p => ({ ...p, title: t }))}
+                onDescriptionGenerated={(d) => setNewProduct(p => ({ ...p, description: d }))}
+              />
+
               <div className="flex gap-2">
                 <button onClick={handleAdd} disabled={saving} className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60 flex items-center gap-1.5">
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Add Product
@@ -372,7 +384,13 @@ const ProductManagement = () => {
                           <input type="number" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Price" />
                           <input type="number" value={editForm.stock_quantity} onChange={e => setEditForm(f => ({ ...f, stock_quantity: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Stock" />
                         </div>
-                        <input value={editForm.image_url} onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Image URL" />
+                        <textarea rows={2} value={editForm.description || ""} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none" placeholder="Description" />
+                        <SEOScoreWidget
+                          title={editForm.title || ""}
+                          description={editForm.description || ""}
+                          onTitleGenerated={(t) => setEditForm(f => ({ ...f, title: t }))}
+                          onDescriptionGenerated={(d) => setEditForm(f => ({ ...f, description: d }))}
+                        />
                         <div className="flex gap-2">
                           <button onClick={saveEdit} disabled={saving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-60">
                             {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
