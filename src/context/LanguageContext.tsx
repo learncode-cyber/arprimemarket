@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 
-export type LangCode = "en" | "bn" | "ar" | "sa" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt";
+export type LangCode = "en" | "bn" | "ar" | "sa" | "hi" | "es" | "fr" | "de" | "zh" | "ja" | "pt" | "ko" | "ru" | "tr" | "th" | "vi" | "id" | "ms" | "sw" | "tl" | "ur" | "fa" | "it" | "nl" | "pl" | "uk" | "ro" | "sv" | "da" | "no" | "fi" | "el" | "hu" | "cs" | "he";
 
 export interface LangConfig {
   code: LangCode;
@@ -15,12 +15,36 @@ export const languages: LangConfig[] = [
   { code: "ar", name: "Arabic (UAE)", nativeName: "العربية (الإمارات)", dir: "rtl" },
   { code: "sa", name: "Arabic (Saudi)", nativeName: "العربية (السعودية)", dir: "rtl" },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr" },
+  { code: "ur", name: "Urdu", nativeName: "اردو", dir: "rtl" },
   { code: "es", name: "Spanish", nativeName: "Español", dir: "ltr" },
   { code: "fr", name: "French", nativeName: "Français", dir: "ltr" },
   { code: "de", name: "German", nativeName: "Deutsch", dir: "ltr" },
+  { code: "it", name: "Italian", nativeName: "Italiano", dir: "ltr" },
+  { code: "nl", name: "Dutch", nativeName: "Nederlands", dir: "ltr" },
+  { code: "pt", name: "Portuguese", nativeName: "Português", dir: "ltr" },
+  { code: "ru", name: "Russian", nativeName: "Русский", dir: "ltr" },
+  { code: "uk", name: "Ukrainian", nativeName: "Українська", dir: "ltr" },
+  { code: "pl", name: "Polish", nativeName: "Polski", dir: "ltr" },
+  { code: "ro", name: "Romanian", nativeName: "Română", dir: "ltr" },
+  { code: "hu", name: "Hungarian", nativeName: "Magyar", dir: "ltr" },
+  { code: "cs", name: "Czech", nativeName: "Čeština", dir: "ltr" },
+  { code: "sv", name: "Swedish", nativeName: "Svenska", dir: "ltr" },
+  { code: "da", name: "Danish", nativeName: "Dansk", dir: "ltr" },
+  { code: "no", name: "Norwegian", nativeName: "Norsk", dir: "ltr" },
+  { code: "fi", name: "Finnish", nativeName: "Suomi", dir: "ltr" },
+  { code: "el", name: "Greek", nativeName: "Ελληνικά", dir: "ltr" },
+  { code: "tr", name: "Turkish", nativeName: "Türkçe", dir: "ltr" },
+  { code: "he", name: "Hebrew", nativeName: "עברית", dir: "rtl" },
+  { code: "fa", name: "Persian", nativeName: "فارسی", dir: "rtl" },
   { code: "zh", name: "Chinese", nativeName: "中文", dir: "ltr" },
   { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr" },
-  { code: "pt", name: "Portuguese", nativeName: "Português", dir: "ltr" },
+  { code: "ko", name: "Korean", nativeName: "한국어", dir: "ltr" },
+  { code: "th", name: "Thai", nativeName: "ไทย", dir: "ltr" },
+  { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", dir: "ltr" },
+  { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", dir: "ltr" },
+  { code: "ms", name: "Malay", nativeName: "Bahasa Melayu", dir: "ltr" },
+  { code: "tl", name: "Filipino", nativeName: "Filipino", dir: "ltr" },
+  { code: "sw", name: "Swahili", nativeName: "Kiswahili", dir: "ltr" },
 ];
 
 type TranslationKey =
@@ -157,19 +181,19 @@ const translations: Record<LangCode, Record<TranslationKey, string>> = {
     dashboard: "لوحة التحكم", signOut: "تسجيل الخروج", adminPanel: "لوحة الإدارة", rating: "تقييم",
   },
   // Fallback languages — use English translations as base
-  sa: {} as any,
-  hi: {} as any,
-  es: {} as any,
-  fr: {} as any,
-  de: {} as any,
-  zh: {} as any,
-  ja: {} as any,
-  pt: {} as any,
+  sa: {} as any, hi: {} as any, es: {} as any, fr: {} as any, de: {} as any,
+  zh: {} as any, ja: {} as any, pt: {} as any, ko: {} as any, ru: {} as any,
+  tr: {} as any, th: {} as any, vi: {} as any, id: {} as any, ms: {} as any,
+  sw: {} as any, tl: {} as any, ur: {} as any, fa: {} as any, it: {} as any,
+  nl: {} as any, pl: {} as any, uk: {} as any, ro: {} as any, sv: {} as any,
+  da: {} as any, no: {} as any, fi: {} as any, el: {} as any, hu: {} as any,
+  cs: {} as any, he: {} as any,
 };
 
 // Fill missing languages with English fallback
 const enKeys = Object.keys(translations.en) as TranslationKey[];
-(["sa", "hi", "es", "fr", "de", "zh", "ja", "pt"] as LangCode[]).forEach(code => {
+const fallbackCodes: LangCode[] = ["sa", "hi", "es", "fr", "de", "zh", "ja", "pt", "ko", "ru", "tr", "th", "vi", "id", "ms", "sw", "tl", "ur", "fa", "it", "nl", "pl", "uk", "ro", "sv", "da", "no", "fi", "el", "hu", "cs", "he"];
+fallbackCodes.forEach(code => {
   const partial: Record<string, string> = {};
   enKeys.forEach(k => { partial[k] = translations.en[k]; });
   translations[code] = partial as Record<TranslationKey, string>;
@@ -231,39 +255,76 @@ const countryToLang: Record<string, LangCode> = {
   AE: "ar", BH: "ar", KW: "ar", OM: "ar", QA: "ar", EG: "ar", IQ: "ar", JO: "ar", LB: "ar", LY: "ar", MA: "ar", TN: "ar", DZ: "ar", SD: "ar", YE: "ar", PS: "ar", SY: "ar",
   SA: "sa",
   // South Asian
-  BD: "en", // Bangladesh defaults to English
-  IN: "hi", PK: "hi", NP: "hi",
+  BD: "bn", IN: "hi", PK: "ur", NP: "hi", LK: "en", MM: "en",
   // Spanish-speaking
   ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es", EC: "es", GT: "es", CU: "es", BO: "es", DO: "es", HN: "es", PY: "es", SV: "es", NI: "es", CR: "es", PA: "es", UY: "es",
   // French-speaking
-  FR: "fr", BE: "fr", CH: "fr", CA: "fr", SN: "fr", CI: "fr", ML: "fr", BF: "fr", NE: "fr", TD: "fr", GN: "fr", RW: "fr", BI: "fr", BJ: "fr", TG: "fr", CF: "fr", CG: "fr", CD: "fr", CM: "fr", GA: "fr", MG: "fr", HT: "fr",
+  FR: "fr", BE: "fr", SN: "fr", CI: "fr", ML: "fr", BF: "fr", NE: "fr", TD: "fr", GN: "fr", RW: "fr", BI: "fr", BJ: "fr", TG: "fr", CF: "fr", CG: "fr", CD: "fr", CM: "fr", GA: "fr", MG: "fr", HT: "fr",
   // German-speaking
-  DE: "de", AT: "de", LI: "de",
-  // Chinese-speaking
-  CN: "zh", TW: "zh", HK: "zh", MO: "zh", SG: "zh",
-  // Japanese
-  JP: "ja",
+  DE: "de", AT: "de", LI: "de", CH: "de",
+  // Italian
+  IT: "it",
+  // Dutch
+  NL: "nl",
   // Portuguese-speaking
   BR: "pt", PT: "pt", AO: "pt", MZ: "pt",
-  // English-speaking (explicit)
-  US: "en", GB: "en", AU: "en", NZ: "en", IE: "en", ZA: "en", KE: "en", NG: "en", GH: "en", PH: "en", MY: "en",
+  // Russian-speaking
+  RU: "ru", BY: "ru", KZ: "ru", KG: "ru",
+  // Ukrainian
+  UA: "uk",
+  // Polish
+  PL: "pl",
+  // Romanian
+  RO: "ro", MD: "ro",
+  // Hungarian
+  HU: "hu",
+  // Czech
+  CZ: "cs",
+  // Scandinavian
+  SE: "sv", DK: "da", NO: "no", FI: "fi", IS: "en",
+  // Greek
+  GR: "el", CY: "el",
+  // Turkish
+  TR: "tr",
+  // Hebrew
+  IL: "he",
+  // Persian
+  IR: "fa", AF: "fa",
+  // Chinese-speaking
+  CN: "zh", TW: "zh", HK: "zh", MO: "zh",
+  // Japanese
+  JP: "ja",
+  // Korean
+  KR: "ko",
+  // Southeast Asia
+  TH: "th", VN: "vi", ID: "id", MY: "ms", SG: "en", PH: "tl",
+  // East Africa
+  KE: "sw", TZ: "sw", UG: "sw",
+  // English-speaking
+  US: "en", GB: "en", AU: "en", NZ: "en", IE: "en", ZA: "en", NG: "en", GH: "en", CA: "en",
 };
 
 const countryToCurrency: Record<string, string> = {
   // Middle East
-  AE: "AED", SA: "SAR", BH: "AED", KW: "AED", OM: "AED", QA: "AED",
+  AE: "AED", SA: "SAR", BH: "BHD", KW: "KWD", OM: "OMR", QA: "QAR", EG: "EGP", IQ: "IQD", JO: "JOD", LB: "LBP",
   // South Asia
-  BD: "BDT", IN: "INR", PK: "INR", NP: "INR",
+  BD: "BDT", IN: "INR", PK: "PKR", NP: "NPR", LK: "LKR", MM: "MMK",
   // Americas
-  US: "USD", CA: "USD", MX: "MXN", AR: "USD", CO: "USD", CL: "USD", PE: "USD", BR: "BRL",
+  US: "USD", CA: "CAD", MX: "MXN", AR: "ARS", CO: "COP", CL: "CLP", PE: "PEN", BR: "BRL", UY: "UYU", JM: "JMD", TT: "TTD",
   // Europe
-  FR: "EUR", DE: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", BE: "EUR", AT: "EUR", PT: "EUR", IE: "EUR", FI: "EUR", GR: "EUR",
+  FR: "EUR", DE: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", BE: "EUR", AT: "EUR", PT: "EUR", IE: "EUR", FI: "EUR", GR: "EUR", CY: "EUR",
   CH: "CHF", LI: "CHF",
-  GB: "USD",
+  GB: "GBP",
+  SE: "SEK", DK: "DKK", NO: "NOK", IS: "ISK",
+  PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON", BG: "BGN", HR: "HRK",
+  RU: "RUB", UA: "UAH",
+  TR: "TRY", IL: "USD",
   // Asia Pacific
-  CN: "CNY", TW: "CNY", HK: "CNY", JP: "JPY", SG: "USD", AU: "USD", NZ: "USD", MY: "USD", PH: "USD",
+  CN: "CNY", TW: "TWD", HK: "HKD", JP: "JPY", KR: "KRW",
+  SG: "SGD", AU: "AUD", NZ: "NZD", MY: "MYR", PH: "PHP", TH: "THB", VN: "VND", ID: "IDR",
   // Africa
-  ZA: "USD", KE: "USD", NG: "USD", GH: "USD", EG: "AED",
+  ZA: "ZAR", KE: "KES", NG: "NGN", GH: "GHS", TZ: "TZS", UG: "UGX", RW: "RWF", ET: "ETB",
+  MA: "MAD", TN: "TND", DZ: "DZD",
 };
 
 const CURRENCY_STORAGE_KEY = "ar-pm-currency";
