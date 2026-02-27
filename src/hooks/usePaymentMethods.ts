@@ -23,16 +23,24 @@ export const usePaymentMethods = (activeOnly = true) => {
   return useQuery({
     queryKey: ["payment-methods", activeOnly],
     queryFn: async () => {
-      // For admin (activeOnly=false), we need to use a different approach
-      // since the RLS policy only allows reading active ones for non-admins
-      const query = supabase
-        .from("payment_methods")
-        .select("*")
-        .order("sort_order", { ascending: true });
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as PaymentMethod[];
+      if (activeOnly) {
+        // Public: use safe view that excludes wallet_address/deposit_link
+        const { data, error } = await supabase
+          .from("payment_methods_public")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        if (error) throw error;
+        return (data || []) as PaymentMethod[];
+      } else {
+        // Admin: use base table (RLS requires admin role for full access)
+        const { data, error } = await supabase
+          .from("payment_methods")
+          .select("*")
+          .order("sort_order", { ascending: true });
+        if (error) throw error;
+        return (data || []) as PaymentMethod[];
+      }
     },
   });
 };
