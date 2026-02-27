@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, History, ArrowLeft } from "lucide-react";
+import { Send, History, ArrowLeft, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ChatOrderForm from "@/components/ChatOrderForm";
 
 interface ChatMessage {
   id: string;
   content: string;
   sender_type: "user" | "agent";
   created_at: string;
+  is_form?: boolean; // special flag for order form
 }
 
 interface ChatWidgetProps {
@@ -17,6 +19,14 @@ interface ChatWidgetProps {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+
+// Keywords that trigger order form
+const ORDER_HELP_KEYWORDS = [
+  "order", "অর্ডার", "buy", "কিনতে", "checkout", "চেকআউট", "purchase", "কেনা",
+  "problem ordering", "can't order", "order help", "how to order", "how to buy",
+  "অর্ডার করতে পারছি না", "কিভাবে অর্ডার", "কিভাবে কিনবো", "অর্ডার দিতে চাই",
+  "payment", "পেমেন্ট", "pay", "পে করতে", "কিনতে চাই", "order দিতে চাই",
+];
 
 export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const { user } = useAuth();
@@ -28,6 +38,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const [showHistory, setShowHistory] = useState(false);
   const [pastSessions, setPastSessions] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const getGuestId = () => {
@@ -39,7 +50,6 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
     return guestId;
   };
 
-  // Load guest messages from localStorage
   const getGuestMessages = (): ChatMessage[] => {
     try {
       const stored = localStorage.getItem("ar-pm-guest-chat-messages");
@@ -82,10 +92,8 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
     initSession();
   }, [user, embedded]);
 
-  // Load messages for authenticated session
   useEffect(() => {
     if (!sessionId || sessionId.startsWith("guest-")) return;
-
     const fetchMessages = async () => {
       const { data } = await supabase
         .from("chat_messages")
@@ -111,9 +119,8 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, showOrderForm]);
 
-  // Load past sessions for history view
   const loadPastSessions = useCallback(async () => {
     if (!user) return;
     setLoadingHistory(true);
@@ -133,11 +140,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
             .eq("session_id", s.id)
             .order("created_at")
             .limit(1);
-          return {
-            ...s,
-            preview: msgs?.[0]?.content?.slice(0, 60) || "No messages",
-            messageCount: 0,
-          };
+          return { ...s, preview: msgs?.[0]?.content?.slice(0, 60) || "No messages" };
         })
       );
       setPastSessions(sessionsWithPreview);
@@ -148,6 +151,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const switchToSession = async (sid: string) => {
     setSessionId(sid);
     setShowHistory(false);
+    setShowOrderForm(false);
     const { data } = await supabase
       .from("chat_messages")
       .select("*")
@@ -158,7 +162,6 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
 
   const startNewSession = async () => {
     if (!user) return;
-    // Close current session
     if (sessionId && !sessionId.startsWith("guest-")) {
       await supabase.from("chat_sessions").update({ status: "closed" }).eq("id", sessionId);
     }
@@ -171,16 +174,21 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
       setSessionId(newSession.id);
       setMessages([]);
       setShowHistory(false);
+      setShowOrderForm(false);
     }
   };
 
-  // Streaming AI response
+  // Check if AI response suggests showing order form
+  const shouldShowOrderForm = (aiResponse: string): boolean => {
+    const triggers = ["[ORDER_FORM]", "[SHOW_FORM]", "order form", "fill up the form", "ফর্ম পূরণ"];
+    return triggers.some(t => aiResponse.toLowerCase().includes(t.toLowerCase()));
+  };
+
   const streamAIResponse = async (userContent: string, currentHistory: ChatMessage[]) => {
     setAiLoading(true);
     let assistantContent = "";
     const aiMsgId = crypto.randomUUID();
 
-    // Add placeholder AI message
     setMessages(prev => [...prev, { id: aiMsgId, content: "", sender_type: "agent", created_at: new Date().toISOString() }]);
 
     try {
@@ -203,9 +211,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
         }),
       });
 
-      if (!resp.ok || !resp.body) {
-        throw new Error("Stream failed");
-      }
+      if (!resp.ok || !resp.body) throw new Error("Stream failed");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -263,6 +269,17 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
           } catch { /* ignore */ }
         }
       }
+
+      // Check if AI suggests order form
+      if (shouldShowOrderForm(assistantContent)) {
+        // Remove the [ORDER_FORM] tag from visible text
+        const cleanContent = assistantContent.replace(/\[ORDER_FORM\]/gi, "").replace(/\[SHOW_FORM\]/gi, "").trim();
+        setMessages(prev =>
+          prev.map(m => m.id === aiMsgId ? { ...m, content: cleanContent } : m)
+        );
+        assistantContent = cleanContent;
+        setTimeout(() => setShowOrderForm(true), 500);
+      }
     } catch {
       assistantContent = "Sorry, I couldn't process that right now. Try again or reach out on WhatsApp! 😊";
       setMessages(prev =>
@@ -270,7 +287,6 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
       );
     }
 
-    // Save AI reply to DB or localStorage
     if (user && sessionId && !sessionId.startsWith("guest-")) {
       await supabase.from("chat_messages").insert({
         session_id: sessionId,
@@ -278,7 +294,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
         content: assistantContent,
       });
     } else {
-      saveGuestMessages([...currentHistory, 
+      saveGuestMessages([...currentHistory,
         { id: crypto.randomUUID(), content: userContent, sender_type: "user", created_at: new Date().toISOString() },
         { id: aiMsgId, content: assistantContent, sender_type: "agent", created_at: new Date().toISOString() }
       ]);
@@ -308,9 +324,37 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
 
     setSending(false);
 
-    // Stream AI response
+    // Check if user message contains order-related keywords
+    const lowerContent = content.toLowerCase();
+    const isOrderRelated = ORDER_HELP_KEYWORDS.some(kw => lowerContent.includes(kw.toLowerCase()));
+
     const currentMessages = [...messages, userMsg];
     await streamAIResponse(content, currentMessages);
+  };
+
+  const handleOrderComplete = (orderNum: string) => {
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      content: `✅ Your order ${orderNum} has been placed successfully! You'll receive a confirmation email shortly. Thank you for shopping with AR Prime Market! 🎉`,
+      sender_type: "agent",
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, msg]);
+
+    if (user && sessionId && !sessionId.startsWith("guest-")) {
+      const insertMsg = async () => {
+        try {
+          await supabase.from("chat_messages").insert({
+            session_id: sessionId,
+            sender_type: "agent",
+            content: msg.content,
+          });
+        } catch {}
+      };
+      insertMsg();
+    }
+
+    setTimeout(() => setShowOrderForm(false), 3000);
   };
 
   if (!embedded) return null;
@@ -345,8 +389,8 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
                 key={s.id}
                 onClick={() => switchToSession(s.id)}
                 className={`w-full text-left p-3 rounded-xl border transition-all ${
-                  s.id === sessionId 
-                    ? "bg-primary/10 border-primary/30" 
+                  s.id === sessionId
+                    ? "bg-primary/10 border-primary/30"
                     : "bg-secondary/50 border-border hover:bg-secondary"
                 }`}
               >
@@ -372,9 +416,18 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   // Chat view
   return (
     <div className="flex flex-col h-full">
-      {/* History button bar */}
-      {user && (
-        <div className="px-3 pt-2 flex justify-end">
+      {/* Top bar */}
+      <div className="px-3 pt-2 flex justify-between items-center">
+        {/* Quick order button */}
+        <button
+          onClick={() => setShowOrderForm(!showOrderForm)}
+          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-lg hover:bg-primary/10 font-medium"
+        >
+          <ShoppingCart className="w-3 h-3" />
+          {showOrderForm ? "Close Form" : "Quick Order"}
+        </button>
+
+        {user && (
           <button
             onClick={() => { setShowHistory(true); loadPastSessions(); }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
@@ -382,11 +435,11 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
             <History className="w-3 h-3" />
             History
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px]">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !showOrderForm ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">👋 Hello! Our Support Team is here to help you. How can we assist you today?</p>
           </div>
@@ -411,6 +464,16 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               </div>
             </div>
           ))
+        )}
+
+        {/* Inline Order Form */}
+        {showOrderForm && (
+          <div className="bg-card border border-primary/20 rounded-xl p-2 shadow-sm">
+            <ChatOrderForm
+              onClose={() => setShowOrderForm(false)}
+              onOrderComplete={handleOrderComplete}
+            />
+          </div>
         )}
       </div>
 
