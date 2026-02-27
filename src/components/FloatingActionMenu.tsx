@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, ArrowUp, X, MessageSquare } from "lucide-react";
+import { MessageCircle, ArrowUp, X } from "lucide-react";
 import { ChatWidget } from "./ChatWidget";
 
 const menuItemVariants = {
@@ -76,7 +76,7 @@ export const FloatingActionMenu = () => {
               onClick={handleChat}
               className="fixed bottom-[5.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card transition-colors touch-manipulation"
             >
-              <MessageSquare className="w-4 h-4 text-primary" />
+              <span className="text-sm" aria-hidden="true">👨‍💻</span>
               <span className="text-xs font-semibold whitespace-nowrap">Chat with Raiyan</span>
             </motion.button>
           </>
@@ -116,7 +116,7 @@ export const FloatingActionMenu = () => {
             </motion.div>
           ) : (
             <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-              <MessageSquare className="w-6 h-6" />
+              <span className="text-xl leading-none" aria-hidden="true">👨‍💻</span>
             </motion.div>
           )}
         </AnimatePresence>

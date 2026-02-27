@@ -79,6 +79,14 @@ export function useShipping(country: string, subtotal: number, totalWeightKg: nu
   }, [zone, zoneRates, subtotal, totalWeightKg]);
 
   const options = getOptions();
+
+  useEffect(() => {
+    if (options.length === 0) return;
+    if (!options.some((o) => o.rate.shipping_type === selectedType)) {
+      setSelectedType(options[0].rate.shipping_type);
+    }
+  }, [options, selectedType]);
+
   const selected = options.find(o => o.rate.shipping_type === selectedType) || options[0];
 
   return { zones, rates, options, selected, selectedType, setSelectedType, loading, zone };
