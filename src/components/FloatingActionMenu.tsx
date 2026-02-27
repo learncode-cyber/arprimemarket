@@ -38,7 +38,9 @@ export const FloatingActionMenu = () => {
   };
 
   const handleEmail = () => {
-    window.location.href = "mailto:biz.arprimemarket@gmail.com?subject=Support Request";
+    const subject = encodeURIComponent("Inquiry regarding Prime Market Products/Orders");
+    const body = encodeURIComponent("Hello Raiyan,\n\nI have a question regarding my experience on Prime Market. Here are the details:\n\n[Please type your question here]\n\nLooking forward to your response.\n\nBest regards");
+    window.location.href = `mailto:biz.arprimemarket@gmail.com?subject=${subject}&body=${body}`;
     setOpen(false);
   };
 
