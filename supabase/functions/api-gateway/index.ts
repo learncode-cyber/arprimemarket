@@ -301,136 +301,137 @@ async function handleHealthCheck() {
 }
 
 // ─── Main router ───
+async function handleRequest(req: Request): Promise<Response> {
+  const startTime = Date.now();
+  const url = new URL(req.url);
+
+  let body: Record<string, any> = {};
+  let route = "";
+
+  if (req.method === "POST") {
+    body = await req.json();
+    route = body.route || "";
+  } else {
+    route = url.searchParams.get("route") || "";
+  }
+
+  if (!route) return error("Missing route parameter");
+
+  // Rate limiting
+  const clientIP = req.headers.get("x-forwarded-for") || "unknown";
+  const rlKey = `${route}:${clientIP}`;
+  const rlCfg = rlConfigs[route] || rlConfigs.default;
+  const rl = checkRate(rlKey, rlCfg);
+  if (!rl.ok) {
+    await logEvent({ ts: new Date().toISOString(), level: "warn", route, error: "rate_limited" });
+    return json({ error: "Too many requests" }, 429, { "X-RateLimit-Remaining": "0" });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  const createPublicClient = () => createClient(supabaseUrl, serviceKey, {
+    global: { headers: {} },
+    db: { schema: 'public' },
+  });
+
+  // Retry wrapper for transient DB errors
+  const MAX_RETRIES = 2;
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const publicReadClient = createPublicClient();
+
+      let response: Response;
+
+      switch (route) {
+        case "health":
+          response = await handleHealthCheck();
+          break;
+        case "products.list":
+          response = await handleProductsList(publicReadClient, body.params || {});
+          break;
+        case "products.detail":
+          if (!body.id) return error("Missing product id/slug");
+          response = await handleProductDetail(publicReadClient, body.id);
+          break;
+        case "categories.list":
+          response = await handleCategoriesList(publicReadClient);
+          break;
+        case "coupons.validate":
+          response = await handleCouponValidate(publicReadClient, body);
+          break;
+        case "orders.list": {
+          const auth = await authenticate(req);
+          if (!auth) return error("Unauthorized", 401);
+          const authClient = createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: req.headers.get("Authorization")! } },
+          });
+          response = await handleOrdersList(authClient, auth.userId, body.params || {});
+          break;
+        }
+        case "cache.invalidate": {
+          const auth = await authenticate(req);
+          if (!auth || auth.role !== "admin") return error("Forbidden", 403);
+          const pattern = body.pattern || "";
+          let cleared = 0;
+          for (const key of cache.keys()) {
+            if (!pattern || key.startsWith(pattern)) {
+              cache.delete(key);
+              cleared++;
+            }
+          }
+          response = json({ cleared, message: `Invalidated ${cleared} cache entries` });
+          break;
+        }
+        default:
+          response = error(`Unknown route: ${route}`, 404);
+      }
+
+      const duration = Date.now() - startTime;
+      await logEvent({
+        ts: new Date().toISOString(),
+        level: "info",
+        route,
+        durationMs: duration,
+        meta: { status: response.status, attempt },
+      });
+
+      return response;
+
+    } catch (err: unknown) {
+      lastError = err;
+      let message = err instanceof Error ? err.message : String(err);
+      const isTransient = message.includes("<!DOCTYPE") || message.includes("SSL") || message.includes("525") || message.includes("fetch failed") || message.includes("connection");
+
+      if (isTransient && attempt < MAX_RETRIES) {
+        // Wait before retry (200ms, 600ms)
+        await new Promise(r => setTimeout(r, 200 * (attempt + 1) * (attempt + 1)));
+        continue;
+      }
+
+      if (isTransient) message = "Database temporarily unavailable. Please retry.";
+
+      console.error(`[api-gateway] Error (attempt ${attempt}):`, message);
+      await logEvent({
+        ts: new Date().toISOString(),
+        level: "error",
+        route,
+        durationMs: Date.now() - startTime,
+        error: message,
+      });
+      return json({ error: message }, 503);
+    }
+  }
+
+  return json({ error: "Unexpected error" }, 500);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
-  const startTime = Date.now();
-  const url = new URL(req.url);
-
-  // Extract route from body or query
-  let body: Record<string, any> = {};
-  let route = "";
-
-  try {
-    if (req.method === "POST") {
-      body = await req.json();
-      route = body.route || "";
-    } else {
-      route = url.searchParams.get("route") || "";
-    }
-
-    if (!route) return error("Missing route parameter");
-
-    // Rate limiting
-    const clientIP = req.headers.get("x-forwarded-for") || "unknown";
-    const rlKey = `${route}:${clientIP}`;
-    const rlCfg = rlConfigs[route] || rlConfigs.default;
-    const rl = checkRate(rlKey, rlCfg);
-    if (!rl.ok) {
-      await logEvent({ ts: new Date().toISOString(), level: "warn", route, error: "rate_limited" });
-      return json({ error: "Too many requests" }, 429, { "X-RateLimit-Remaining": "0" });
-    }
-
-    // Create supabase client (service role for reads, user auth for writes)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    // Public read routes use service role for performance (bypasses RLS for public data)
-    const publicReadClient = createClient(supabaseUrl, serviceKey, {
-      global: { headers: {} },
-      db: { schema: 'public' },
-    });
-
-    // Route dispatch
-    let response: Response;
-
-    switch (route) {
-      case "health":
-        response = await handleHealthCheck();
-        break;
-
-      case "products.list":
-        response = await handleProductsList(publicReadClient, body.params || {});
-        break;
-
-      case "products.detail":
-        if (!body.id) return error("Missing product id/slug");
-        response = await handleProductDetail(publicReadClient, body.id);
-        break;
-
-      case "categories.list":
-        response = await handleCategoriesList(publicReadClient);
-        break;
-
-      case "coupons.validate":
-        response = await handleCouponValidate(publicReadClient, body);
-        break;
-
-      case "orders.list": {
-        const auth = await authenticate(req);
-        if (!auth) return error("Unauthorized", 401);
-        const authClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: req.headers.get("Authorization")! } },
-        });
-        response = await handleOrdersList(authClient, auth.userId, body.params || {});
-        break;
-      }
-
-      case "cache.invalidate": {
-        const auth = await authenticate(req);
-        if (!auth || auth.role !== "admin") return error("Forbidden", 403);
-        const pattern = body.pattern || "";
-        let cleared = 0;
-        for (const key of cache.keys()) {
-          if (!pattern || key.startsWith(pattern)) {
-            cache.delete(key);
-            cleared++;
-          }
-        }
-        response = json({ cleared, message: `Invalidated ${cleared} cache entries` });
-        break;
-      }
-
-      default:
-        response = error(`Unknown route: ${route}`, 404);
-    }
-
-    const duration = Date.now() - startTime;
-    await logEvent({
-      ts: new Date().toISOString(),
-      level: "info",
-      route,
-      durationMs: duration,
-      meta: { status: response.status },
-    });
-
-    return response;
-
-  } catch (err: unknown) {
-    const duration = Date.now() - startTime;
-    let message = "Internal server error";
-    if (err instanceof Error) {
-      message = err.message;
-    } else if (typeof err === "object" && err !== null && "message" in err) {
-      message = String((err as Record<string, unknown>).message);
-    } else if (typeof err === "string") {
-      message = err;
-    }
-    // Detect Cloudflare/SSL errors and return a clean message
-    if (message.includes("<!DOCTYPE") || message.includes("SSL handshake") || message.includes("525")) {
-      message = "Database temporarily unavailable. Please retry.";
-    }
-    console.error("[api-gateway] Error:", message);
-    await logEvent({
-      ts: new Date().toISOString(),
-      level: "error",
-      route,
-      durationMs: duration,
-      error: message,
-    });
-    return json({ error: message }, 503);
-  }
+  return handleRequest(req);
 });
