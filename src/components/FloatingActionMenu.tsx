@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, ArrowUp, X, Mail } from "lucide-react";
+import { MessageCircle, ArrowUp, X, Mail, Copy } from "lucide-react";
 import { ChatWidget } from "./ChatWidget";
+import { useToast } from "@/hooks/use-toast";
 
 const menuItemVariants = {
   hidden: { opacity: 0, y: 10, scale: 0.92 },
@@ -20,6 +21,7 @@ export const FloatingActionMenu = () => {
   const [open, setOpen] = useState(false);
   const [showScroll, setShowScroll] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const onScroll = () => setShowScroll(window.scrollY > 300);
@@ -38,9 +40,19 @@ export const FloatingActionMenu = () => {
   };
 
   const handleEmail = () => {
+    const email = "biz.arprimemarket@gmail.com";
     const subject = encodeURIComponent("Inquiry regarding Prime Market Products/Orders");
     const body = encodeURIComponent("Hello Raiyan,\n\nI have a question regarding my experience on Prime Market. Here are the details:\n\n[Please type your question here]\n\nLooking forward to your response.\n\nBest regards");
-    window.location.href = `mailto:biz.arprimemarket@gmail.com?subject=${subject}&body=${body}`;
+    toast({ title: "Opening your email app..." });
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    setOpen(false);
+  };
+
+  const handleCopyEmail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText("biz.arprimemarket@gmail.com").then(() => {
+      toast({ title: "Email copied to clipboard!", description: "biz.arprimemarket@gmail.com" });
+    });
     setOpen(false);
   };
 
@@ -60,18 +72,33 @@ export const FloatingActionMenu = () => {
             />
 
             {/* Email Support */}
-            <motion.button
-              variants={menuItemVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={smoothTransition(0.06)}
-              onClick={handleEmail}
-              className="fixed bottom-[11.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-accent/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg hover:bg-accent transition-colors touch-manipulation"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="text-xs font-semibold whitespace-nowrap">Email Support</span>
-            </motion.button>
+            <div className="fixed bottom-[11.5rem] right-4 z-50 flex items-center gap-1.5">
+              <motion.button
+                variants={menuItemVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={smoothTransition(0.06)}
+                onClick={handleCopyEmail}
+                className="w-9 h-10 flex items-center justify-center rounded-full bg-muted/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg hover:bg-accent transition-colors touch-manipulation"
+                aria-label="Copy email address"
+                title="Copy email address"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </motion.button>
+              <motion.button
+                variants={menuItemVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={smoothTransition(0.06)}
+                onClick={handleEmail}
+                className="flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-accent/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg hover:bg-accent transition-colors touch-manipulation"
+              >
+                <Mail className="w-4 h-4" />
+                <span className="text-xs font-semibold whitespace-nowrap">Email Support</span>
+              </motion.button>
+            </div>
 
             {/* WhatsApp */}
             <motion.button
