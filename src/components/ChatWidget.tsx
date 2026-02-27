@@ -452,12 +452,17 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               }`}>
                 {m.content ? (
                   m.sender_type === "agent" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_a]:text-primary [&_a]:underline [&_a]:font-medium [&_a]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_strong]:font-semibold">
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_strong]:font-semibold">
                       <ReactMarkdown
                         components={{
                           a: ({ href, children }) => (
-                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium hover:opacity-80 transition-opacity">
-                              {children}
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 text-primary underline decoration-primary/40 underline-offset-2 font-semibold hover:decoration-primary transition-all hover:opacity-90"
+                            >
+                              {children} ↗
                             </a>
                           ),
                           p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,

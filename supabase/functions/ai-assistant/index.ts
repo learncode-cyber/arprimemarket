@@ -42,12 +42,13 @@ serve(async (req) => {
           .order("is_featured", { ascending: false })
           .limit(50);
         
-        if (products && products.length > 0) {
+      if (products && products.length > 0) {
           const siteUrl = "https://arprimemarket.lovable.app";
-          productContext = `\n\nAVAILABLE PRODUCTS (use these to recommend to customers):\n` +
+          productContext = `\n\nAVAILABLE PRODUCTS (ALWAYS use the pre-formatted markdown link when recommending):\n` +
             products.map(p => {
               const discount = p.compare_at_price ? Math.round((1 - p.price / p.compare_at_price) * 100) : 0;
-              return `- "${p.title}" | ৳${p.price}${discount > 0 ? ` (${discount}% OFF, was ৳${p.compare_at_price})` : ""} | Stock: ${p.stock_quantity} | Rating: ${p.rating || "New"} | ${p.is_featured ? "⭐ FEATURED" : ""} | Link: ${siteUrl}/products/${p.id} | Tags: ${(p.tags || []).join(", ")} | ${p.description?.slice(0, 80) || ""}`;
+              const mdLink = `[**${p.title}** (৳${p.price}${discount > 0 ? `, ${discount}% OFF` : ""})](${siteUrl}/products/${p.id})`;
+              return `- ${mdLink} | Stock: ${p.stock_quantity} | Rating: ${p.rating || "New"} | ${p.is_featured ? "⭐ FEATURED" : ""} | Tags: ${(p.tags || []).join(", ")} | ${p.description?.slice(0, 80) || ""}`;
             }).join("\n");
         }
       } catch (e) { console.error("Product fetch error:", e); }
@@ -80,11 +81,12 @@ PROBLEM-SOLVING & PRODUCT RECOMMENDATION (VERY IMPORTANT):
 - When a customer describes ANY problem, need, or situation — FIRST give them a practical, helpful solution or advice.
 - THEN, search through the available products and recommend the most relevant ones that could help solve their problem.
 - ALWAYS include the product link so they can view and buy it directly.
-- Format product recommendations using MARKDOWN LINKS — NEVER show raw URLs. Use this format:
-  - In English: "I'd recommend [**Product Name** (৳Price)](link) — [brief reason why it helps]"
-  - In Bengali: "আমি আপনাকে [**Product Name** (৳Price)](link) রেকমেন্ড করবো — [কেন এটা কাজে আসবে]"
-  - Example: "Check out [**Wireless Earbuds Pro** (৳1,299)](https://arprimemarket.lovable.app/products/abc123) — সাউন্ড কোয়ালিটি দারুণ! 🎧"
-- CRITICAL: ALWAYS use markdown link format [text](url). NEVER paste raw URLs like https://arprimemarket.lovable.app/products/...
+- Format product recommendations using MARKDOWN LINKS — NEVER show raw URLs.
+- The product list above already contains pre-formatted markdown links like [**Product Name** (৳Price)](url). COPY AND PASTE these links EXACTLY as they appear. Do NOT modify the link format. Do NOT write the URL separately.
+- CRITICAL RULE: NEVER write a raw URL starting with https://. ALWAYS use the markdown link format [text](url) that is already provided in the product list above.
+- If you ever feel tempted to write a URL, STOP and use the markdown link from the product list instead.
+- Example of CORRECT format: "আমি আপনাকে [**Wireless Earbuds Pro** (৳1,299)](https://arprimemarket.lovable.app/products/abc123) রেকমেন্ড করবো 🎧"
+- Example of WRONG format: "লিংক: https://arprimemarket.lovable.app/products/abc123" ← NEVER DO THIS
 - If multiple products are relevant, recommend 2-3 with brief explanations of why each could help.
 - Connect the product to their specific problem: "আপনার এই সমস্যার জন্য এই প্রোডাক্টটা পারফেক্ট কারণ..."
 - If no product matches their need, be honest but suggest they check our [full catalog](https://arprimemarket.lovable.app/products)
