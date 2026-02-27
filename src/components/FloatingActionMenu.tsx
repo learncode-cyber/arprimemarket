@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, ArrowUp, X } from "lucide-react";
+import { MessageCircle, ArrowUp, X, Mail } from "lucide-react";
 import { ChatWidget } from "./ChatWidget";
 
 const menuItemVariants = {
@@ -37,6 +37,11 @@ export const FloatingActionMenu = () => {
     setOpen(false);
   };
 
+  const handleEmail = () => {
+    window.location.href = "mailto:support@abdullahraiyan.com?subject=Support Request";
+    setOpen(false);
+  };
+
   return (
     <>
       {/* Expanded options */}
@@ -51,6 +56,20 @@ export const FloatingActionMenu = () => {
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-40"
             />
+
+            {/* Email Support */}
+            <motion.button
+              variants={menuItemVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={smoothTransition(0.06)}
+              onClick={handleEmail}
+              className="fixed bottom-[11.5rem] right-4 z-50 flex w-40 h-10 items-center justify-center gap-2 rounded-full bg-accent/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg hover:bg-accent transition-colors touch-manipulation"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="text-xs font-semibold whitespace-nowrap">Email Support</span>
+            </motion.button>
 
             {/* WhatsApp */}
             <motion.button
