@@ -42,11 +42,17 @@ export const FloatingActionMenu = () => {
 
   const handleEmail = () => {
     const email = "biz.arprimemarket@gmail.com";
-    const subject = encodeURIComponent("[Prime Market Inquiry] - Customer Support Request");
-    const body = encodeURIComponent("Hello Raiyan & Support Team,\n\nThis is an inquiry from Prime Market 🛒.\n\nI would like to know about: [Please type your question here]\n\nThank you.");
+    const subject = "[Prime Market Inquiry] - Customer Support Request";
+    const body = "Hello Raiyan & Support Team,\n\nThis is an inquiry from Prime Market 🛒.\n\nI would like to know about: [Please type your question here]\n\nThank you.";
     navigator.clipboard.writeText(email).catch(() => {});
-    toast({ title: "Opening your email app...", description: "Email address also copied to clipboard!" });
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    toast({ title: "Opening Gmail...", description: "Address copied to clipboard!" });
+
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } else {
+      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+    }
     setOpen(false);
   };
 
