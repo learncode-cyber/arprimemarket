@@ -16,7 +16,7 @@ interface Props {
 }
 
 const PaymentMethodSelector = ({ selectedKey, onSelect, shippingCountry }: Props) => {
-  const { data: allMethods = [], isLoading } = usePaymentMethods(true);
+  const { data: allMethods = [], isLoading, isError } = usePaymentMethods(true);
   const { lang } = useLanguage();
   const [copied, setCopied] = useState(false);
 
@@ -56,15 +56,32 @@ const PaymentMethodSelector = ({ selectedKey, onSelect, shippingCountry }: Props
     return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-14 rounded-xl bg-muted/50 animate-pulse" />)}</div>;
   }
 
-  if (methods.length === 0) {
+  // Fallback payment methods when DB returns empty (e.g. anon/guest users)
+  const fallbackMethods: PaymentMethod[] = (() => {
+    const base: PaymentMethod[] = [
+      { id: "fb-binance", method_type: "crypto", method_key: "binance_pay", display_name: "Binance Pay", display_name_bn: "বাইন্যান্স পে", display_name_ar: "بينانس باي", icon_name: "Coins", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay via Binance Pay", instructions_bn: "বাইন্যান্স পে দিয়ে পেমেন্ট করুন", instructions_ar: "ادفع عبر بينانس باي", network: null, sort_order: 3 },
+      { id: "fb-visa", method_type: "card", method_key: "visa_mastercard", display_name: "Visa / Mastercard", display_name_bn: "ভিসা / মাস্টারকার্ড", display_name_ar: "فيزا / ماستركارد", icon_name: "CreditCard", is_active: true, wallet_address: null, deposit_link: null, instructions: "Pay with card", instructions_bn: "কার্ড দিয়ে পেমেন্ট করুন", instructions_ar: "ادفع بالبطاقة", network: null, sort_order: 4 },
+    ];
+    if (isBangladesh) {
+      base.unshift(
+        { id: "fb-bkash", method_type: "mobile", method_key: "bkash", display_name: "bKash", display_name_bn: "বিকাশ", display_name_ar: "بي كاش", icon_name: "Smartphone", is_active: true, wallet_address: null, deposit_link: null, instructions: "Send payment to bKash", instructions_bn: "বিকাশে পেমেন্ট পাঠান", instructions_ar: "أرسل الدفعة عبر بي كاش", network: null, sort_order: 1 },
+        { id: "fb-nagad", method_type: "mobile", method_key: "nagad", display_name: "Nagad", display_name_bn: "নগদ", display_name_ar: "ناجاد", icon_name: "Smartphone", is_active: true, wallet_address: null, deposit_link: null, instructions: "Send payment to Nagad", instructions_bn: "নগদে পেমেন্ট পাঠান", instructions_ar: "أرسل الدفعة عبر ناجاد", network: null, sort_order: 2 },
+      );
+    }
+    return base;
+  })();
+
+  const finalMethods = methods.length > 0 ? methods : fallbackMethods;
+
+  if (finalMethods.length === 0) {
     return <p className="text-sm text-muted-foreground">No payment methods available.</p>;
   }
 
-  const selected = methods.find(m => m.method_key === selectedKey);
+  const selected = finalMethods.find(m => m.method_key === selectedKey);
 
   // Group methods by type for display
   const grouped: Record<string, PaymentMethod[]> = {};
-  methods.forEach(m => {
+  finalMethods.forEach(m => {
     const type = m.method_type;
     if (!grouped[type]) grouped[type] = [];
     grouped[type].push(m);
@@ -74,7 +91,7 @@ const PaymentMethodSelector = ({ selectedKey, onSelect, shippingCountry }: Props
     <div className="space-y-4">
       {/* Payment method buttons */}
       <div className="space-y-1.5">
-        {methods.map(method => {
+        {finalMethods.map(method => {
           const Icon = iconMap[method.icon_name || ""] || Coins;
           const isSelected = selectedKey === method.method_key;
 

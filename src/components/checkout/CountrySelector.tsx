@@ -92,7 +92,7 @@ const CountrySelector = ({ value, onChange, label }: CountrySelectorProps) => {
                 />
               </div>
             </div>
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto scrollbar-hide">
               {filtered.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">No countries found</p>
               ) : (

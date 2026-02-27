@@ -135,8 +135,12 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   }, [currency]);
 
   const formatPrice = useCallback((bdtPrice: number) => {
-    const converted = convertPrice(bdtPrice);
-    return `${currency.symbol}${converted.toLocaleString(undefined, { minimumFractionDigits: currency.code === "BDT" ? 0 : 2, maximumFractionDigits: 2 })}`;
+    let converted = convertPrice(bdtPrice);
+    // Auto-round BDT to whole numbers (discount poisha)
+    if (currency.code === "BDT") {
+      converted = Math.floor(converted);
+    }
+    return `${currency.symbol}${converted.toLocaleString(undefined, { minimumFractionDigits: currency.code === "BDT" ? 0 : 2, maximumFractionDigits: currency.code === "BDT" ? 0 : 2 })}`;
   }, [currency, convertPrice]);
 
   return (
