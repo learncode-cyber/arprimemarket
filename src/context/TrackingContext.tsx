@@ -46,6 +46,11 @@ declare global {
 
 const injectedScripts = new Set<string>();
 
+// Sanitize pixel/tracking IDs to prevent XSS injection
+const sanitizePixelId = (id: string): string => {
+  return id.replace(/[^a-zA-Z0-9_\-.:]/g, "");
+};
+
 const injectScript = (id: string, src: string) => {
   if (injectedScripts.has(id) || document.getElementById(id)) return;
   const s = document.createElement("script");
@@ -88,33 +93,33 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
         t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
         (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init','${meta.pixel_id}');
+        fbq('init','${sanitizePixelId(meta.pixel_id)}');
       `);
     }
 
     const ga = getPixel("google_analytics");
     if (ga) {
-      injectScript("ga4-script", `https://www.googletagmanager.com/gtag/js?id=${ga.pixel_id}`);
+      injectScript("ga4-script", `https://www.googletagmanager.com/gtag/js?id=${sanitizePixelId(ga.pixel_id)}`);
       injectInline("ga4-init", `
         window.dataLayer=window.dataLayer||[];
         function gtag(){dataLayer.push(arguments);}
         gtag('js',new Date());
-        gtag('config','${ga.pixel_id}',{send_page_view:false});
+        gtag('config','${sanitizePixelId(ga.pixel_id)}',{send_page_view:false});
       `);
     }
 
     const gads = getPixel("google_ads");
     if (gads) {
       if (!ga) {
-        injectScript("gads-script", `https://www.googletagmanager.com/gtag/js?id=${gads.pixel_id}`);
+        injectScript("gads-script", `https://www.googletagmanager.com/gtag/js?id=${sanitizePixelId(gads.pixel_id)}`);
         injectInline("gads-init", `
           window.dataLayer=window.dataLayer||[];
           function gtag(){dataLayer.push(arguments);}
           gtag('js',new Date());
-          gtag('config','${gads.pixel_id}');
+          gtag('config','${sanitizePixelId(gads.pixel_id)}');
         `);
       } else {
-        injectInline("gads-config", `gtag('config','${gads.pixel_id}');`);
+        injectInline("gads-config", `gtag('config','${sanitizePixelId(gads.pixel_id)}');`);
       }
     }
   }, [loaded, getPixel]);

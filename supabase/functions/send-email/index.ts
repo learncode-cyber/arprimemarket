@@ -233,12 +233,27 @@ Deno.serve(async (req) => {
       }
 
       case "custom": {
+        // Restrict custom emails to admin role only
+        const userId = await requireAuth(req);
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const adminClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+        const { data: roleData } = await adminClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .eq("role", "admin")
+          .single();
+        if (!roleData) return json({ error: "Admin access required" }, 403);
+
         if (!body.to || !body.subject || !body.html) {
           return json({ error: "to, subject, and html required" }, 400);
         }
         const result = await sendEmail(RESEND_API_KEY, {
           to: body.to,
-          subject: body.subject,
+          subject: String(body.subject).slice(0, 200),
           html: body.html,
         });
         return json({ success: true, id: result.id });
