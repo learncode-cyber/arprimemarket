@@ -26,17 +26,19 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim() || !form.email.trim()) {
-      toast.error("Name, Phone and Email are required");
+    if (!form.name.trim() || !form.phone.trim() || !form.email.trim() || !form.address.trim()) {
+      toast.error("Name, Phone, Email and Address are required");
       return;
     }
     setSending(true);
     try {
       const orderNumber = "ARP-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+      const orderId = crypto.randomUUID();
 
-      const { data: order, error: orderError } = await supabase
+      const { error: orderError } = await supabase
         .from("orders")
         .insert({
+          id: orderId,
           order_number: orderNumber,
           status: "pending",
           payment_status: "unpaid",
@@ -44,17 +46,15 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
           total: product.price,
           shipping_name: form.name.trim(),
           shipping_phone: form.phone.trim(),
-          shipping_email: form.email.trim() || null,
-          shipping_address: form.address.trim() || null,
+          shipping_email: form.email.trim(),
+          shipping_address: form.address.trim(),
           notes: "1-Click Quick Order (Guest)",
-        })
-        .select("id")
-        .single();
+        });
 
       if (orderError) throw orderError;
 
-      await supabase.from("order_items").insert({
-        order_id: order.id,
+      const { error: itemError } = await supabase.from("order_items").insert({
+        order_id: orderId,
         product_id: product.id,
         title: product.title,
         price: product.price,
@@ -62,6 +62,8 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
         total: product.price,
         image_url: product.image,
       });
+
+      if (itemError) throw itemError;
 
       setDone(true);
       toast.success("Order placed successfully!");
@@ -154,10 +156,11 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                     maxLength={255}
                   />
                   <textarea
-                    placeholder="Delivery Address"
+                    placeholder="Delivery Address *"
                     value={form.address}
                     onChange={(e) => setForm(f => ({ ...f, address: e.target.value }))}
                     className="w-full h-20 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    required
                     maxLength={500}
                   />
                   <button
