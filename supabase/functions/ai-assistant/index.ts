@@ -16,7 +16,63 @@ serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
-    // Auth check - must be admin
+    const body = await req.json();
+    const { action, scanResultId, fixQuery, message, context: clientContext } = body;
+
+    // Public chat action - no auth required
+    if (action === "chat") {
+      if (!lovableApiKey) {
+        return new Response(JSON.stringify({ error: "AI not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const userLang = clientContext?.language || "en";
+      const history = clientContext?.history || [];
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            {
+              role: "system",
+              content: `You are a friendly and helpful customer support assistant for AR Prime Market, an online ecommerce store. You help customers with product questions, orders, shipping, returns, and general inquiries.
+
+CRITICAL RULES:
+- Detect the language of the user's message and ALWAYS reply in the SAME language.
+- If the user writes in Bengali, reply in Bengali. If Arabic, reply in Arabic. If English, reply in English. And so on for any language.
+- The user's browser language is: ${userLang}. Use this as a hint if the message language is ambiguous.
+- Be concise, friendly, and helpful. Keep responses under 150 words.
+- For order issues, ask for the order number.
+- Never share internal system details or admin information.
+- If you don't know something, say so and suggest contacting support via WhatsApp.`,
+            },
+            ...history.map((h: any) => ({ role: h.role, content: h.content })),
+            { role: "user", content: message },
+          ],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const status = aiResponse.status;
+        if (status === 429) return new Response(JSON.stringify({ reply: "I'm a bit busy right now. Please try again in a moment!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ reply: "Sorry, I couldn't process that. Please try again!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const aiData = await aiResponse.json();
+      const reply = aiData.choices?.[0]?.message?.content || "I'm here to help! Please try again.";
+
+      return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Auth check - must be admin for all other actions
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader || "" } },
     });
@@ -40,8 +96,6 @@ serve(async (req) => {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { action, scanResultId, fixQuery } = await req.json();
 
     // ─── SCAN ACTION ───
     if (action === "scan") {
@@ -428,9 +482,8 @@ serve(async (req) => {
       });
     }
 
-    // ─── AI CHAT ───
-    if (action === "chat") {
-      const { message } = await req.json().catch(() => ({ message: "" }));
+    // ─── ADMIN AI CHAT ───
+    if (action === "admin_chat") {
       if (!lovableApiKey) {
         return new Response(JSON.stringify({ error: "AI not configured" }), {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

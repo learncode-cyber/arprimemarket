@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2, Share2 } from "lucide-react";
+import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2, Share2, Zap } from "lucide-react";
 import { ShareButtons } from "@/components/SocialLinks";
 import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProductData";
@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
+import { QuickOrderModal } from "@/components/QuickOrderModal";
 import { SEOHead } from "@/components/SEOHead";
 import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
 
@@ -19,6 +20,7 @@ const ProductDetail = () => {
   const { t } = useLanguage();
   const { trackViewContent } = useTracking();
   const [qty, setQty] = useState(1);
+  const [quickOrder, setQuickOrder] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -123,6 +125,9 @@ const ProductDetail = () => {
             <button onClick={handleAdd} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
               <ShoppingCart className="w-4 h-4" /> {t("addToCart")}
             </button>
+            <button onClick={() => setQuickOrder(true)} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-accent text-accent-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
+              <Zap className="w-4 h-4" /> Order in 1-Click
+            </button>
             <button className="p-3.5 rounded-xl border border-border bg-card hover:bg-secondary transition-colors touch-manipulation">
               <Heart className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -130,6 +135,14 @@ const ProductDetail = () => {
 
           {/* Share Buttons */}
           <ShareButtons url={`/products/${product.slug}`} title={product.title} />
+
+          {product && (
+            <QuickOrderModal
+              open={quickOrder}
+              onClose={() => setQuickOrder(false)}
+              product={{ id: product.id, title: product.title, price: product.price, image: product.image }}
+            />
+          )}
         </motion.div>
       </div>
     </div>

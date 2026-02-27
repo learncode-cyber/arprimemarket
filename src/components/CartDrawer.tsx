@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Minus, ShoppingBag } from "lucide-react";
+import { X, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -41,7 +41,10 @@ export const CartDrawer = ({ open, onClose }: CartDrawerProps) => {
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <ShoppingBag className="w-12 h-12 text-muted-foreground/20 mb-3" />
-                  <p className="text-sm text-muted-foreground">{t("emptyCart")}</p>
+                  <p className="text-sm text-muted-foreground mb-4">{t("emptyCart")}</p>
+                  <Link to="/products" onClick={onClose} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation">
+                    {t("continueShopping")} <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
               ) : (
                 items.map((item) => (

@@ -45,9 +45,9 @@ export const FloatingActionMenu = () => {
               exit={{ opacity: 0, y: 12, scale: 0.85 }}
               transition={{ type: "spring", stiffness: 400, damping: 24, delay: 0.05 }}
               onClick={handleWhatsApp}
-              className="fixed bottom-[8rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-[#25D366]/90 backdrop-blur-xl border border-[#25D366]/30 text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#25D366] active:scale-95 transition-all touch-manipulation"
+              className="fixed bottom-[8rem] right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-card/80 backdrop-blur-xl border border-border/50 text-foreground shadow-lg shadow-primary/10 hover:bg-card active:scale-95 transition-all touch-manipulation"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4 text-primary" />
               <span className="text-xs font-semibold whitespace-nowrap">WhatsApp Support</span>
             </motion.button>
 
@@ -96,7 +96,7 @@ export const FloatingActionMenu = () => {
         <AnimatePresence mode="wait">
           {open ? (
             <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </motion.div>
           ) : (
             <motion.div key="bot" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
