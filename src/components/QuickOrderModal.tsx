@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "sonner";
+import { useShipping } from "@/hooks/useShipping";
+import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
+import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import CountrySelector from "@/components/checkout/CountrySelector";
 
 interface QuickOrderProduct {
   id: string;
@@ -20,9 +25,31 @@ interface QuickOrderModalProps {
 
 export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps) => {
   const { formatPrice } = useCurrency();
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const { lang } = useLanguage();
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", country: "Bangladesh" });
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [txReference, setTxReference] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+
+  const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType } = useShipping(form.country, product.price);
+  const shippingCost = selectedShipping?.totalCost ?? 0;
+  const total = product.price + shippingCost;
+
+  const tx = (en: string, bn: string, ar: string) => {
+    if (lang.code === "bn") return bn;
+    if (lang.code === "ar" || lang.code === "sa") return ar;
+    return en;
+  };
+
+  // Auto-detect country from localStorage (set by CurrencyContext geo-detection)
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const saved = localStorage.getItem("arp-detected-country");
+      if (saved) setForm(f => ({ ...f, country: saved }));
+    } catch {}
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +68,17 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
           id: orderId,
           order_number: orderNumber,
           status: "pending",
-          payment_status: "unpaid",
+          payment_status: paymentMethod === "cod" ? "unpaid" : "pending",
+          payment_method: paymentMethod,
           subtotal: product.price,
-          total: product.price,
+          shipping_cost: shippingCost,
+          total,
           shipping_name: form.name.trim(),
           shipping_phone: form.phone.trim(),
           shipping_email: form.email.trim(),
           shipping_address: form.address.trim(),
+          shipping_country: form.country,
+          shipping_method: shippingType,
           notes: "1-Click Quick Order (Guest)",
         });
 
@@ -65,8 +96,22 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
       if (itemError) throw itemError;
 
+      // Create payment transaction for non-COD (best-effort for guest)
+      if (paymentMethod !== "cod") {
+        try {
+          await supabase.from("payment_transactions").insert({
+            order_id: orderId,
+            payment_method_key: paymentMethod,
+            amount: total,
+            currency: "BDT",
+            status: "pending",
+            transaction_reference: txReference.trim() || null,
+          });
+        } catch {} // non-blocking for guest
+      }
+
       setDone(true);
-      toast.success("Order placed successfully!");
+      toast.success(tx("Order placed successfully!", "অর্ডার সফলভাবে দেওয়া হয়েছে!", "تم تقديم الطلب بنجاح!"));
     } catch (err: any) {
       console.error(err);
       toast.error("Failed to place order. Please try again.");
@@ -77,9 +122,13 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
   const handleClose = () => {
     setDone(false);
-    setForm({ name: "", phone: "", email: "", address: "" });
+    setForm({ name: "", phone: "", email: "", address: "", country: "Bangladesh" });
+    setPaymentMethod("cod");
+    setTxReference("");
     onClose();
   };
+
+  const needsReference = paymentMethod !== "cod" && paymentMethod !== "visa_mastercard";
 
   return (
     <AnimatePresence>
@@ -96,12 +145,15 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
-            className="relative w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl z-10 overflow-hidden"
+            className="relative w-full max-w-md max-h-[90vh] rounded-2xl bg-card border border-border shadow-2xl z-10 overflow-hidden flex flex-col"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
-                <span className="font-display font-bold text-sm">Order in 1-Click</span>
+                <span className="font-display font-bold text-sm">
+                  {tx("Order in 1-Click", "১-ক্লিকে অর্ডার", "اطلب بنقرة واحدة")}
+                </span>
               </div>
               <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
@@ -111,14 +163,19 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
             {done ? (
               <div className="p-8 text-center">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <h3 className="font-display font-bold text-lg text-foreground mb-1">Order Placed!</h3>
-                <p className="text-sm text-muted-foreground mb-4">We'll contact you shortly to confirm.</p>
+                <h3 className="font-display font-bold text-lg text-foreground mb-1">
+                  {tx("Order Placed!", "অর্ডার সম্পন্ন!", "تم الطلب!")}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {tx("We'll contact you shortly to confirm.", "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।", "سنتواصل معك قريبًا للتأكيد.")}
+                </p>
                 <button onClick={handleClose} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">
-                  Close
+                  {tx("Close", "বন্ধ", "إغلاق")}
                 </button>
               </div>
             ) : (
-              <>
+              <div className="overflow-y-auto flex-1">
+                {/* Product summary */}
                 <div className="px-5 py-3 flex items-center gap-3 bg-secondary/50">
                   <img src={product.image} alt={product.title} className="w-12 h-12 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
@@ -128,9 +185,10 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-5 space-y-3">
+                  {/* Contact fields */}
                   <input
                     type="text"
-                    placeholder="Your Name *"
+                    placeholder={tx("Your Name *", "আপনার নাম *", "اسمك *")}
                     value={form.name}
                     onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -139,7 +197,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                   />
                   <input
                     type="tel"
-                    placeholder="Phone Number *"
+                    placeholder={tx("Phone Number *", "ফোন নম্বর *", "رقم الهاتف *")}
                     value={form.phone}
                     onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -148,7 +206,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                   />
                   <input
                     type="email"
-                    placeholder="Email *"
+                    placeholder={tx("Email *", "ইমেইল *", "البريد الإلكتروني *")}
                     value={form.email}
                     onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -156,23 +214,80 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                     maxLength={255}
                   />
                   <textarea
-                    placeholder="Delivery Address *"
+                    placeholder={tx("Delivery Address *", "ডেলিভারি ঠিকানা *", "عنوان التوصيل *")}
                     value={form.address}
                     onChange={(e) => setForm(f => ({ ...f, address: e.target.value }))}
-                    className="w-full h-20 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    className="w-full h-16 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                     required
                     maxLength={500}
                   />
+
+                  {/* Country Selector */}
+                  <CountrySelector
+                    value={form.country}
+                    onChange={(val) => setForm(f => ({ ...f, country: val }))}
+                    label={tx("Country", "দেশ", "البلد")}
+                  />
+
+                  {/* Shipping Method */}
+                  {shippingOptions.length > 0 && (
+                    <ShippingMethodSelector
+                      options={shippingOptions}
+                      selectedType={shippingType}
+                      onSelect={setShippingType}
+                      tx={tx}
+                    />
+                  )}
+
+                  {/* Payment Method */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-medium text-muted-foreground">
+                      {tx("Payment Method", "পেমেন্ট পদ্ধতি", "طريقة الدفع")}
+                    </h3>
+                    <PaymentMethodSelector
+                      selectedKey={paymentMethod}
+                      onSelect={setPaymentMethod}
+                      shippingCountry={form.country}
+                    />
+                  </div>
+
+                  {/* Transaction reference for digital payments */}
+                  {needsReference && (
+                    <input
+                      type="text"
+                      placeholder={tx("Transaction Reference (optional)", "ট্রানজেকশন রেফারেন্স (ঐচ্ছিক)", "مرجع المعاملة (اختياري)")}
+                      value={txReference}
+                      onChange={(e) => setTxReference(e.target.value)}
+                      className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  )}
+
+                  {/* Order Summary */}
+                  <div className="bg-secondary/50 rounded-xl p-3 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>{tx("Subtotal", "সাবটোটাল", "المجموع الفرعي")}</span>
+                      <span>{formatPrice(product.price)}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>{tx("Shipping", "শিপিং", "الشحن")}</span>
+                      <span>{shippingCost === 0 ? tx("Free", "ফ্রি", "مجاني") : formatPrice(shippingCost)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-foreground text-sm pt-1 border-t border-border">
+                      <span>{tx("Total", "মোট", "الإجمالي")}</span>
+                      <span>{formatPrice(total)}</span>
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={sending}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    {sending ? "Placing Order..." : "Place Order"}
+                    {sending ? tx("Placing Order...", "অর্ডার হচ্ছে...", "جارٍ تقديم الطلب...") : tx("Place Order", "অর্ডার দিন", "تقديم الطلب")}
                   </button>
                 </form>
-              </>
+              </div>
             )}
           </motion.div>
         </div>
