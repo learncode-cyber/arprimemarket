@@ -1903,6 +1903,54 @@ export type Database = {
         }
         Relationships: []
       }
+      widget_configs: {
+        Row: {
+          ai_persona: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_scraped_at: string | null
+          scraped_data: Json | null
+          site_name: string
+          site_url: string
+          updated_at: string
+          user_id: string
+          welcome_message: string
+          widget_color: string
+          widget_position: string
+        }
+        Insert: {
+          ai_persona?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          scraped_data?: Json | null
+          site_name?: string
+          site_url?: string
+          updated_at?: string
+          user_id: string
+          welcome_message?: string
+          widget_color?: string
+          widget_position?: string
+        }
+        Update: {
+          ai_persona?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          scraped_data?: Json | null
+          site_name?: string
+          site_url?: string
+          updated_at?: string
+          user_id?: string
+          welcome_message?: string
+          widget_color?: string
+          widget_position?: string
+        }
+        Relationships: []
+      }
       wishlists: {
         Row: {
           created_at: string

@@ -38,6 +38,8 @@ import FAQ from "./pages/FAQ";
 import Tickets from "./pages/Tickets";
 import NewTicket from "./pages/NewTicket";
 import TicketDetail from "./pages/TicketDetail";
+import AISetup from "./pages/AISetup";
+import WidgetChat from "./pages/WidgetChat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +68,7 @@ const App = () => (
                 <Routes>
                   <Route path="/ar" element={<Admin />} />
                   <Route path="/ar/*" element={<Admin />} />
+                  <Route path="/widget/chat" element={<WidgetChat />} />
                   <Route path="/admin" element={<Navigate to="/ar" replace />} />
                   <Route path="/admin/*" element={<Navigate to="/ar" replace />} />
                   <Route path="*" element={
@@ -97,6 +100,7 @@ const App = () => (
                         <Route path="/tickets" element={<Tickets />} />
                         <Route path="/tickets/new" element={<NewTicket />} />
                         <Route path="/tickets/:id" element={<TicketDetail />} />
+                        <Route path="/ai-setup" element={<AISetup />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
