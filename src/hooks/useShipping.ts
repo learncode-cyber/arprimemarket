@@ -30,7 +30,9 @@ export interface ShippingOption {
 
 const COUNTRY_MAP: Record<string, string> = {
   Bangladesh: "BD", "United States": "US", USA: "US", Canada: "CA",
-  "United Arab Emirates": "AE", UAE: "AE",
+  "United Arab Emirates": "AE", UAE: "AE", "South Korea": "KR",
+  "South Africa": "ZA", "Saudi Arabia": "SA", "Sri Lanka": "LK",
+  "New Zealand": "NZ", "North Korea": "KP", "United Kingdom": "GB",
 };
 
 export function useShipping(country: string, subtotal: number, totalWeightKg: number = 0.5) {
@@ -54,8 +56,9 @@ export function useShipping(country: string, subtotal: number, totalWeightKg: nu
   }, []);
 
   const countryCode = COUNTRY_MAP[country] || country?.toUpperCase()?.slice(0, 2) || "BD";
-  const zone = zones.find(z => z.country_code === countryCode) || zones.find(z => z.country_code === "BD");
-  const isBD = zone?.country_code === "BD";
+  const isBD = countryCode === "BD";
+  // Only fallback to BD zone if the selected country IS Bangladesh
+  const zone = zones.find(z => z.country_code === countryCode) || (isBD ? zones.find(z => z.country_code === "BD") : undefined);
   // For BD: show inside_dhaka/outside_dhaka; for others: show standard/express
   const zoneRates = zone ? rates.filter(r => {
     if (r.zone_id !== zone.id) return false;
