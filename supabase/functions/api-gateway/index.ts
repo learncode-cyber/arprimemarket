@@ -403,7 +403,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
     } catch (err: unknown) {
       lastError = err;
-      let message = err instanceof Error ? err.message : String(err);
+      let message = err instanceof Error ? err.message : (typeof err === "object" && err !== null ? JSON.stringify(err) : String(err));
       const isTransient = message.includes("<!DOCTYPE") || message.includes("SSL") || message.includes("525") || message.includes("fetch failed") || message.includes("connection");
 
       if (isTransient && attempt < MAX_RETRIES) {
@@ -414,7 +414,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
       if (isTransient) message = "Database temporarily unavailable. Please retry.";
 
-      console.error(`[api-gateway] Error (attempt ${attempt}):`, message);
+      console.error(`[api-gateway] Error (attempt ${attempt}):`, typeof lastError === "object" ? JSON.stringify(lastError) : message);
       await logEvent({
         ts: new Date().toISOString(),
         level: "error",
