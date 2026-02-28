@@ -75,7 +75,9 @@ const AIAssistantDashboard = () => {
   const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
   const [expandedFinding, setExpandedFinding] = useState<number | null>(null);
   const [applyingFix, setApplyingFix] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"scan" | "chat" | "history">("scan");
+  const [activeView, setActiveView] = useState<"scan" | "chat" | "history" | "security">("scan");
+  const [securityScanning, setSecurityScanning] = useState(false);
+  const [securityResults, setSecurityResults] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -175,6 +177,22 @@ const AIAssistantDashboard = () => {
     }
   };
 
+  const runSecurityScan = async () => {
+    setSecurityScanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("security-guard", {
+        body: { action: "full_scan" },
+      });
+      if (error) throw error;
+      setSecurityResults(data);
+      toast.success(`Security scan: ${data.stats?.total || 0} issues, ${data.stats?.auto_fixed || 0} auto-fixed`);
+    } catch (err: any) {
+      toast.error(err.message || "Security scan failed");
+    } finally {
+      setSecurityScanning(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -200,9 +218,10 @@ const AIAssistantDashboard = () => {
       {/* View Tabs */}
       <div className="flex gap-1 bg-secondary/50 rounded-xl p-1">
         {[
-          { id: "scan" as const, label: "Health Monitor", icon: Activity },
+          { id: "scan" as const, label: "Health", icon: Activity },
+          { id: "security" as const, label: "Security", icon: Shield },
           { id: "chat" as const, label: "AI Chat", icon: Bot },
-          { id: "history" as const, label: "Activity Log", icon: History },
+          { id: "history" as const, label: "Log", icon: History },
         ].map(tab => (
           <button
             key={tab.id}
@@ -479,6 +498,115 @@ const AIAssistantDashboard = () => {
               <Send className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* SECURITY VIEW */}
+      {activeView === "security" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-primary" /> Security Guard
+              </h4>
+              <p className="text-[10px] text-muted-foreground">Auto-runs daily at 7:00 AM BST. Checks SQL injection, XSS, payment fraud, data integrity.</p>
+            </div>
+            <button
+              onClick={runSecurityScan}
+              disabled={securityScanning}
+              className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {securityScanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+              {securityScanning ? "Scanning..." : "Run Now"}
+            </button>
+          </div>
+
+          {securityResults && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { label: "Total", value: securityResults.stats?.total || 0, color: "text-foreground" },
+                  { label: "Critical", value: securityResults.stats?.critical || 0, color: "text-destructive" },
+                  { label: "Warnings", value: securityResults.stats?.warning || 0, color: "text-accent-foreground" },
+                  { label: "Info", value: securityResults.stats?.info || 0, color: "text-primary" },
+                  { label: "Auto-Fixed", value: securityResults.stats?.auto_fixed || 0, color: "text-primary" },
+                ].map((stat) => (
+                  <div key={stat.label} className="bg-card border border-border rounded-xl p-3 text-center">
+                    <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {securityResults.auto_fix_results?.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                  <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-primary" /> Auto-Fixed Issues
+                  </h4>
+                  {securityResults.auto_fix_results.map((fix: string, i: number) => (
+                    <p key={i} className="text-xs text-muted-foreground">✅ {fix}</p>
+                  ))}
+                </div>
+              )}
+
+              {securityResults.findings?.length > 0 && (
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border">
+                    <h4 className="text-xs font-semibold text-foreground">Security Findings</h4>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {securityResults.findings.map((f: any, i: number) => {
+                      const sev = severityConfig[f.severity as keyof typeof severityConfig] || severityConfig.info;
+                      return (
+                        <div key={i} className="px-4 py-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${sev.bg} ${sev.color}`}>{sev.label}</span>
+                            <span className="text-[10px] text-muted-foreground capitalize">{f.category}</span>
+                            {f.auto_fix_available && f.severity === "critical" && (
+                              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Auto-fixed ✓</span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground">{f.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{f.suggestion}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {securityResults.findings?.length === 0 && (
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
+                  <CheckCircle className="w-10 h-10 text-primary mx-auto mb-3" />
+                  <h3 className="text-sm font-semibold text-foreground">All Clear! 🛡️</h3>
+                  <p className="text-xs text-muted-foreground">No security issues detected. Your website is protected.</p>
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground text-right">
+                Last scan: {new Date(securityResults.scan_time).toLocaleString("bn-BD", { timeZone: "Asia/Dhaka" })}
+              </p>
+            </>
+          )}
+
+          {!securityResults && !securityScanning && (
+            <div className="bg-card border border-border rounded-xl p-8 text-center">
+              <Shield className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-sm font-semibold text-foreground mb-1">Security Guard Ready</h3>
+              <p className="text-xs text-muted-foreground mb-2">
+                Automated daily scan runs at 7:00 AM BST. Click "Run Now" for immediate scan.
+              </p>
+              <p className="text-[10px] text-muted-foreground">Checks: SQL injection, XSS, CSRF, payment fraud, data integrity, auth security</p>
+            </div>
+          )}
+
+          {securityScanning && (
+            <div className="bg-card border border-border rounded-xl p-8 text-center">
+              <Loader2 className="w-8 h-8 text-destructive mx-auto mb-3 animate-spin" />
+              <h3 className="text-sm font-semibold text-foreground">Running Security Scan...</h3>
+              <p className="text-xs text-muted-foreground">Checking injection vectors, auth, payments, data integrity...</p>
+            </div>
+          )}
         </div>
       )}
 
