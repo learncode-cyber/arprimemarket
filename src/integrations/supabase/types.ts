@@ -1755,6 +1755,39 @@ export type Database = {
         }
         Relationships: []
       }
+      translations_cache: {
+        Row: {
+          content_id: string | null
+          content_type: string
+          created_at: string
+          id: string
+          source_lang: string
+          source_text: string
+          target_lang: string
+          translated_text: string
+        }
+        Insert: {
+          content_id?: string | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          source_lang?: string
+          source_text: string
+          target_lang: string
+          translated_text: string
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          source_lang?: string
+          source_text?: string
+          target_lang?: string
+          translated_text?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

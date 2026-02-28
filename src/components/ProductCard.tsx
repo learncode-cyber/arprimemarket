@@ -4,6 +4,7 @@ import { Product } from "@/hooks/useProductData";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTranslatedText } from "@/hooks/useTranslatedText";
 import { ShoppingCart, Star, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { WishlistButton } from "@/components/WishlistButton";
@@ -19,6 +20,7 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
+  const translatedTitle = useTranslatedText(product.title);
   const [quickOrder, setQuickOrder] = useState(false);
   const discount = product.compare_at_price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
@@ -61,7 +63,7 @@ export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
       <div className="p-2.5 sm:p-3.5 flex flex-col gap-1 flex-1">
         <Link to={`/products/${product.id}`}>
           <h3 className="font-display font-semibold text-[11px] sm:text-sm text-foreground line-clamp-2 leading-snug hover:text-primary transition-colors">
-            {product.title}
+            {translatedTitle}
           </h3>
         </Link>
 
