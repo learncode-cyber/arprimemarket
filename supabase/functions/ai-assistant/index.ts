@@ -8,15 +8,27 @@ const corsHeaders = {
 
 const RETRYABLE_AI_STATUSES = new Set([429, 503]);
 
+const MODELS_BY_PRIORITY = [
+  "google/gemini-3-flash-preview",
+  "google/gemini-2.5-flash",
+  "google/gemini-2.5-flash-lite",
+];
+
 const callLovableAIWithRetry = async (
   lovableApiKey: string,
   payload: Record<string, unknown>,
-  maxRetries = 2,
+  maxRetries = 3,
 ): Promise<Response> => {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 700 * attempt));
+      // Exponential backoff: 1.5s, 3s, 5s
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
     }
+
+    // Fall back to cheaper model on retries to avoid rate limits
+    const model = attempt < 2
+      ? (payload.model || MODELS_BY_PRIORITY[0])
+      : MODELS_BY_PRIORITY[Math.min(attempt, MODELS_BY_PRIORITY.length - 1)];
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -24,15 +36,18 @@ const callLovableAIWithRetry = async (
         Authorization: `Bearer ${lovableApiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, model }),
     });
 
     if (response.ok || !RETRYABLE_AI_STATUSES.has(response.status) || attempt === maxRetries) {
       return response;
     }
+    
+    // Consume body to prevent resource leaks
+    try { await response.text(); } catch {}
   }
 
-  return new Response(JSON.stringify({ error: "AI request failed" }), { status: 500 });
+  return new Response(JSON.stringify({ error: "AI request failed after retries" }), { status: 500 });
 };
 
 serve(async (req) => {

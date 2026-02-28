@@ -199,7 +199,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
       }));
 
       const runChatRequest = async () => {
-        const retryDelays = [0, 900, 1800];
+        const retryDelays = [0, 2000, 4000, 6000];
         let lastResponse: Response | null = null;
 
         for (const delay of retryDelays) {
