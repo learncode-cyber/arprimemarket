@@ -30,10 +30,11 @@ serve(async (req) => {
       const userLang = clientContext?.language || "en";
       const history = clientContext?.history || [];
 
+      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
       // Fetch products for context-aware recommendations
       let productContext = "";
       try {
-        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
         const { data: products } = await supabaseAdmin
           .from("products")
           .select("id, title, slug, price, compare_at_price, description, tags, stock_quantity, is_featured, rating, category_id")
@@ -52,6 +53,38 @@ serve(async (req) => {
             }).join("\n");
         }
       } catch (e) { console.error("Product fetch error:", e); }
+
+      // ─── SELF-LEARNING: Fetch lessons learned ───
+      let learningContext = "";
+      try {
+        const { data: lessons } = await supabaseAdmin
+          .from("ai_learning_log")
+          .select("lesson, category, lesson_type")
+          .eq("is_active", true)
+          .order("confidence_score", { ascending: false })
+          .limit(20);
+        
+        if (lessons && lessons.length > 0) {
+          learningContext = `\n\nLESSONS LEARNED (CRITICAL - Apply these corrections ALWAYS):\n` +
+            lessons.map(l => `- [${l.category}/${l.lesson_type}]: ${l.lesson}`).join("\n");
+        }
+      } catch (e) { console.error("Learning fetch error:", e); }
+
+      // ─── MARKETING STRATEGIES: Fetch active strategies ───
+      let strategyContext = "";
+      try {
+        const { data: strategies } = await supabaseAdmin
+          .from("ai_marketing_strategies")
+          .select("strategy_name, description, effectiveness_score, strategy_type")
+          .eq("is_active", true)
+          .order("effectiveness_score", { ascending: false })
+          .limit(10);
+        
+        if (strategies && strategies.length > 0) {
+          strategyContext = `\n\nACTIVE MARKETING STRATEGIES (Use these tactics, rotate naturally):\n` +
+            strategies.map(s => `- ${s.strategy_name} (${s.strategy_type}, score: ${s.effectiveness_score}): ${s.description}`).join("\n");
+        }
+      } catch (e) { console.error("Strategy fetch error:", e); }
 
       const systemPrompt = `You are Raiyan (বাংলায়: রাইয়ান) — AR Prime Market-এর কাস্টমার সাপোর্ট ও ডিজিটাল মার্কেটিং এক্সপার্ট। তোমাকে AR Prime Market-এর মালিক বিশেষভাবে নিয়োগ দিয়েছেন কাস্টমারদের সব ধরনের সমস্যা সমাধান করতে এবং সেরা সার্ভিস দিতে। Customers are chatting directly with you.
 
@@ -90,6 +123,12 @@ ORDER FORM RULES (CRITICAL):
 - Customer buying intent clear হলেই form দাও — permission নেওয়ার দরকার নাই।
 - Customer শুধু browse করছে? → তখন form দিও না, আগে interest build করো।
 
+SELF-IMPROVEMENT RULES:
+- If you made a mistake before and there's a correction in LESSONS LEARNED, ALWAYS follow the correction.
+- Never repeat a past mistake. The lessons are your evolved knowledge.
+- When recommending, always use the latest marketing strategies with highest effectiveness scores.
+- Adapt your approach based on what's working (high effectiveness) vs what's not (low scores).
+
 RESPONSE LENGTH (STRICTLY 500 CHARACTERS MAX — space সহ):
 - প্রতিটা response সর্বোচ্চ ৫০০ অক্ষর (space সহ)। এটা HARD LIMIT।
 - ৫০০ অক্ষরের মধ্যে সব কথা শেষ করো। Count করে লেখো।
@@ -104,7 +143,7 @@ RULES:
 - Don't know? → WhatsApp: +880 1910-521565
 - NO signatures. NO "- রাইয়ান".
 - Shipping: BD + international. Payment: bKash, Nagad, Rocket, bank, Binance Pay.
-${productContext}`;
+${productContext}${learningContext}${strategyContext}`;
 
       const aiPayload: any = {
         model: "google/gemini-3-flash-preview",
@@ -135,6 +174,24 @@ ${productContext}`;
           return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
+        // Log knowledge auto-update (every 100th chat triggers a check)
+        try {
+          const { count } = await supabaseAdmin
+            .from("ai_knowledge_updates")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", new Date(Date.now() - 3600000).toISOString());
+          
+          if (!count || count === 0) {
+            // Auto-refresh: log that knowledge is being used
+            await supabaseAdmin.from("ai_knowledge_updates").insert({
+              update_type: "product_sync",
+              summary: `Auto-synced product context with ${productContext ? "products loaded" : "no products"}, ${learningContext ? "lessons applied" : "no lessons"}, ${strategyContext ? "strategies active" : "no strategies"}`,
+              items_updated: 0,
+              triggered_by: "auto",
+            });
+          }
+        } catch {}
+
         return new Response(aiResponse.body, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
@@ -161,6 +218,119 @@ ${productContext}`;
       const reply = aiData.choices?.[0]?.message?.content || "I'm here to help! Please try again.";
 
       return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── LEARN FROM FEEDBACK ───
+    if (action === "learn") {
+      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+      const { lesson, category, lesson_type, trigger_message, wrong_response, correct_response } = body;
+      
+      if (!lesson) {
+        return new Response(JSON.stringify({ error: "lesson is required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await supabaseAdmin.from("ai_learning_log").insert({
+        lesson,
+        category: category || "general",
+        lesson_type: lesson_type || "correction",
+        trigger_message: trigger_message || null,
+        wrong_response: wrong_response || null,
+        correct_response: correct_response || null,
+        confidence_score: 0.7,
+      });
+
+      return new Response(JSON.stringify({ success: true, message: "Lesson recorded" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── AUTO-UPDATE STRATEGIES ───
+    if (action === "refresh_strategies") {
+      if (!lovableApiKey) {
+        return new Response(JSON.stringify({ error: "AI not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+      // Get current strategies
+      const { data: strategies } = await supabaseAdmin
+        .from("ai_marketing_strategies")
+        .select("*")
+        .eq("is_active", true);
+
+      // Get recent chat patterns from learning log
+      const { data: recentLessons } = await supabaseAdmin
+        .from("ai_learning_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      // Ask AI to review and suggest updated strategies
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: `You are a marketing strategy optimizer. Review current strategies and lessons learned. Suggest updates to improve conversion rates. Return ONLY a JSON array of strategy updates: [{"strategy_name":"...", "description":"...", "strategy_type":"sales_tactic|engagement|upsell|retention", "effectiveness_score": 0.0-1.0}]. Max 5 new/updated strategies.` },
+            { role: "user", content: `Current strategies: ${JSON.stringify(strategies)}\n\nRecent lessons/feedback: ${JSON.stringify(recentLessons)}\n\nAnalyze what's working and what needs improvement. Suggest updated strategies.` },
+          ],
+        }),
+      });
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        const rawReply = aiData.choices?.[0]?.message?.content || "";
+        try {
+          const jsonMatch = rawReply.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const newStrategies = JSON.parse(jsonMatch[0]);
+            for (const s of newStrategies) {
+              // Upsert: update if name exists, insert if new
+              const { data: existing } = await supabaseAdmin
+                .from("ai_marketing_strategies")
+                .select("id")
+                .eq("strategy_name", s.strategy_name)
+                .maybeSingle();
+              
+              if (existing) {
+                await supabaseAdmin.from("ai_marketing_strategies").update({
+                  description: s.description,
+                  effectiveness_score: s.effectiveness_score,
+                  last_reviewed_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                }).eq("id", existing.id);
+              } else {
+                await supabaseAdmin.from("ai_marketing_strategies").insert({
+                  strategy_name: s.strategy_name,
+                  strategy_type: s.strategy_type || "sales_tactic",
+                  description: s.description,
+                  effectiveness_score: s.effectiveness_score || 0.5,
+                });
+              }
+            }
+
+            await supabaseAdmin.from("ai_knowledge_updates").insert({
+              update_type: "strategy_refresh",
+              summary: `AI auto-updated ${newStrategies.length} marketing strategies`,
+              items_updated: newStrategies.length,
+              triggered_by: "auto",
+            });
+
+            return new Response(JSON.stringify({ success: true, updated: newStrategies.length }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } catch (e) { console.error("Strategy parse error:", e); }
+      }
+
+      return new Response(JSON.stringify({ success: false, message: "Could not update strategies" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -267,7 +437,6 @@ ${productContext}`;
         });
       }
 
-      // Orders health
       const { data: pendingOrders } = await adminClient
         .from("orders")
         .select("id, order_number, created_at, status, payment_status")
@@ -291,7 +460,6 @@ ${productContext}`;
         });
       }
 
-      // Blog SEO
       const { data: blogPosts } = await adminClient
         .from("blog_posts")
         .select("id, title, meta_title, meta_description, slug, is_published");
@@ -307,7 +475,6 @@ ${productContext}`;
         });
       }
 
-      // Payment & shipping checks
       const { data: paymentMethods } = await adminClient.from("payment_methods").select("id, is_active");
       const activePayments = (paymentMethods || []).filter(p => p.is_active);
       if (activePayments.length === 0) {
@@ -332,7 +499,6 @@ ${productContext}`;
         });
       }
 
-      // Support tickets
       const { count: ticketCount } = await adminClient
         .from("support_tickets")
         .select("id", { count: "exact", head: true })
@@ -348,7 +514,6 @@ ${productContext}`;
         });
       }
 
-      // AI summary
       let aiSummary = "";
       if (lovableApiKey && findings.length > 0) {
         try {
@@ -370,7 +535,6 @@ ${productContext}`;
         } catch (e) { console.error("AI summary error:", e); }
       }
 
-      // Store findings
       if (findings.length > 0) {
         await adminClient.from("ai_scan_results").delete().eq("status", "pending");
         await adminClient.from("ai_scan_results").insert(findings.map(f => ({
@@ -385,6 +549,15 @@ ${productContext}`;
         details: `Full scan: ${findings.length} issues. Critical: ${findings.filter(f => f.severity === "critical").length}, Warnings: ${findings.filter(f => f.severity === "warning").length}`,
         performed_by: user.id,
       });
+
+      // Auto-trigger strategy refresh after scan
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/ai-assistant`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
+          body: JSON.stringify({ action: "refresh_strategies" }),
+        });
+      } catch {}
 
       return new Response(JSON.stringify({
         findings, summary: aiSummary,
@@ -569,7 +742,6 @@ If you cannot identify any pixels, return: {"error":"Could not identify any trac
       const rawReply = aiData.choices?.[0]?.message?.content || "";
 
       try {
-        // Try to extract JSON from the response
         const jsonMatch = rawReply.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);

@@ -94,6 +94,123 @@ export type Database = {
           },
         ]
       }
+      ai_knowledge_updates: {
+        Row: {
+          created_at: string
+          id: string
+          items_updated: number | null
+          status: string | null
+          summary: string | null
+          triggered_by: string | null
+          update_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items_updated?: number | null
+          status?: string | null
+          summary?: string | null
+          triggered_by?: string | null
+          update_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items_updated?: number | null
+          status?: string | null
+          summary?: string | null
+          triggered_by?: string | null
+          update_type?: string
+        }
+        Relationships: []
+      }
+      ai_learning_log: {
+        Row: {
+          category: string
+          confidence_score: number | null
+          correct_response: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          lesson: string
+          lesson_type: string
+          times_applied: number | null
+          trigger_message: string | null
+          updated_at: string
+          wrong_response: string | null
+        }
+        Insert: {
+          category?: string
+          confidence_score?: number | null
+          correct_response?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          lesson: string
+          lesson_type?: string
+          times_applied?: number | null
+          trigger_message?: string | null
+          updated_at?: string
+          wrong_response?: string | null
+        }
+        Update: {
+          category?: string
+          confidence_score?: number | null
+          correct_response?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          lesson?: string
+          lesson_type?: string
+          times_applied?: number | null
+          trigger_message?: string | null
+          updated_at?: string
+          wrong_response?: string | null
+        }
+        Relationships: []
+      }
+      ai_marketing_strategies: {
+        Row: {
+          created_at: string
+          description: string
+          effectiveness_score: number | null
+          id: string
+          is_active: boolean | null
+          last_reviewed_at: string | null
+          strategy_name: string
+          strategy_type: string
+          times_converted: number | null
+          times_used: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          effectiveness_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_reviewed_at?: string | null
+          strategy_name: string
+          strategy_type?: string
+          times_converted?: number | null
+          times_used?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          effectiveness_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_reviewed_at?: string | null
+          strategy_name?: string
+          strategy_type?: string
+          times_converted?: number | null
+          times_used?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_scan_results: {
         Row: {
           applied_at: string | null
