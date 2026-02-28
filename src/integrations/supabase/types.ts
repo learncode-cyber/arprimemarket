@@ -873,6 +873,7 @@ export type Database = {
           tax_amount: number
           total: number
           tracking_number: string | null
+          tracking_token: string | null
           updated_at: string
           user_id: string | null
         }
@@ -907,6 +908,7 @@ export type Database = {
           tax_amount?: number
           total?: number
           tracking_number?: string | null
+          tracking_token?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -941,6 +943,7 @@ export type Database = {
           tax_amount?: number
           total?: number
           tracking_number?: string | null
+          tracking_token?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2236,6 +2239,50 @@ export type Database = {
       }
     }
     Functions: {
+      get_guest_order: {
+        Args: { _order_number: string; _tracking_token: string }
+        Returns: {
+          auto_forwarded: boolean | null
+          coupon_id: string | null
+          created_at: string
+          currency: string
+          delivered_at: string | null
+          discount_amount: number
+          forwarded_at: string | null
+          id: string
+          is_dropship: boolean | null
+          notes: string | null
+          order_number: string
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          processing_errors: Json | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_cost: number
+          shipping_country: string | null
+          shipping_email: string | null
+          shipping_method: string | null
+          shipping_name: string | null
+          shipping_phone: string | null
+          shipping_postal_code: string | null
+          status: string
+          subtotal: number
+          supplier_order_id: string | null
+          tax_amount: number
+          total: number
+          tracking_number: string | null
+          tracking_token: string | null
+          updated_at: string
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2244,6 +2291,50 @@ export type Database = {
         Returns: boolean
       }
       is_guest_order: { Args: { _order_id: string }; Returns: boolean }
+      verify_guest_order: {
+        Args: { _email: string; _order_number: string }
+        Returns: {
+          auto_forwarded: boolean | null
+          coupon_id: string | null
+          created_at: string
+          currency: string
+          delivered_at: string | null
+          discount_amount: number
+          forwarded_at: string | null
+          id: string
+          is_dropship: boolean | null
+          notes: string | null
+          order_number: string
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          processing_errors: Json | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_cost: number
+          shipping_country: string | null
+          shipping_email: string | null
+          shipping_method: string | null
+          shipping_name: string | null
+          shipping_phone: string | null
+          shipping_postal_code: string | null
+          status: string
+          subtotal: number
+          supplier_order_id: string | null
+          tax_amount: number
+          total: number
+          tracking_number: string | null
+          tracking_token: string | null
+          updated_at: string
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

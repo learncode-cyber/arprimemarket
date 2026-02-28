@@ -24,11 +24,13 @@ const TrackOrder = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [supplierOrders, setSupplierOrders] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [showEmailField, setShowEmailField] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const l = (en: string, bn: string, ar: string) => lang.code === "bn" ? bn : lang.code === "ar" || lang.code === "sa" ? ar : en;
@@ -40,14 +42,53 @@ const TrackOrder = () => {
     setOrder(null);
     setSupplierOrders([]);
 
-    const { data, error: err } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("order_number", query.trim().toUpperCase())
-      .maybeSingle();
+    const orderNum = query.trim().toUpperCase();
 
-    if (err || !data) {
-      setError(l("Order not found. Please check the order number.", "অর্ডার পাওয়া যায়নি। অর্ডার নম্বর চেক করুন।", "لم يتم العثور على الطلب."));
+    // Try authenticated user lookup first
+    let data: any = null;
+    if (user) {
+      const res = await supabase
+        .from("orders")
+        .select("*")
+        .eq("order_number", orderNum)
+        .maybeSingle();
+      data = res.data;
+    }
+
+    // If not found (guest order), try secure guest lookup
+    if (!data) {
+      // Try with email if provided
+      if (email.trim()) {
+        const res = await supabase.rpc("verify_guest_order", {
+          _order_number: orderNum,
+          _email: email.trim(),
+        });
+        data = res.data?.[0] || null;
+      }
+
+      // Try with tracking token from URL
+      if (!data) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        if (token) {
+          const res = await supabase.rpc("get_guest_order", {
+            _order_number: orderNum,
+            _tracking_token: token,
+          });
+          data = res.data?.[0] || null;
+        }
+      }
+    }
+
+    if (!data) {
+      // If not logged in and no email provided, ask for email
+      if (!user && !email.trim()) {
+        setShowEmailField(true);
+        setError(l("Please enter your email to verify the order.", "অর্ডার ভেরিফাই করতে আপনার ইমেইল দিন।", "أدخل بريدك الإلكتروني للتحقق من الطلب."));
+        setLoading(false);
+        return;
+      }
+      setError(l("Order not found. Please check the order number and email.", "অর্ডার পাওয়া যায়নি। অর্ডার নম্বর ও ইমেইল চেক করুন।", "لم يتم العثور على الطلب."));
       setLoading(false);
       return;
     }
@@ -131,6 +172,18 @@ const TrackOrder = () => {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
           </button>
         </div>
+        {showEmailField && !user && (
+          <div className="mt-3">
+            <input
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              placeholder={l("Enter your email for verification", "ভেরিফিকেশনের জন্য ইমেইল দিন", "أدخل بريدك الإلكتروني للتحقق")}
+              type="email"
+              className="w-full px-4 py-3 rounded-2xl border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
+            />
+          </div>
+        )}
         {user && (
           <p className="text-xs text-muted-foreground mt-2 text-center">
             {l("Or ", "অথবা ", "أو ")}
