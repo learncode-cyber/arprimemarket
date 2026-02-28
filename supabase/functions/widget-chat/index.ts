@@ -52,6 +52,38 @@ Deno.serve(async (req) => {
       if (sd.pages_summary) scrapedContext += `\n\nSITE CONTENT:\n${sd.pages_summary}`;
     }
 
+    // ─── SELF-LEARNING: Fetch lessons learned ───
+    let learningContext = "";
+    try {
+      const { data: lessons } = await supabase
+        .from("ai_learning_log")
+        .select("lesson, category, lesson_type")
+        .eq("is_active", true)
+        .order("confidence_score", { ascending: false })
+        .limit(15);
+      
+      if (lessons && lessons.length > 0) {
+        learningContext = `\n\nLESSONS LEARNED (Apply these corrections):\n` +
+          lessons.map(l => `- [${l.category}]: ${l.lesson}`).join("\n");
+      }
+    } catch {}
+
+    // ─── MARKETING STRATEGIES ───
+    let strategyContext = "";
+    try {
+      const { data: strategies } = await supabase
+        .from("ai_marketing_strategies")
+        .select("strategy_name, description, effectiveness_score")
+        .eq("is_active", true)
+        .order("effectiveness_score", { ascending: false })
+        .limit(8);
+      
+      if (strategies && strategies.length > 0) {
+        strategyContext = `\n\nMARKETING STRATEGIES (Use naturally):\n` +
+          strategies.map(s => `- ${s.strategy_name} (score: ${s.effectiveness_score}): ${s.description}`).join("\n");
+      }
+    } catch {}
+
     const systemPrompt = `You are an AI assistant for "${widget.site_name}" (${widget.site_url}).
 
 ROLE: ${widget.ai_persona}
@@ -68,13 +100,19 @@ SALES TECHNIQUES:
 - Build rapport before selling
 - Handle objections with empathy + solution
 
+SELF-IMPROVEMENT:
+- If LESSONS LEARNED section exists, ALWAYS follow those corrections
+- Never repeat past mistakes
+- Use marketing strategies with highest effectiveness scores
+- Adapt your approach based on what's working
+
 RULES:
 - Be concise (max 500 chars per response)
 - Use emojis sparingly (2-3 max)
 - Respond in the customer's language
 - If you don't know something, say so honestly
 - Never make up information not in your knowledge base
-${scrapedContext}`;
+${scrapedContext}${learningContext}${strategyContext}`;
 
     const aiPayload = {
       model: "google/gemini-3-flash-preview",
