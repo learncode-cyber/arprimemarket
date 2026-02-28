@@ -67,8 +67,8 @@ export const LanguageSelector = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-[100] sm:hidden bg-popover border-t border-border rounded-t-2xl shadow-2xl"
-              style={{ maxHeight: "80vh" }}
+              className="fixed left-2 right-2 bottom-2 z-[100] sm:hidden bg-popover border border-border rounded-2xl shadow-2xl"
+              style={{ maxHeight: "75vh" }}
             >
               <div className="flex justify-center pt-2 pb-1">
                 <div className="w-10 h-1 rounded-full bg-border" />
@@ -91,7 +91,7 @@ export const LanguageSelector = () => {
                   />
                 </div>
               </div>
-              <div className="overflow-y-auto scrollbar-hide pb-6" style={{ maxHeight: "calc(80vh - 140px)" }}>
+              <div className="overflow-y-auto scrollbar-hide pb-6" style={{ maxHeight: "calc(75vh - 140px)" }}>
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">No language found</p>
                 ) : (
