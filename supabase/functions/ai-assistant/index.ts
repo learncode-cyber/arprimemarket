@@ -6,6 +6,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const RETRYABLE_AI_STATUSES = new Set([429, 503]);
+
+const callLovableAIWithRetry = async (
+  lovableApiKey: string,
+  payload: Record<string, unknown>,
+  maxRetries = 2,
+): Promise<Response> => {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 700 * attempt));
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok || !RETRYABLE_AI_STATUSES.has(response.status) || attempt === maxRetries) {
+      return response;
+    }
+  }
+
+  return new Response(JSON.stringify({ error: "AI request failed" }), { status: 500 });
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -158,18 +187,16 @@ ${productContext}${learningContext}${strategyContext}`;
       if (wantStream) {
         aiPayload.stream = true;
 
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(aiPayload),
-        });
+        const aiResponse = await callLovableAIWithRetry(lovableApiKey, aiPayload, 2);
 
         if (!aiResponse.ok) {
           const status = aiResponse.status;
-          if (status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          if (status === 429 || status === 503) {
+            return new Response(JSON.stringify({ error: "Rate limited" }), {
+              status: 429,
+              headers: { ...corsHeaders, "Retry-After": "2", "Content-Type": "application/json" },
+            });
+          }
           if (status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
@@ -198,20 +225,26 @@ ${productContext}${learningContext}${strategyContext}`;
       }
 
       // Non-streaming mode (backward compatible)
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(aiPayload),
-      });
+      const aiResponse = await callLovableAIWithRetry(lovableApiKey, aiPayload, 2);
 
       if (!aiResponse.ok) {
         const status = aiResponse.status;
-        if (status === 429) return new Response(JSON.stringify({ reply: "I'm a bit busy right now. Please try again in a moment! 😊" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ reply: "Sorry, our chat service is temporarily unavailable. Please try WhatsApp!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        return new Response(JSON.stringify({ reply: "Sorry, I couldn't process that. Please try again!" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 429 || status === 503) {
+          return new Response(JSON.stringify({ reply: "আমি এখন একটু ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন! 😊" }), {
+            status: 429,
+            headers: { ...corsHeaders, "Retry-After": "2", "Content-Type": "application/json" },
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ reply: "চ্যাট সার্ভিস সাময়িকভাবে বন্ধ আছে। WhatsApp-এ যোগাযোগ করুন! 📱" }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ reply: "Sorry, I couldn't process that. Please try again!" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const aiData = await aiResponse.json();

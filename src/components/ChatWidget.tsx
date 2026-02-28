@@ -198,33 +198,56 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
         content: m.content,
       }));
 
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          action: "chat",
-          message: userContent,
-          stream: true,
-          context: { language: navigator.language || "en", history: historyForAI },
-        }),
-      });
+      const runChatRequest = async () => {
+        const retryDelays = [0, 900, 1800];
+        let lastResponse: Response | null = null;
 
-      if (!resp.ok || !resp.body) {
+        for (const delay of retryDelays) {
+          if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+
+          const response = await fetch(CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              action: "chat",
+              message: userContent,
+              stream: true,
+              context: { language: navigator.language || "en", history: historyForAI },
+            }),
+          });
+
+          if (response.ok && response.body) return response;
+          lastResponse = response;
+
+          if (response.status !== 429 && response.status !== 503) {
+            return response;
+          }
+        }
+
+        return lastResponse;
+      };
+
+      const resp = await runChatRequest();
+
+      if (!resp || !resp.ok || !resp.body) {
         // Try to parse error message from response
         let errorMsg = "Sorry, I couldn't process that right now. Try again or reach out on WhatsApp! 😊";
         try {
-          const errData = await resp.json();
-          if (errData.reply) errorMsg = errData.reply;
-          else if (errData.error) {
-            if (resp.status === 429) errorMsg = "আমি এখন একটু ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন! 😊";
-            else if (resp.status === 402) errorMsg = "চ্যাট সার্ভিস সাময়িকভাবে বন্ধ আছে। WhatsApp-এ যোগাযোগ করুন! 📱";
+          if (resp) {
+            const errData = await resp.json();
+            if (errData.reply) errorMsg = errData.reply;
+            else if (errData.error) {
+              if (resp.status === 429 || resp.status === 503) errorMsg = "আমি এখন একটু ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন! 😊";
+              else if (resp.status === 402) errorMsg = "চ্যাট সার্ভিস সাময়িকভাবে বন্ধ আছে। WhatsApp-এ যোগাযোগ করুন! 📱";
+            }
           }
         } catch {}
-        const errId = crypto.randomUUID();
-        setMessages(prev => [...prev, { id: errId, content: errorMsg, sender_type: "agent", created_at: new Date().toISOString() }]);
+
+        assistantContent = errorMsg;
+        setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: errorMsg } : m));
         setAiLoading(false);
         return;
       }
