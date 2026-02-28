@@ -212,7 +212,22 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
         }),
       });
 
-      if (!resp.ok || !resp.body) throw new Error("Stream failed");
+      if (!resp.ok || !resp.body) {
+        // Try to parse error message from response
+        let errorMsg = "Sorry, I couldn't process that right now. Try again or reach out on WhatsApp! 😊";
+        try {
+          const errData = await resp.json();
+          if (errData.reply) errorMsg = errData.reply;
+          else if (errData.error) {
+            if (resp.status === 429) errorMsg = "আমি এখন একটু ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন! 😊";
+            else if (resp.status === 402) errorMsg = "চ্যাট সার্ভিস সাময়িকভাবে বন্ধ আছে। WhatsApp-এ যোগাযোগ করুন! 📱";
+          }
+        } catch {}
+        const errId = crypto.randomUUID();
+        setMessages(prev => [...prev, { id: errId, content: errorMsg, sender_type: "agent", created_at: new Date().toISOString() }]);
+        setAiLoading(false);
+        return;
+      }
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
