@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.widget-scraper]
 verify_jwt = false
+
+[functions.security-guard]
+verify_jwt = false
