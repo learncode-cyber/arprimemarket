@@ -73,7 +73,20 @@ const WidgetChat = () => {
         }),
       });
 
-      if (!resp.ok) throw new Error("Failed");
+      if (!resp.ok) {
+        let errorMsg = "Sorry, I couldn't process that. Please try again! 😊";
+        try {
+          const errData = await resp.json();
+          if (errData.reply) errorMsg = errData.reply;
+        } catch {}
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          content: errorMsg,
+          role: "assistant",
+        }]);
+        setLoading(false);
+        return;
+      }
 
       // Handle streaming
       if (resp.headers.get("content-type")?.includes("text/event-stream")) {

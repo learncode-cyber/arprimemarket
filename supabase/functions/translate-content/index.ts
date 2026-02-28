@@ -88,7 +88,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "You are a professional translator. Translate accurately and naturally. For ecommerce product content, keep brand names and technical terms unchanged. Return ONLY the translation, no explanations." },
           { role: "user", content: prompt },

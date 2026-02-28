@@ -77,7 +77,7 @@ RULES:
 ${scrapedContext}`;
 
     const aiPayload = {
-      model: "google/gemini-2.5-flash-lite",
+      model: "google/gemini-3-flash-preview",
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
@@ -96,6 +96,17 @@ ${scrapedContext}`;
     });
 
     if (!aiResponse.ok) {
+      const status = aiResponse.status;
+      if (status === 429) {
+        return new Response(JSON.stringify({ reply: "I'm a bit busy right now. Please try again in a moment! 😊" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ reply: "Chat service temporarily unavailable. Please try again later!" }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ reply: "Sorry, I'm having trouble. Please try again!" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
