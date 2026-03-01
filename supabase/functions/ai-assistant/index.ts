@@ -72,6 +72,8 @@ serve(async (req) => {
       }
 
       const userLang = clientContext?.language || "en";
+      const userLangName = clientContext?.languageName || "English";
+      const userNativeLangName = clientContext?.nativeLanguageName || "English";
       const history = clientContext?.history || [];
 
       const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
@@ -185,12 +187,16 @@ RESPONSE LENGTH (STRICTLY 500 CHARACTERS MAX — space সহ):
 - Product links সহ হলে একটু বেশি হতে পারে কিন্তু তবুও tight রাখো।
 - NEVER exceed 500 characters. NEVER write walls of text.
 
-RULES:
-- Reply in customer's language. Bengali name: রাইয়ান.
-- Language hint: ${userLang}
+LANGUAGE RULES (CRITICAL - THINK LIKE A HUMAN):
+- The customer's website is set to: ${userLangName} (${userNativeLangName}, code: ${userLang}).
+- Your FIRST message and ALL subsequent messages MUST be in ${userNativeLangName} (${userLangName}).
+- If the customer writes in a DIFFERENT language than the website setting, IMMEDIATELY switch to THEIR language. A human would naturally do this.
+- If the customer explicitly asks to change language (e.g. "speak in English", "বাংলায় বলো"), switch immediately and stay in that language.
+- NEVER mix languages awkwardly. Pick ONE language per message based on what the customer is using.
+- Bengali name: রাইয়ান. For other languages, use "Raiyan".
 - Order issues → ask order number.
 - Don't know? → WhatsApp: +880 1910-521565
-- NO signatures. NO "- রাইয়ান".
+- NO signatures. NO "- রাইয়ান" or "- Raiyan".
 - Shipping: BD + international. Payment: bKash, Nagad, Rocket, bank, Binance Pay.
 ${productContext}${learningContext}${strategyContext}`;
 
