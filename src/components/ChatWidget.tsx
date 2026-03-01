@@ -3,6 +3,7 @@ import { Send, History, ArrowLeft, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ChatOrderForm from "@/components/ChatOrderForm";
@@ -33,6 +34,7 @@ const ORDER_HELP_KEYWORDS = [
 export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const { user } = useAuth();
   const { lang } = useLanguage();
+  const { items: cartItems } = useCart();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -123,6 +125,31 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, showOrderForm]);
+
+  // ─── ABANDONED CART DETECTION ───
+  useEffect(() => {
+    if (cartItems.length === 0) return;
+    
+    const abandonedTimer = setTimeout(() => {
+      // If cart has items for 3 minutes without ordering, prompt
+      const alreadyPrompted = sessionStorage.getItem("ar-cart-nudge");
+      if (alreadyPrompted) return;
+      
+      sessionStorage.setItem("ar-cart-nudge", "1");
+      const cartTotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
+      const nudgeMsg: ChatMessage = {
+        id: "cart-nudge-" + Date.now(),
+        content: lang.code === "bn" 
+          ? `🛒 আপনার কার্টে ${cartItems.length}টি আইটেম আছে (৳${Math.floor(cartTotal)})! অর্ডার করতে চান? আমি সাহায্য করতে পারি — শুধু বলুন! 😊`
+          : `🛒 You have ${cartItems.length} item(s) in your cart (৳${Math.floor(cartTotal)})! Ready to order? I can help you checkout! 😊`,
+        sender_type: "agent",
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, nudgeMsg]);
+    }, 180000); // 3 minutes
+    
+    return () => clearTimeout(abandonedTimer);
+  }, [cartItems.length, lang.code]);
 
   const loadPastSessions = useCallback(async () => {
     if (!user) return;
@@ -374,9 +401,28 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   };
 
   const handleOrderComplete = (orderNum: string) => {
+    // Build detailed order confirmation
+    const orderItems = (() => {
+      try {
+        const cartCtx = document.querySelector('[data-cart-items]');
+        return null; // Will use generic message
+      } catch { return null; }
+    })();
+
+    const confirmMsg = `✅ **অর্ডার সফলভাবে প্লেস হয়েছে!** 🎉
+
+🧾 **Order ID:** \`${orderNum}\`
+📦 **Status:** Processing
+💳 **Payment:** Pending verification
+📧 **Confirmation:** আপনার ইমেইলে পাঠানো হয়েছে
+
+🔍 অর্ডার ট্র্যাক করতে: [Track Order](/track-order)
+
+কোনো সমস্যা হলে আমাকে জানান! 😊`;
+
     const msg: ChatMessage = {
       id: crypto.randomUUID(),
-      content: `✅ Your order ${orderNum} has been placed successfully! You'll receive a confirmation email shortly. Thank you for shopping with AR Prime Market! 🎉`,
+      content: confirmMsg,
       sender_type: "agent",
       created_at: new Date().toISOString(),
     };
