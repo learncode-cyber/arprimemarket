@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Minus, Maximize2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Bot, Send, X, Minus, Maximize2, Loader2, RefreshCw, Shield, Activity, Code, Package, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -18,16 +18,24 @@ interface Alert {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
+const QUICK_ACTIONS = [
+  { icon: "📊", label: "Daily Summary", prompt: "আজকের ডেইলি সামারি দাও — অর্ডার, সেলস, টিকেট, ইনভেন্টরি সব কিছু।" },
+  { icon: "📦", label: "Pending Orders", prompt: "পেন্ডিং অর্ডার গুলো দেখাও এবং কোনটা urgent সেটা বলো।" },
+  { icon: "🔒", label: "Security Check", prompt: "সিকিউরিটি স্ক্যান রেজাল্ট দেখাও এবং critical issues আছে কিনা বলো।" },
+  { icon: "💻", label: "Code Help", prompt: "আমি কোডে একটা পরিবর্তন করতে চাই — সাহায্য করো।" },
+  { icon: "🚀", label: "Deploy Guide", prompt: "এই সাইটটা অন্য হোস্টিং-এ মুভ করতে কি কি করতে হবে step by step বলো।" },
+  { icon: "📈", label: "Analytics", prompt: "আজকের সেলস পারফরম্যান্স, কনভার্সন রেট এবং কান্ট্রি-ওয়াইজ ডেটা দেখাও।" },
+];
+
 const AdminARChat = () => {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: "welcome", content: "👋 আমি **Admin AR** — আপনার Senior Dev Assistant।\n\nকোড, ডিপ্লয়মেন্ট, অর্ডার মনিটরিং, পারফরম্যান্স — যেকোনো কিছু জিজ্ঞেস করুন!", role: "assistant" }
+    { id: "welcome", content: "👋 আমি **Admin AR** — আপনার Senior Dev Assistant।\n\nকোড, ডিপ্লয়মেন্ট, অর্ডার মনিটরিং, পারফরম্যান্স, হোস্টিং — যেকোনো কিছু জিজ্ঞেস করুন!\n\n💡 Quick actions থেকে সহজে শুরু করতে পারেন।", role: "assistant" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasNotification, setHasNotification] = useState(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const alertsFetched = useRef(false);
 
@@ -45,19 +53,16 @@ const AdminARChat = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      // Fetch pending orders count
       const { count: pendingOrders } = await supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
 
-      // Fetch open tickets
       const { count: openTickets } = await supabase
         .from("support_tickets")
         .select("id", { count: "exact", head: true })
         .in("status", ["open", "pending"]);
 
-      // Fetch critical scan results
       const { count: criticalFindings } = await supabase
         .from("ai_scan_results")
         .select("id", { count: "exact", head: true })
@@ -77,27 +82,21 @@ const AdminARChat = () => {
       }
 
       if (newAlerts.length > 0) {
-        setAlerts(newAlerts);
         setHasNotification(true);
-
-        // Add proactive alert message
         const alertMsg = `🔔 **Proactive Alerts:**\n\n${newAlerts.map(a => `${a.type === "critical" ? "🔴" : "🟡"} ${a.message}`).join("\n")}\n\nবিস্তারিত জানতে আমাকে জিজ্ঞেস করুন!`;
         setMessages(prev => [...prev, { id: "alerts-" + Date.now(), content: alertMsg, role: "assistant" }]);
       }
     } catch { /* silent */ }
   }, []);
 
-  // Check for alerts periodically (every 5 min when open)
   useEffect(() => {
-    if (open && !alertsFetched.current) {
-      fetchAlerts();
-    }
+    if (open && !alertsFetched.current) fetchAlerts();
   }, [open, fetchAlerts]);
 
-  // Background notification check (every 2 min)
+  // Background notification check
   useEffect(() => {
     const checkNotifications = async () => {
-      if (open) return; // Don't check when already open
+      if (open) return;
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data: { session } } = await supabase.auth.getSession();
@@ -108,21 +107,19 @@ const AdminARChat = () => {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending");
 
-        if (pendingOrders && pendingOrders > 3) {
-          setHasNotification(true);
-        }
+        if (pendingOrders && pendingOrders > 3) setHasNotification(true);
       } catch { /* silent */ }
     };
 
-    const interval = setInterval(checkNotifications, 120000); // 2 min
-    checkNotifications(); // Initial check
+    const interval = setInterval(checkNotifications, 120000);
+    checkNotifications();
     return () => clearInterval(interval);
   }, [open]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-    const content = input.trim();
-    setInput("");
+  const sendMessage = async (overrideContent?: string) => {
+    const content = (overrideContent || input).trim();
+    if (!content || loading) return;
+    if (!overrideContent) setInput("");
 
     const userMsg: Message = { id: crypto.randomUUID(), content, role: "user" };
     const currentMsgs = [...messages, userMsg];
@@ -167,11 +164,6 @@ const AdminARChat = () => {
     setLoading(false);
   };
 
-  const requestDailySummary = () => {
-    setInput("আজকের ডেইলি সামারি দাও — অর্ডার, সেলস, টিকেট, ইনভেন্টরি সব কিছু।");
-    setTimeout(() => sendMessage(), 100);
-  };
-
   if (!open) {
     return (
       <motion.button
@@ -195,7 +187,7 @@ const AdminARChat = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         className={`fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
-          minimized ? "bottom-6 right-6 w-72 h-14" : "bottom-6 right-6 w-96 h-[520px]"
+          minimized ? "bottom-6 right-6 w-72 h-14" : "bottom-6 right-6 w-[420px] h-[560px]"
         }`}
       >
         {/* Header */}
@@ -218,22 +210,20 @@ const AdminARChat = () => {
         {!minimized && (
           <>
             {/* Quick Actions */}
-            <div className="px-3 py-2 border-b border-border flex gap-1.5 shrink-0 overflow-x-auto">
-              <button
-                onClick={requestDailySummary}
-                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
-              >
-                📊 Daily Summary
-              </button>
-              <button
-                onClick={() => { setInput("পেন্ডিং অর্ডার গুলো দেখাও"); setTimeout(() => sendMessage(), 100); }}
-                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
-              >
-                📦 Pending Orders
-              </button>
+            <div className="px-2 py-2 border-b border-border flex gap-1 shrink-0 overflow-x-auto scrollbar-none">
+              {QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.label}
+                  onClick={() => sendMessage(qa.prompt)}
+                  disabled={loading}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors disabled:opacity-50"
+                >
+                  {qa.icon} {qa.label}
+                </button>
+              ))}
               <button
                 onClick={() => { alertsFetched.current = false; fetchAlerts(); }}
-                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
+                className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
               >
                 <RefreshCw className="w-3 h-3" /> Refresh
               </button>
@@ -251,7 +241,7 @@ const AdminARChat = () => {
                         : "bg-secondary text-foreground rounded-bl-sm"
                   }`}>
                     {m.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0 [&_code]:text-xs [&_pre]:text-xs [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-lg">
+                      <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0 [&_code]:text-xs [&_pre]:text-xs [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-lg [&_pre]:overflow-x-auto">
                         <ReactMarkdown>{m.content}</ReactMarkdown>
                       </div>
                     ) : m.content}
