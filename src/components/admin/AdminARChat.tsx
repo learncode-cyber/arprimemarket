@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Minus, Maximize2, Loader2 } from "lucide-react";
+import { Bot, Send, X, Minus, Maximize2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,11 @@ interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
+}
+
+interface Alert {
+  type: "critical" | "warning" | "info";
+  message: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
@@ -22,11 +27,97 @@ const AdminARChat = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasNotification, setHasNotification] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const alertsFetched = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // Proactive alerts on first open
+  const fetchAlerts = useCallback(async () => {
+    if (alertsFetched.current) return;
+    alertsFetched.current = true;
+
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      // Fetch pending orders count
+      const { count: pendingOrders } = await supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+
+      // Fetch open tickets
+      const { count: openTickets } = await supabase
+        .from("support_tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["open", "pending"]);
+
+      // Fetch critical scan results
+      const { count: criticalFindings } = await supabase
+        .from("ai_scan_results")
+        .select("id", { count: "exact", head: true })
+        .eq("severity", "critical")
+        .eq("status", "pending");
+
+      const newAlerts: Alert[] = [];
+
+      if (pendingOrders && pendingOrders > 5) {
+        newAlerts.push({ type: "warning", message: `⚠️ ${pendingOrders}টি পেন্ডিং অর্ডার আছে — প্রসেস করুন!` });
+      }
+      if (openTickets && openTickets > 10) {
+        newAlerts.push({ type: "warning", message: `🎫 ${openTickets}টি আনসলভড সাপোর্ট টিকেট` });
+      }
+      if (criticalFindings && criticalFindings > 0) {
+        newAlerts.push({ type: "critical", message: `🚨 ${criticalFindings}টি ক্রিটিক্যাল সমস্যা পাওয়া গেছে` });
+      }
+
+      if (newAlerts.length > 0) {
+        setAlerts(newAlerts);
+        setHasNotification(true);
+
+        // Add proactive alert message
+        const alertMsg = `🔔 **Proactive Alerts:**\n\n${newAlerts.map(a => `${a.type === "critical" ? "🔴" : "🟡"} ${a.message}`).join("\n")}\n\nবিস্তারিত জানতে আমাকে জিজ্ঞেস করুন!`;
+        setMessages(prev => [...prev, { id: "alerts-" + Date.now(), content: alertMsg, role: "assistant" }]);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  // Check for alerts periodically (every 5 min when open)
+  useEffect(() => {
+    if (open && !alertsFetched.current) {
+      fetchAlerts();
+    }
+  }, [open, fetchAlerts]);
+
+  // Background notification check (every 2 min)
+  useEffect(() => {
+    const checkNotifications = async () => {
+      if (open) return; // Don't check when already open
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+
+        const { count: pendingOrders } = await supabase
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+
+        if (pendingOrders && pendingOrders > 3) {
+          setHasNotification(true);
+        }
+      } catch { /* silent */ }
+    };
+
+    const interval = setInterval(checkNotifications, 120000); // 2 min
+    checkNotifications(); // Initial check
+    return () => clearInterval(interval);
+  }, [open]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -39,8 +130,8 @@ const AdminARChat = () => {
     setLoading(true);
 
     try {
-      const token = (await import("@/integrations/supabase/client")).supabase;
-      const { data: { session } } = await token.auth.getSession();
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
         setMessages(prev => [...prev, { id: crypto.randomUUID(), content: "⚠️ Admin session required. Please log in.", role: "assistant" }]);
@@ -57,7 +148,7 @@ const AdminARChat = () => {
         body: JSON.stringify({
           action: "admin_ar_chat",
           message: content,
-          history: currentMsgs.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })),
+          history: currentMsgs.filter(m => m.id !== "welcome" && !m.id.startsWith("alerts-")).map(m => ({ role: m.role, content: m.content })),
         }),
       });
 
@@ -74,6 +165,11 @@ const AdminARChat = () => {
       setMessages(prev => [...prev, { id: crypto.randomUUID(), content: "Connection error. Please try again.", role: "assistant" }]);
     }
     setLoading(false);
+  };
+
+  const requestDailySummary = () => {
+    setInput("আজকের ডেইলি সামারি দাও — অর্ডার, সেলস, টিকেট, ইনভেন্টরি সব কিছু।");
+    setTimeout(() => sendMessage(), 100);
   };
 
   if (!open) {
@@ -121,6 +217,28 @@ const AdminARChat = () => {
 
         {!minimized && (
           <>
+            {/* Quick Actions */}
+            <div className="px-3 py-2 border-b border-border flex gap-1.5 shrink-0 overflow-x-auto">
+              <button
+                onClick={requestDailySummary}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
+              >
+                📊 Daily Summary
+              </button>
+              <button
+                onClick={() => { setInput("পেন্ডিং অর্ডার গুলো দেখাও"); setTimeout(() => sendMessage(), 100); }}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
+              >
+                📦 Pending Orders
+              </button>
+              <button
+                onClick={() => { alertsFetched.current = false; fetchAlerts(); }}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-secondary text-foreground hover:bg-secondary/80 whitespace-nowrap transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" /> Refresh
+              </button>
+            </div>
+
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-background">
               {messages.map(m => (
@@ -128,7 +246,9 @@ const AdminARChat = () => {
                   <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
                     m.role === "user"
                       ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-secondary text-foreground rounded-bl-sm"
+                      : m.id.startsWith("alerts-")
+                        ? "bg-destructive/10 text-foreground border border-destructive/20 rounded-bl-sm"
+                        : "bg-secondary text-foreground rounded-bl-sm"
                   }`}>
                     {m.role === "assistant" ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0 [&_code]:text-xs [&_pre]:text-xs [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-lg">
