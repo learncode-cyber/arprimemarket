@@ -12,7 +12,7 @@ interface SEOHeadProps {
 
 const SITE_NAME = "AR Prime Market";
 const DEFAULT_DESC = "Shop premium curated products at AR Prime Market. Electronics, Fashion, Accessories & more with fast delivery.";
-const DEFAULT_IMAGE = "https://lovable.dev/opengraph-image-p98pqg.png";
+const DEFAULT_IMAGE = "/images/logo.png";
 const BASE_URL = "https://arprimemarket.lovable.app";
 
 export const SEOHead = ({

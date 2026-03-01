@@ -31,6 +31,7 @@ import ChatManagement from "@/components/admin/ChatManagement";
 import TicketManagement from "@/components/admin/TicketManagement";
 import AIAssistantDashboard from "@/components/admin/AIAssistantDashboard";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
+import AdminARChat from "@/components/admin/AdminARChat";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -219,6 +220,9 @@ const Admin = () => {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Admin AR Floating Chat */}
+      <AdminARChat />
     </div>
   );
 };
