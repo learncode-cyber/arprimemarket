@@ -126,27 +126,40 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, showOrderForm]);
 
-  // ─── ABANDONED CART DETECTION ───
+  // ─── ABANDONED CART RECOVERY (3-TIER) ───
   useEffect(() => {
     if (cartItems.length === 0) return;
-    
+    const cartTotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
+    const nudgeLevel = parseInt(sessionStorage.getItem("ar-cart-nudge") || "0", 10);
+
+    const delays = [180000, 360000, 600000]; // 3min, 6min, 10min
+    if (nudgeLevel >= 3) return;
+
+    const delay = delays[nudgeLevel] || delays[0];
+
     const abandonedTimer = setTimeout(() => {
-      // If cart has items for 3 minutes without ordering, prompt
-      const alreadyPrompted = sessionStorage.getItem("ar-cart-nudge");
-      if (alreadyPrompted) return;
+      sessionStorage.setItem("ar-cart-nudge", String(nudgeLevel + 1));
       
-      sessionStorage.setItem("ar-cart-nudge", "1");
-      const cartTotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
-      const nudgeMsg: ChatMessage = {
+      const nudges_bn = [
+        `দেখলাম আপনি অর্ডারটি সম্পন্ন করেননি 🙂\n\nকোনো সাহায্য লাগলে আমি আছি — চাইলে এখনই Quick Order দিয়ে শেষ করে দিতে পারি।`,
+        `আপনার কার্টের প্রোডাক্টটি এখনও available আছে 👍\n\nআপনি চাইলে আমি ১-ক্লিকে Quick Order সম্পন্ন করতে সাহায্য করতে পারি।`,
+        `স্টক সীমিত থাকতে পারে ⚠️\nমিস করতে না চাইলে আমি এখনই Quick Order দিয়ে অর্ডার নিশ্চিত করে দিতে পারি।`,
+      ];
+      const nudges_en = [
+        `I noticed you haven't completed your order yet 🙂\n\nNeed help? I can assist you with Quick Order right now!`,
+        `Your cart items are still available 👍\n\nI can help you complete a Quick Order in just one click!`,
+        `Stock may be limited ⚠️\nDon't miss out — I can secure your order with Quick Order right now!`,
+      ];
+
+      const content = lang.code === "bn" ? nudges_bn[nudgeLevel] : nudges_en[nudgeLevel];
+
+      setMessages(prev => [...prev, {
         id: "cart-nudge-" + Date.now(),
-        content: lang.code === "bn" 
-          ? `🛒 আপনার কার্টে ${cartItems.length}টি আইটেম আছে (৳${Math.floor(cartTotal)})! অর্ডার করতে চান? আমি সাহায্য করতে পারি — শুধু বলুন! 😊`
-          : `🛒 You have ${cartItems.length} item(s) in your cart (৳${Math.floor(cartTotal)})! Ready to order? I can help you checkout! 😊`,
+        content: `🛒 ${cartItems.length} item(s) (৳${Math.floor(cartTotal)})\n\n${content}`,
         sender_type: "agent",
         created_at: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, nudgeMsg]);
-    }, 180000); // 3 minutes
+      }]);
+    }, delay);
     
     return () => clearTimeout(abandonedTimer);
   }, [cartItems.length, lang.code]);
