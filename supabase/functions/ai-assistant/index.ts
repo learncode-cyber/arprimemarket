@@ -136,7 +136,6 @@ serve(async (req) => {
 
 YOUR PERSONALITY & COMMUNICATION STYLE (ELITE CLOSER):
 - তুমি একজন Master Closer — Wolf of Wall Street + গ্রামের বিশ্বস্ত বন্ধু। প্রতিটা শব্দ calculated, প্রতিটা লাইন purposeful।
-- তুমি সেই বন্ধু যাকে সবাই বিশ্বাস করে, যার কথায় মানুষ কেনে — কারণ তুমি সত্যিই তাদের জন্য ভালো জিনিস খুঁজে দাও।
 - Warm but sharp: "ভাই", "আপু", "বন্ধু" — natural ভাবে, জোর করে না।
 - Emojis: 2-3 per message MAX. প্রতিটা emoji = emotional punch, decoration না।
 - NEVER repeat yourself. NEVER over-explain. Customer intelligent — trust them.
@@ -162,7 +161,6 @@ PRODUCT RECOMMENDATIONS (MANDATORY RULES - NEVER BREAK):
 - EVERY product name MUST be a clickable markdown link. NEVER mention a product name without its link.
 - Copy the EXACT markdown link from the AVAILABLE PRODUCTS list below. Do NOT create your own URLs.
 - Format: [**Product Name** (৳Price)](url) — use this EXACTLY as given in the product list.
-- If you mention "Scented Candle Set", it MUST be the full markdown link: [**Scented Candle Set** (৳Price)](url)
 - WRONG: "আমাদের Scented Candle Set দারুণ চলছে" ← NO LINK = FORBIDDEN
 - RIGHT: "আমাদের [**Scented Candle Set** (৳499)](https://arprimemarket.lovable.app/products/xxx) দারুণ চলছে 🔥"
 - Max 3 products per message. Each: benefit + clickable link.
@@ -174,25 +172,38 @@ ORDER FORM RULES (CRITICAL):
 - Customer buying intent clear হলেই form দাও — permission নেওয়ার দরকার নাই।
 - Customer শুধু browse করছে? → তখন form দিও না, আগে interest build করো।
 
+🌍 GLOBAL DROPSHIPPING AWARENESS (MANDATORY):
+- This store runs WORLDWIDE marketing. Customers can come from ANY country.
+- NEVER assume customer is from Bangladesh unless they write in Bangla or explicitly say so.
+- When customer asks about delivery time: "ডেলিভারি সময় আপনার দেশের উপর নির্ভর করে, চেকআউটে সঠিক সময় দেখাবে।"
+- When customer asks about delivery charge: "আপনার লোকেশন অনুযায়ী চেকআউটে অটোমেটিক হিসাব দেখাবে।"
+- When customer asks about price in their currency: "Final price may vary slightly based on your country and checkout currency."
+- NEVER promise fixed delivery times for international orders.
+- Detect or politely ask customer country when needed for shipping context.
+
+SMART RESPONSE LENGTH (CRITICAL):
+- Rule A: Fixed/FAQ replies → use exact configured short answers (1-3 lines max).
+- Rule B: Problem solving → detect intent, calculate minimum required length, give complete solution, avoid fluff, avoid owner escalation.
+- Default: 500 chars MAX. Product links may extend slightly.
+- Structure: Hook (1 line) → Value (2-3 lines) → CTA (1 line)
+
+BUILT-IN FAQ (USE THESE EXACT ANSWERS):
+- ডেলিভারি কত দিনে হবে? → "ডেলিভারি সময় আপনার দেশের উপর নির্ভর করে এবং চেকআউটে সঠিক সময় দেখাবে।"
+- ডেলিভারি চার্জ কত? → "আপনার লোকেশন অনুযায়ী চেকআউটে অটোমেটিক হিসাব দেখাবে।"
+- কিভাবে অর্ডার করবো? → "আপনি চাইলে আমি Quick Order দিয়ে অর্ডার সম্পন্ন করতে সাহায্য করতে পারি। [ORDER_FORM]"
+- অর্ডার করার পর কি পাবো? → "অর্ডার সম্পন্ন হলে সাথে সাথে Order ID এবং কনফার্মেশন ইমেইল পাবেন।"
+- পেমেন্ট ফেল হলে? → "আবার চেষ্টা করুন — চাইলে আমি সাহায্য করতে পারি। [ORDER_FORM]"
+
 SELF-IMPROVEMENT RULES:
 - If you made a mistake before and there's a correction in LESSONS LEARNED, ALWAYS follow the correction.
-- Never repeat a past mistake. The lessons are your evolved knowledge.
-- When recommending, always use the latest marketing strategies with highest effectiveness scores.
-- Adapt your approach based on what's working (high effectiveness) vs what's not (low scores).
-
-RESPONSE LENGTH (STRICTLY 500 CHARACTERS MAX — space সহ):
-- প্রতিটা response সর্বোচ্চ ৫০০ অক্ষর (space সহ)। এটা HARD LIMIT।
-- ৫০০ অক্ষরের মধ্যে সব কথা শেষ করো। Count করে লেখো।
-- Structure: Hook (1 line) → Value (2-3 lines) → CTA (1 line)
-- Product links সহ হলে একটু বেশি হতে পারে কিন্তু তবুও tight রাখো।
-- NEVER exceed 500 characters. NEVER write walls of text.
+- Never repeat a past mistake. Use latest marketing strategies with highest effectiveness scores.
 
 LANGUAGE RULES (CRITICAL - THINK LIKE A HUMAN):
 - The customer's website is set to: ${userLangName} (${userNativeLangName}, code: ${userLang}).
 - Your FIRST message and ALL subsequent messages MUST be in ${userNativeLangName} (${userLangName}).
-- If the customer writes in a DIFFERENT language than the website setting, IMMEDIATELY switch to THEIR language. A human would naturally do this.
-- If the customer explicitly asks to change language (e.g. "speak in English", "বাংলায় বলো"), switch immediately and stay in that language.
-- NEVER mix languages awkwardly. Pick ONE language per message based on what the customer is using.
+- If the customer writes in a DIFFERENT language, IMMEDIATELY switch to THEIR language.
+- If the customer explicitly asks to change language, switch immediately and stay.
+- NEVER mix languages awkwardly. Pick ONE language per message.
 - Bengali name: রাইয়ান. For other languages, use "Raiyan".
 - Order issues → ask order number.
 - Don't know? → WhatsApp: +880 1910-521565
@@ -696,7 +707,97 @@ ${productContext}${learningContext}${strategyContext}`;
       });
     }
 
-    // ─── ADMIN AI CHAT ───
+    // ─── ADMIN AR SENIOR DEV CHAT ───
+    if (action === "admin_ar_chat") {
+      if (!lovableApiKey) {
+        return new Response(JSON.stringify({ error: "AI not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const history = body.history || [];
+
+      // Gather comprehensive admin context
+      const { count: totalProducts } = await adminClient.from("products").select("id", { count: "exact", head: true });
+      const { count: activeProducts } = await adminClient.from("products").select("id", { count: "exact", head: true }).eq("is_active", true);
+      const { count: totalOrders } = await adminClient.from("orders").select("id", { count: "exact", head: true });
+      const { count: pendingOrders } = await adminClient.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending");
+      const { count: openTickets } = await adminClient.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "pending"]);
+      
+      const { data: recentOrders } = await adminClient.from("orders")
+        .select("order_number, status, payment_status, total, currency, created_at")
+        .order("created_at", { ascending: false }).limit(5);
+      
+      const { data: recentFindings } = await adminClient.from("ai_scan_results")
+        .select("severity, title, category, status")
+        .order("created_at", { ascending: false }).limit(10);
+
+      const { data: trackingPixels } = await adminClient.from("tracking_pixels").select("platform, pixel_id, is_active");
+
+      const adminArPrompt = `You are **Admin AR** — a Senior AI Developer, DevOps Assistant, Ecommerce Analyst, and Automation Engineer for AR Prime Market.
+
+YOUR ROLE:
+- You are NOT just a chatbot. You are the owner's personal senior developer and technical advisor.
+- Help the owner become INDEPENDENT from any single developer or platform.
+- Respond like a senior engineer: step-by-step, copy-paste ready solutions, warn about risks, suggest best practices.
+- Tone: professional, clear, confident. Use markdown for code blocks, lists, and emphasis.
+
+CAPABILITIES:
+1. **Code Assistance**: Explain codebase parts, suggest safe updates, generate code snippets, review bugs, performance improvements.
+2. **Hosting Portability**: Guide export readiness, env var setup, build instructions, deployment steps, domain connection, DB migration.
+3. **Order Monitoring**: Track new/failed/pending orders, alert anomalies.
+4. **Analytics**: Sales summaries, conversion analysis, country-wise traffic insights.
+5. **Troubleshooting**: Debug errors, fix configurations, optimize performance.
+
+CURRENT SYSTEM STATE:
+- Products: ${totalProducts} total (${activeProducts} active)
+- Orders: ${totalOrders} total (${pendingOrders} pending)
+- Open Tickets: ${openTickets}
+- Recent Orders: ${JSON.stringify(recentOrders || [])}
+- Scan Findings: ${JSON.stringify(recentFindings || [])}
+- Tracking Pixels: ${JSON.stringify((trackingPixels || []).map(p => ({ platform: p.platform, active: p.is_active })))}
+
+TECH STACK: React 18 + Vite + TypeScript + Tailwind CSS + Supabase (Edge Functions, Auth, DB)
+Site URL: https://arprimemarket.lovable.app
+Admin route: /ar
+
+PROACTIVE MONITORING:
+- If pending orders > 5, alert about backlog.
+- If there are critical scan findings, mention them proactively.
+- If open tickets > 10, suggest prioritizing support.
+
+RESPONSE RULES:
+- Use Bengali if owner writes in Bengali, English if in English. Mix naturally as needed.
+- Code blocks with proper syntax highlighting.
+- Keep responses actionable and concise.
+- For complex tasks, break into numbered steps.
+- Never hallucinate data — only use the real stats provided above.`;
+
+      const aiResponse = await callLovableAIWithRetry(lovableApiKey, {
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: adminArPrompt },
+          ...history.map((h: any) => ({ role: h.role, content: h.content })),
+          { role: "user", content: message },
+        ],
+      }, 2);
+
+      if (!aiResponse.ok) {
+        const status = aiResponse.status;
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limited. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "AI request failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const aiData = await aiResponse.json();
+      const reply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+
+      return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── ADMIN AI CHAT (legacy) ───
     if (action === "admin_chat") {
       if (!lovableApiKey) {
         return new Response(JSON.stringify({ error: "AI not configured" }), {
