@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, History, ArrowLeft, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ChatOrderForm from "@/components/ChatOrderForm";
@@ -31,6 +32,7 @@ const ORDER_HELP_KEYWORDS = [
 
 export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -215,7 +217,7 @@ export const ChatWidget = ({ embedded = false }: ChatWidgetProps) => {
               action: "chat",
               message: userContent,
               stream: true,
-              context: { language: navigator.language || "en", history: historyForAI },
+              context: { language: lang.code, languageName: lang.name, nativeLanguageName: lang.nativeName, history: historyForAI },
             }),
           });
 
