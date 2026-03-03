@@ -222,7 +222,7 @@ const Products = () => {
                   {/* Price Range */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                      Price Range: {formatPrice(priceRange[0])} — {formatPrice(priceRange[1])}
+                      Price Range: {formatPrice(priceRange[0])} — {formatPrice(effectiveMaxPrice)}
                     </label>
                     <div className="flex gap-2 items-center">
                       <input
