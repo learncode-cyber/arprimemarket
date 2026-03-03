@@ -62,8 +62,6 @@ const Products = () => {
       const matchesStock = !inStockOnly || p.stock_quantity > 0;
       return matchesCategory && matchesSearch && matchesPrice && matchesRating && matchesStock;
     });
-      return matchesCategory && matchesSearch && matchesPrice && matchesRating;
-    });
 
     switch (sortBy) {
       case "price-asc": result.sort((a, b) => a.price - b.price); break;
