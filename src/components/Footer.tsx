@@ -5,6 +5,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { SocialLinksRow } from "./SocialLinks";
 import { VisaIcon, MastercardIcon, BinancePayIcon, BkashIcon, NagadIcon, CodIcon } from "./PaymentIcons";
 import { useSectionContent } from "@/hooks/useSiteContent";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const paymentMethods = [
   { icon: VisaIcon, label: "Visa" },
@@ -54,12 +56,22 @@ export const Footer = () => {
     ],
   };
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim()) return;
+    try {
+      const { error } = await supabase.from("newsletter_subscribers" as any).insert({ email: email.trim().toLowerCase() } as any);
+      if (error) {
+        if (error.code === "23505") { toast.info("You're already subscribed!"); }
+        else { toast.error("Failed to subscribe. Try again."); }
+      } else {
+        toast.success("Subscribed successfully! 🎉");
+      }
       setSubscribed(true);
       setEmail("");
       setTimeout(() => setSubscribed(false), 3000);
+    } catch {
+      toast.error("Something went wrong.");
     }
   };
 

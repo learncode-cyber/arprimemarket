@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Loader2, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { loginSchema, clientRateLimit } from "@/lib/validation";
@@ -92,6 +93,14 @@ const Login = () => {
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" maxLength={128} className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={async () => {
+              if (!email.trim()) { toast.error("Enter your email first"); return; }
+              const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+              if (error) toast.error(error.message);
+              else toast.success("Check your email for a password reset link!");
+            }} className="text-xs text-primary hover:underline">Forgot Password?</button>
           </div>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary disabled:opacity-50">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4" /></>}
