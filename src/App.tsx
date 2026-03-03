@@ -40,6 +40,7 @@ import NewTicket from "./pages/NewTicket";
 import TicketDetail from "./pages/TicketDetail";
 import AISetup from "./pages/AISetup";
 import WidgetChat from "./pages/WidgetChat";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ const App = () => (
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/checkout" element={<Checkout />} />
                         <Route path="/track-order" element={<TrackOrder />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<TermsOfService />} />
                         <Route path="/refund-policy" element={<RefundPolicy />} />

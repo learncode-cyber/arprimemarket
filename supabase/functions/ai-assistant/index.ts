@@ -388,7 +388,15 @@ ${productContext}${learningContext}${strategyContext}`;
       }
 
       const aiData = await aiResponse.json();
-      const reply = aiData.choices?.[0]?.message?.content || "I'm here to help! Please try again.";
+      let reply = aiData.choices?.[0]?.message?.content || "I'm here to help! Please try again.";
+
+      // Enforce 500-char hard limit (allow slight overflow for markdown links)
+      if (reply.length > 600) {
+        // Find last sentence boundary before 500 chars
+        const truncated = reply.slice(0, 500);
+        const lastSentence = Math.max(truncated.lastIndexOf("।"), truncated.lastIndexOf("."), truncated.lastIndexOf("!"), truncated.lastIndexOf("?"));
+        reply = lastSentence > 200 ? reply.slice(0, lastSentence + 1) : truncated + "...";
+      }
 
       return new Response(JSON.stringify({ reply }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

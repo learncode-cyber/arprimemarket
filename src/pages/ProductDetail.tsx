@@ -11,6 +11,7 @@ import { useTracking } from "@/context/TrackingContext";
 import { QuickOrderModal } from "@/components/QuickOrderModal";
 import { SEOHead } from "@/components/SEOHead";
 import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
+import { ProductReviews } from "@/components/ProductReviews";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -145,6 +146,9 @@ const ProductDetail = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Product Reviews */}
+      <ProductReviews productId={product.id} />
     </div>
   );
 };

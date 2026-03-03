@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -51,7 +51,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Proactive token refresh every 10 minutes to prevent bad_jwt on custom domains
+    const refreshInterval = setInterval(async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession) {
+        await supabase.auth.refreshSession();
+      }
+    }, 10 * 60 * 1000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
