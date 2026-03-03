@@ -284,7 +284,7 @@ const Dashboard = () => {
                 currentIdx={currentIdx}
                 isCancelled={isCancelled}
                 onBack={() => setSelectedOrder(null)}
-                onDownload={downloadInvoice}
+                
                 l={l}
                 t={t}
                 lang={lang}
