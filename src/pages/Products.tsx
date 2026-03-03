@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, SlidersHorizontal, Loader2, X, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, X, ArrowUpDown, ChevronDown, PackageX } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
@@ -11,21 +11,40 @@ import { collectionPageSchema } from "@/lib/seoSchemas";
 
 const ITEMS_PER_PAGE = 12;
 
-type SortOption = "newest" | "price-asc" | "price-desc" | "rating" | "name";
+type SortOption = "newest" | "price-asc" | "price-desc" | "rating" | "name" | "popularity";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || "All";
+  const initialSort = (searchParams.get("sort") as SortOption) || "newest";
+  const initialMinPrice = Number(searchParams.get("min_price")) || 0;
+  const initialMaxPrice = Number(searchParams.get("max_price")) || 0;
+  const initialRating = Number(searchParams.get("rating")) || 0;
+  const initialSearch = searchParams.get("q") || "";
+  const initialInStock = searchParams.get("in_stock") === "true";
 
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
+  const [sortBy, setSortBy] = useState<SortOption>(initialSort);
+  const [priceRange, setPriceRange] = useState<[number, number]>([initialMinPrice, initialMaxPrice]);
   const [showFilters, setShowFilters] = useState(false);
-  const [ratingFilter, setRatingFilter] = useState(0);
+  const [ratingFilter, setRatingFilter] = useState(initialRating);
+  const [inStockOnly, setInStockOnly] = useState(initialInStock);
   const { t } = useLanguage();
   const { formatPrice } = useCurrency();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput]);
 
   const { data: products = [], isLoading } = useProducts();
   const { data: dbCategories = [] } = useCategories();
