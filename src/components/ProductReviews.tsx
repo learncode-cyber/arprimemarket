@@ -33,7 +33,7 @@ export const ProductReviews = ({ productId }: { productId: string }) => {
         .eq("is_approved", true)
         .order("created_at", { ascending: false })
         .limit(20);
-      return (data as Review[]) || [];
+      return ((data as any[]) || []) as Review[];
     },
   });
 
@@ -47,7 +47,7 @@ export const ProductReviews = ({ productId }: { productId: string }) => {
         .eq("product_id", productId)
         .eq("user_id", user.id)
         .maybeSingle();
-      return data as Review | null;
+      return (data as any) as Review | null;
     },
     enabled: !!user,
   });
