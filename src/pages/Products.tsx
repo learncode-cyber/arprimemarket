@@ -96,22 +96,19 @@ const Products = () => {
   const handleCategoryChange = useCallback((cat: string) => {
     setCategory(cat);
     setPage(1);
-    const params = new URLSearchParams(searchParams);
-    if (cat === "All") params.delete("category");
-    else params.set("category", cat);
-    setSearchParams(params);
-  }, [searchParams, setSearchParams]);
+  }, []);
 
-  const activeFilters = (category !== "All" ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0);
+  const activeFilters = (category !== "All" ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + (priceRange[0] > 0 || (priceRange[1] > 0 && priceRange[1] < maxPrice) ? 1 : 0) + (inStockOnly ? 1 : 0);
 
   const clearAllFilters = () => {
     setCategory("All");
     setRatingFilter(0);
-    setPriceRange([0, maxPrice]);
+    setPriceRange([0, 0]);
+    setSearchInput("");
     setSearch("");
     setSortBy("newest");
+    setInStockOnly(false);
     setPage(1);
-    setSearchParams({});
   };
 
   const sortOptions: { value: SortOption; label: string }[] = [
@@ -119,6 +116,7 @@ const Products = () => {
     { value: "price-asc", label: "Price: Low → High" },
     { value: "price-desc", label: "Price: High → Low" },
     { value: "rating", label: "Top Rated" },
+    { value: "popularity", label: "Most Popular" },
     { value: "name", label: "Name A-Z" },
   ];
 
@@ -143,12 +141,12 @@ const Products = () => {
             <input
               type="search"
               placeholder={t("searchProducts")}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
             />
-            {search && (
-              <button onClick={() => { setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-md touch-manipulation">
+            {searchInput && (
+              <button onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-md touch-manipulation">
                 <X className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
             )}
