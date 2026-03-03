@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Package, Settings, LogOut, ChevronRight, Clock, Truck, CheckCircle, XCircle, ArrowLeft, MapPin, Download, PackageCheck, CreditCard, Heart, MapPinned, Lock, Plus, Trash2, Star, ShoppingCart, Loader2, Bell, BellOff, KeyRound } from "lucide-react";
+import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -405,9 +406,28 @@ const OrderDetail = ({ order, items, loadingItems, config, StatusIcon, currentId
       <button onClick={onBack} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation">
         <ArrowLeft className="w-4 h-4" /> {l("Back", "ফিরে যান", "رجوع")}
       </button>
-      <button onClick={onDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition-colors touch-manipulation">
-        <Download className="w-3.5 h-3.5" /> {l("Invoice", "ইনভয়েস", "فاتورة")}
-      </button>
+      <InvoiceDownload
+        order={{
+          order_number: order.order_number,
+          created_at: order.created_at,
+          status: order.status,
+          payment_status: order.payment_status,
+          shipping_name: order.shipping_name,
+          shipping_phone: order.shipping_phone,
+          shipping_email: order.shipping_email,
+          shipping_address: order.shipping_address,
+          shipping_city: order.shipping_city,
+          shipping_country: order.shipping_country,
+          subtotal: Number(order.subtotal),
+          discount_amount: Number(order.discount_amount),
+          shipping_cost: Number(order.shipping_cost),
+          tax_amount: Number(order.tax_amount),
+          total: Number(order.total),
+          tracking_number: order.tracking_number,
+          payment_method: order.payment_method,
+        }}
+        items={items.map((i: any) => ({ title: i.title, quantity: i.quantity, price: Number(i.price), total: Number(i.total) }))}
+      />
     </div>
     <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
