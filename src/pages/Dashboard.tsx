@@ -143,33 +143,7 @@ const Dashboard = () => {
     else { toast.success(l("Password changed!", "পাসওয়ার্ড পরিবর্তন হয়েছে!", "تم تغيير كلمة المرور!")); setPasswordForm({ password: "", confirm: "" }); }
   };
 
-  const downloadInvoice = () => {
-    if (!selectedOrder) return;
-    const inv = [
-      "═══════════════════════════════════════",
-      "           AR PRIME MARKET - INVOICE",
-      "═══════════════════════════════════════",
-      "", `Order: ${selectedOrder.order_number}`, `Date: ${new Date(selectedOrder.created_at).toLocaleString()}`,
-      `Status: ${getStatusLabel(selectedOrder.status)}`, `Payment: ${getPaymentLabel(selectedOrder.payment_status)}`,
-      "", "───────────────────────────────────────", "SHIP TO:",
-      `  ${selectedOrder.shipping_name}`, `  ${selectedOrder.shipping_phone}`, `  ${selectedOrder.shipping_email}`,
-      `  ${selectedOrder.shipping_address}, ${selectedOrder.shipping_city}`,
-      "", "───────────────────────────────────────", "ITEMS:",
-      ...orderItems.map(i => `  ${i.quantity}x ${i.title} — ${formatPrice(Number(i.total))}`),
-      "", "───────────────────────────────────────",
-      `Subtotal:  ${formatPrice(Number(selectedOrder.subtotal))}`,
-      Number(selectedOrder.discount_amount) > 0 ? `Discount: -${formatPrice(Number(selectedOrder.discount_amount))}` : null,
-      `Shipping:  ${Number(selectedOrder.shipping_cost) > 0 ? formatPrice(Number(selectedOrder.shipping_cost)) : "Free"}`,
-      `TOTAL:     ${formatPrice(Number(selectedOrder.total))}`,
-      "", selectedOrder.tracking_number ? `Tracking: ${selectedOrder.tracking_number}` : null,
-      "", "═══════════════════════════════════════", "Thank you for shopping with AR Prime Market!",
-    ].filter(Boolean).join("\n");
-    const blob = new Blob([inv], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `invoice-${selectedOrder.order_number}.txt`; a.click();
-    URL.revokeObjectURL(url);
-    toast.success(l("Invoice downloaded!", "ইনভয়েস ডাউনলোড হয়েছে!", "تم تحميل الفاتورة!"));
-  };
+  // Invoice download is now handled by InvoiceDownload component
 
   if (loading || !user) return null;
 
