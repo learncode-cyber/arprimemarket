@@ -51,13 +51,17 @@ const Products = () => {
   const categories = useMemo(() => ["All", ...dbCategories.map(c => c.name)], [dbCategories]);
 
   const maxPrice = useMemo(() => Math.max(...products.map(p => p.price), 100000), [products]);
+  const effectiveMaxPrice = priceRange[1] === 0 ? maxPrice : priceRange[1];
 
   const filtered = useMemo(() => {
     let result = products.filter((p) => {
       const matchesCategory = category === "All" || p.category === category;
       const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-      const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
+      const matchesPrice = p.price >= priceRange[0] && p.price <= effectiveMaxPrice;
       const matchesRating = p.rating >= ratingFilter;
+      const matchesStock = !inStockOnly || p.stock_quantity > 0;
+      return matchesCategory && matchesSearch && matchesPrice && matchesRating && matchesStock;
+    });
       return matchesCategory && matchesSearch && matchesPrice && matchesRating;
     });
 
@@ -66,11 +70,25 @@ const Products = () => {
       case "price-desc": result.sort((a, b) => b.price - a.price); break;
       case "rating": result.sort((a, b) => b.rating - a.rating); break;
       case "name": result.sort((a, b) => a.title.localeCompare(b.title)); break;
-      default: break; // newest is default from DB
+      case "popularity": result.sort((a, b) => b.review_count - a.review_count); break;
+      default: break;
     }
 
     return result;
-  }, [search, category, products, sortBy, priceRange, ratingFilter]);
+  }, [search, category, products, sortBy, priceRange, ratingFilter, effectiveMaxPrice, inStockOnly]);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (category !== "All") params.set("category", category);
+    if (search) params.set("q", search);
+    if (sortBy !== "newest") params.set("sort", sortBy);
+    if (priceRange[0] > 0) params.set("min_price", String(priceRange[0]));
+    if (priceRange[1] > 0 && priceRange[1] < maxPrice) params.set("max_price", String(priceRange[1]));
+    if (ratingFilter > 0) params.set("rating", String(ratingFilter));
+    if (inStockOnly) params.set("in_stock", "true");
+    setSearchParams(params, { replace: true });
+  }, [category, search, sortBy, priceRange, ratingFilter, inStockOnly, maxPrice]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
