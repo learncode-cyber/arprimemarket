@@ -1070,6 +1070,66 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          price_delta: number
+          product_id: string
+          size: string | null
+          sku: string | null
+          sort_order: number
+          stock_quantity: number
+          updated_at: string
+          variant_label: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_delta?: number
+          product_id: string
+          size?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock_quantity?: number
+          updated_at?: string
+          variant_label?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_delta?: number
+          product_id?: string
+          size?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock_quantity?: number
+          updated_at?: string
+          variant_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
