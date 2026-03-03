@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, SlidersHorizontal, Loader2, X, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, X, ArrowUpDown, ChevronDown, PackageX } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProducts, useCategories } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
@@ -11,35 +11,56 @@ import { collectionPageSchema } from "@/lib/seoSchemas";
 
 const ITEMS_PER_PAGE = 12;
 
-type SortOption = "newest" | "price-asc" | "price-desc" | "rating" | "name";
+type SortOption = "newest" | "price-asc" | "price-desc" | "rating" | "name" | "popularity";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || "All";
+  const initialSort = (searchParams.get("sort") as SortOption) || "newest";
+  const initialMinPrice = Number(searchParams.get("min_price")) || 0;
+  const initialMaxPrice = Number(searchParams.get("max_price")) || 0;
+  const initialRating = Number(searchParams.get("rating")) || 0;
+  const initialSearch = searchParams.get("q") || "";
+  const initialInStock = searchParams.get("in_stock") === "true";
 
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
+  const [sortBy, setSortBy] = useState<SortOption>(initialSort);
+  const [priceRange, setPriceRange] = useState<[number, number]>([initialMinPrice, initialMaxPrice]);
   const [showFilters, setShowFilters] = useState(false);
-  const [ratingFilter, setRatingFilter] = useState(0);
+  const [ratingFilter, setRatingFilter] = useState(initialRating);
+  const [inStockOnly, setInStockOnly] = useState(initialInStock);
   const { t } = useLanguage();
   const { formatPrice } = useCurrency();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput]);
 
   const { data: products = [], isLoading } = useProducts();
   const { data: dbCategories = [] } = useCategories();
   const categories = useMemo(() => ["All", ...dbCategories.map(c => c.name)], [dbCategories]);
 
   const maxPrice = useMemo(() => Math.max(...products.map(p => p.price), 100000), [products]);
+  const effectiveMaxPrice = priceRange[1] === 0 ? maxPrice : priceRange[1];
 
   const filtered = useMemo(() => {
     let result = products.filter((p) => {
       const matchesCategory = category === "All" || p.category === category;
       const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-      const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
+      const matchesPrice = p.price >= priceRange[0] && p.price <= effectiveMaxPrice;
       const matchesRating = p.rating >= ratingFilter;
-      return matchesCategory && matchesSearch && matchesPrice && matchesRating;
+      const matchesStock = !inStockOnly || p.stock_quantity > 0;
+      return matchesCategory && matchesSearch && matchesPrice && matchesRating && matchesStock;
     });
 
     switch (sortBy) {
@@ -47,11 +68,25 @@ const Products = () => {
       case "price-desc": result.sort((a, b) => b.price - a.price); break;
       case "rating": result.sort((a, b) => b.rating - a.rating); break;
       case "name": result.sort((a, b) => a.title.localeCompare(b.title)); break;
-      default: break; // newest is default from DB
+      case "popularity": result.sort((a, b) => b.review_count - a.review_count); break;
+      default: break;
     }
 
     return result;
-  }, [search, category, products, sortBy, priceRange, ratingFilter]);
+  }, [search, category, products, sortBy, priceRange, ratingFilter, effectiveMaxPrice, inStockOnly]);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (category !== "All") params.set("category", category);
+    if (search) params.set("q", search);
+    if (sortBy !== "newest") params.set("sort", sortBy);
+    if (priceRange[0] > 0) params.set("min_price", String(priceRange[0]));
+    if (priceRange[1] > 0 && priceRange[1] < maxPrice) params.set("max_price", String(priceRange[1]));
+    if (ratingFilter > 0) params.set("rating", String(ratingFilter));
+    if (inStockOnly) params.set("in_stock", "true");
+    setSearchParams(params, { replace: true });
+  }, [category, search, sortBy, priceRange, ratingFilter, inStockOnly, maxPrice]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -59,22 +94,19 @@ const Products = () => {
   const handleCategoryChange = useCallback((cat: string) => {
     setCategory(cat);
     setPage(1);
-    const params = new URLSearchParams(searchParams);
-    if (cat === "All") params.delete("category");
-    else params.set("category", cat);
-    setSearchParams(params);
-  }, [searchParams, setSearchParams]);
+  }, []);
 
-  const activeFilters = (category !== "All" ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0);
+  const activeFilters = (category !== "All" ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + (priceRange[0] > 0 || (priceRange[1] > 0 && priceRange[1] < maxPrice) ? 1 : 0) + (inStockOnly ? 1 : 0);
 
   const clearAllFilters = () => {
     setCategory("All");
     setRatingFilter(0);
-    setPriceRange([0, maxPrice]);
+    setPriceRange([0, 0]);
+    setSearchInput("");
     setSearch("");
     setSortBy("newest");
+    setInStockOnly(false);
     setPage(1);
-    setSearchParams({});
   };
 
   const sortOptions: { value: SortOption; label: string }[] = [
@@ -82,6 +114,7 @@ const Products = () => {
     { value: "price-asc", label: "Price: Low → High" },
     { value: "price-desc", label: "Price: High → Low" },
     { value: "rating", label: "Top Rated" },
+    { value: "popularity", label: "Most Popular" },
     { value: "name", label: "Name A-Z" },
   ];
 
@@ -106,12 +139,12 @@ const Products = () => {
             <input
               type="search"
               placeholder={t("searchProducts")}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
             />
-            {search && (
-              <button onClick={() => { setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-md touch-manipulation">
+            {searchInput && (
+              <button onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-md touch-manipulation">
                 <X className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
             )}
@@ -189,7 +222,7 @@ const Products = () => {
                   {/* Price Range */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                      Price Range: {formatPrice(priceRange[0])} — {formatPrice(priceRange[1])}
+                      Price Range: {formatPrice(priceRange[0])} — {formatPrice(effectiveMaxPrice)}
                     </label>
                     <div className="flex gap-2 items-center">
                       <input
@@ -233,6 +266,19 @@ const Products = () => {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Availability */}
+                  <div className="sm:col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer touch-manipulation">
+                      <input
+                        type="checkbox"
+                        checked={inStockOnly}
+                        onChange={e => { setInStockOnly(e.target.checked); setPage(1); }}
+                        className="w-4 h-4 rounded border-border text-primary accent-[hsl(var(--primary))]"
+                      />
+                      <span className="text-xs font-medium text-foreground">In Stock Only</span>
+                    </label>
                   </div>
                 </div>
               </div>

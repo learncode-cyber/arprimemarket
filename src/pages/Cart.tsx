@@ -29,27 +29,30 @@ const Cart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="lg:col-span-2 space-y-3">
             {items.map((item, i) => (
-              <motion.div key={item.product.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} layout className="bg-card border border-border rounded-2xl p-3 sm:p-4 flex gap-3 sm:gap-4">
+              <motion.div key={`${item.product.id}-${item.variantId || 'base'}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} layout className="bg-card border border-border rounded-2xl p-3 sm:p-4 flex gap-3 sm:gap-4">
                 <img src={item.product.image} alt={item.product.title} className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <Link to={`/products/${item.product.id}`} className="font-display font-semibold text-sm text-foreground hover:text-primary transition-colors">
                     {item.product.title}
                   </Link>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.product.category}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {item.product.category}
+                    {item.variantLabel && <span className="ml-1.5 text-primary">· {item.variantLabel}</span>}
+                  </p>
                   <div className="flex items-center justify-between mt-2.5">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="p-1.5 rounded-md bg-secondary hover:bg-border transition-colors touch-manipulation active:scale-90">
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variantId)} className="p-1.5 rounded-md bg-secondary hover:bg-border transition-colors touch-manipulation active:scale-90">
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-6 text-center font-medium text-xs">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-1.5 rounded-md bg-secondary hover:bg-border transition-colors touch-manipulation active:scale-90">
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variantId)} className="p-1.5 rounded-md bg-secondary hover:bg-border transition-colors touch-manipulation active:scale-90">
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
-                    <span className="font-display font-bold text-sm text-foreground">{formatPrice(item.product.price * item.quantity)}</span>
+                    <span className="font-display font-bold text-sm text-foreground">{formatPrice((item.product.price + (item.priceDelta || 0)) * item.quantity)}</span>
                   </div>
                 </div>
-                <button onClick={() => removeFromCart(item.product.id)} className="self-start p-1.5 rounded-md hover:bg-destructive/10 transition-colors touch-manipulation">
+                <button onClick={() => removeFromCart(item.product.id, item.variantId)} className="self-start p-1.5 rounded-md hover:bg-destructive/10 transition-colors touch-manipulation">
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
               </motion.div>

@@ -4,6 +4,7 @@ import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus, Loader2, Share2, Zap
 import { ShareButtons } from "@/components/SocialLinks";
 import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProductData";
+import { useProductVariants, ProductVariant } from "@/hooks/useProductVariants";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -12,22 +13,32 @@ import { QuickOrderModal } from "@/components/QuickOrderModal";
 import { SEOHead } from "@/components/SEOHead";
 import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
 import { ProductReviews } from "@/components/ProductReviews";
+import { VariantSelector } from "@/components/VariantSelector";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { data: product, isLoading } = useProduct(id || "");
+  const { data: variants = [] } = useProductVariants(id || "");
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
   const { trackViewContent } = useTracking();
   const [qty, setQty] = useState(1);
   const [quickOrder, setQuickOrder] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   useEffect(() => {
     if (product) {
       trackViewContent({ id: product.id, title: product.title, price: product.price, category: product.category, currency: product.currency });
     }
   }, [product, trackViewContent]);
+
+  // Auto-select first variant
+  useEffect(() => {
+    if (variants.length > 0 && !selectedVariant) {
+      setSelectedVariant(variants[0]);
+    }
+  }, [variants, selectedVariant]);
 
   if (isLoading) {
     return (
@@ -46,9 +57,19 @@ const ProductDetail = () => {
     );
   }
 
+  const effectivePrice = product.price + (selectedVariant?.price_delta || 0);
+  const effectiveComparePrice = product.compare_at_price
+    ? product.compare_at_price + (selectedVariant?.price_delta || 0)
+    : null;
+
   const handleAdd = () => {
-    for (let i = 0; i < qty; i++) addToCart(product);
+    const variantData = selectedVariant
+      ? { id: selectedVariant.id, label: selectedVariant.variant_label || [selectedVariant.size, selectedVariant.color].filter(Boolean).join(" / "), priceDelta: selectedVariant.price_delta }
+      : undefined;
+    for (let i = 0; i < qty; i++) addToCart(product, variantData);
   };
+
+  const isOutOfStock = selectedVariant ? selectedVariant.stock_quantity <= 0 : product.stock_quantity <= 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -96,19 +117,29 @@ const ProductDetail = () => {
 
           <div className="flex items-baseline gap-2">
             <span className="font-display text-3xl sm:text-4xl font-bold text-foreground">
-              {formatPrice(product.price)}
+              {formatPrice(effectivePrice)}
             </span>
-            {product.compare_at_price && (
+            {effectiveComparePrice && (
               <span className="text-base sm:text-lg text-muted-foreground line-through">
-                {formatPrice(product.compare_at_price)}
+                {formatPrice(effectiveComparePrice)}
               </span>
             )}
-            {product.compare_at_price && (
+            {effectiveComparePrice && (
               <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-semibold">
-                -{Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)}%
+                -{Math.round(((effectiveComparePrice - effectivePrice) / effectiveComparePrice) * 100)}%
               </span>
             )}
           </div>
+
+          {/* Variant Selector */}
+          {variants.length > 0 && (
+            <VariantSelector
+              variants={variants}
+              selectedVariant={selectedVariant}
+              onSelect={setSelectedVariant}
+              basePrice={product.price}
+            />
+          )}
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5 border border-border rounded-xl px-3 py-2">
@@ -123,10 +154,18 @@ const ProductDetail = () => {
           </div>
 
           <div className="flex gap-2.5 pt-1">
-            <button onClick={handleAdd} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
-              <ShoppingCart className="w-4 h-4" /> {t("addToCart")}
+            <button
+              onClick={handleAdd}
+              disabled={isOutOfStock}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ShoppingCart className="w-4 h-4" /> {isOutOfStock ? "Out of Stock" : t("addToCart")}
             </button>
-            <button onClick={() => setQuickOrder(true)} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-accent text-accent-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
+            <button
+              onClick={() => setQuickOrder(true)}
+              disabled={isOutOfStock}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-accent text-accent-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation disabled:opacity-50"
+            >
               <Zap className="w-4 h-4" /> Order in 1-Click
             </button>
             <button className="p-3.5 rounded-xl border border-border bg-card hover:bg-secondary transition-colors touch-manipulation">
@@ -141,7 +180,7 @@ const ProductDetail = () => {
             <QuickOrderModal
               open={quickOrder}
               onClose={() => setQuickOrder(false)}
-              product={{ id: product.id, title: product.title, price: product.price, image: product.image }}
+              product={{ id: product.id, title: product.title, price: effectivePrice, image: product.image }}
             />
           )}
         </motion.div>
