@@ -267,6 +267,19 @@ const Products = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Availability */}
+                  <div className="sm:col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer touch-manipulation">
+                      <input
+                        type="checkbox"
+                        checked={inStockOnly}
+                        onChange={e => { setInStockOnly(e.target.checked); setPage(1); }}
+                        className="w-4 h-4 rounded border-border text-primary accent-[hsl(var(--primary))]"
+                      />
+                      <span className="text-xs font-medium text-foreground">In Stock Only</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </motion.div>
