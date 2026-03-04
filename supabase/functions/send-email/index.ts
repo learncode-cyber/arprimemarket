@@ -17,28 +17,55 @@ interface EmailPayload {
   html: string;
 }
 
-async function sendEmail(apiKey: string, payload: EmailPayload) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "AR Prime Market <onboarding@resend.dev>",
-      to: [payload.to],
-      subject: payload.subject,
-      html: payload.html,
-    }),
-  });
+async function sendEmail(apiKey: string, payload: EmailPayload, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "AR Prime Market <onboarding@resend.dev>",
+          to: [payload.to],
+          subject: payload.subject,
+          html: payload.html,
+        }),
+      });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Resend error:", res.status, err);
-    throw new Error(`Email send failed: ${res.status}`);
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`Resend error (attempt ${attempt + 1}):`, res.status, err);
+        if (attempt === retries) throw new Error(`Email send failed: ${res.status}`);
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+
+      return await res.json();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
   }
+  throw new Error("Email send exhausted retries");
+}
 
-  return await res.json();
+async function logEmail(action: string, payload: EmailPayload, result: any, orderId?: string) {
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await admin.from("email_logs").insert({
+      email_type: action,
+      recipient: payload.to,
+      subject: payload.subject,
+      order_id: orderId || null,
+      status: result?.id ? "sent" : "failed",
+      error_message: result?.error || null,
+    });
+  } catch (err) {
+    console.warn("[email-log]", err);
+  }
 }
 
 // ─── Email Templates ───
@@ -217,18 +244,73 @@ Deno.serve(async (req) => {
       case "order_confirmation": {
         const payload = orderConfirmationTemplate(body.order);
         const result = await sendEmail(RESEND_API_KEY, payload);
+        await logEmail("order_confirmation", payload, result, body.order?.id);
         return json({ success: true, id: result.id });
       }
 
       case "shipping_update": {
         const payload = shippingUpdateTemplate(body.order);
         const result = await sendEmail(RESEND_API_KEY, payload);
+        await logEmail("shipping_update", payload, result, body.order?.id);
         return json({ success: true, id: result.id });
       }
 
       case "delivery_confirmation": {
         const payload = deliveryConfirmationTemplate(body.order);
         const result = await sendEmail(RESEND_API_KEY, payload);
+        await logEmail("delivery_confirmation", payload, result, body.order?.id);
+        return json({ success: true, id: result.id });
+      }
+
+      case "order_cancelled": {
+        const order = body.order;
+        const cancelPayload: EmailPayload = {
+          to: order.email,
+          subject: `Your order ${order.order_number} has been cancelled`,
+          html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<div style="max-width:600px;margin:0 auto;padding:20px">
+  <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px">
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:24px">Order Cancelled</h1>
+    <p style="color:#fecaca;margin:0;font-size:14px">Order ${order.order_number}</p>
+  </div>
+  <div style="background:#f8fafc;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+    <p style="margin:0 0 12px;color:#1e293b;font-size:16px">Your order has been cancelled.</p>
+    <p style="margin:0;color:#64748b;font-size:13px">If you didn't request this, please contact support.</p>
+  </div>
+  <div style="text-align:center"><a href="https://arprimemarket.lovable.app/contact" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:14px">Contact Support</a></div>
+  <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:24px">AR Prime Market</p>
+</div></body></html>`,
+        };
+        const result = await sendEmail(RESEND_API_KEY, cancelPayload);
+        await logEmail("order_cancelled", cancelPayload, result, order?.id);
+        return json({ success: true, id: result.id });
+      }
+
+      case "payment_received": {
+        const order = body.order;
+        const payPayload: EmailPayload = {
+          to: order.email,
+          subject: `Payment received for ${order.order_number} ✅`,
+          html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<div style="max-width:600px;margin:0 auto;padding:20px">
+  <div style="background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px">
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:24px">💰 Payment Confirmed</h1>
+    <p style="color:#dcfce7;margin:0;font-size:14px">Order ${order.order_number}</p>
+  </div>
+  <div style="background:#f8fafc;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+    <p style="margin:0 0 8px;color:#1e293b;font-size:16px">We've received your payment of ৳${Number(order.total).toLocaleString()}</p>
+    <p style="margin:0;color:#64748b;font-size:13px">Your order is now being processed.</p>
+  </div>
+  <div style="text-align:center"><a href="https://arprimemarket.lovable.app/track-order" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:14px">Track Order</a></div>
+  <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:24px">AR Prime Market</p>
+</div></body></html>`,
+        };
+        const result = await sendEmail(RESEND_API_KEY, payPayload);
+        await logEmail("payment_received", payPayload, result, order?.id);
         return json({ success: true, id: result.id });
       }
 

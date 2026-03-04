@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.security-guard]
 verify_jwt = false
+
+[functions.cart-recovery]
+verify_jwt = false

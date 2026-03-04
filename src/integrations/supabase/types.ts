@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          cart_items: Json
+          created_at: string
+          currency: string
+          email: string | null
+          id: string
+          is_recovered: boolean
+          last_activity_at: string
+          recovered_at: string | null
+          recovered_order_id: string | null
+          recovery_token: string | null
+          session_id: string | null
+          subtotal: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cart_items?: Json
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          is_recovered?: boolean
+          last_activity_at?: string
+          recovered_at?: string | null
+          recovered_order_id?: string | null
+          recovery_token?: string | null
+          session_id?: string | null
+          subtotal?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cart_items?: Json
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          is_recovered?: boolean
+          last_activity_at?: string
+          recovered_at?: string | null
+          recovered_order_id?: string | null
+          recovery_token?: string | null
+          session_id?: string | null
+          subtotal?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_carts_recovered_order_id_fkey"
+            columns: ["recovered_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       addresses: {
         Row: {
           address: string
@@ -455,6 +514,44 @@ export type Database = {
           },
         ]
       }
+      cart_reminder_logs: {
+        Row: {
+          abandoned_cart_id: string
+          email_to: string
+          error_message: string | null
+          id: string
+          reminder_tier: number
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          abandoned_cart_id: string
+          email_to: string
+          error_message?: string | null
+          id?: string
+          reminder_tier: number
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          abandoned_cart_id?: string
+          email_to?: string
+          error_message?: string | null
+          id?: string
+          reminder_tier?: number
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_reminder_logs_abandoned_cart_id_fkey"
+            columns: ["abandoned_cart_id"]
+            isOneToOne: false
+            referencedRelation: "abandoned_carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -602,6 +699,60 @@ export type Database = {
           used_count?: number | null
         }
         Relationships: []
+      }
+      email_logs: {
+        Row: {
+          abandoned_cart_id: string | null
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          order_id: string | null
+          recipient: string
+          retry_count: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          abandoned_cart_id?: string | null
+          created_at?: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          recipient: string
+          retry_count?: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          abandoned_cart_id?: string | null
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          recipient?: string
+          retry_count?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_abandoned_cart_id_fkey"
+            columns: ["abandoned_cart_id"]
+            isOneToOne: false
+            referencedRelation: "abandoned_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       faq_categories: {
         Row: {
@@ -1967,6 +2118,62 @@ export type Database = {
           translated_text?: string
         }
         Relationships: []
+      }
+      upsell_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          source_product_id: string | null
+          suggested_product_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          source_product_id?: string | null
+          suggested_product_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          source_product_id?: string | null
+          suggested_product_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upsell_events_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_events_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_events_suggested_product_id_fkey"
+            columns: ["suggested_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_events_suggested_product_id_fkey"
+            columns: ["suggested_product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

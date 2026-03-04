@@ -4,6 +4,7 @@ import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Link } from "react-router-dom";
+import { CartUpsell } from "@/components/CartUpsell";
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, subtotal, totalItems } = useCart();
@@ -59,19 +60,23 @@ const Cart = () => {
             ))}
           </div>
 
-          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="bg-card border border-border rounded-2xl p-5 sm:p-6 h-fit space-y-3">
-            <h3 className="font-display font-semibold text-foreground text-base">{t("orderSummary")}</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">{t("subtotal")}</span><span className="text-foreground">{formatPrice(subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{t("shipping")}</span><span className="text-foreground">{t("free")}</span></div>
+          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 h-fit space-y-3">
+              <h3 className="font-display font-semibold text-foreground text-base">{t("orderSummary")}</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("subtotal")}</span><span className="text-foreground">{formatPrice(subtotal)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("shipping")}</span><span className="text-foreground">{t("free")}</span></div>
+              </div>
+              <div className="border-t border-border pt-3 flex justify-between">
+                <span className="font-display font-semibold text-foreground">{t("total")}</span>
+                <span className="font-display font-bold text-lg text-foreground">{formatPrice(subtotal)}</span>
+              </div>
+              <Link to="/checkout" className="block w-full text-center py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
+                {t("checkout")}
+              </Link>
             </div>
-            <div className="border-t border-border pt-3 flex justify-between">
-              <span className="font-display font-semibold text-foreground">{t("total")}</span>
-              <span className="font-display font-bold text-lg text-foreground">{formatPrice(subtotal)}</span>
-            </div>
-            <Link to="/checkout" className="block w-full text-center py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] touch-manipulation">
-              {t("checkout")}
-            </Link>
+            {/* Upsell Block */}
+            <CartUpsell />
           </motion.div>
         </div>
       )}
