@@ -72,8 +72,6 @@ const ReturnsManagement = () => {
     if (restockItems && (action === "approved" || action === "refunded") && selected.product_items?.length) {
       for (const item of selected.product_items) {
         if (item.product_id) {
-          await supabase.rpc("increment_stock" as any, { p_id: item.product_id, qty: item.quantity } as any).catch(() => {});
-          // Fallback: direct update
           const { data: prod } = await supabase.from("products").select("stock_quantity").eq("id", item.product_id).maybeSingle();
           if (prod) {
             await supabase.from("products").update({ stock_quantity: prod.stock_quantity + (item.quantity || 1) }).eq("id", item.product_id);

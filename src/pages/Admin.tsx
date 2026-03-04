@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
   Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
-  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft
+  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft, RotateCcw
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -55,6 +55,7 @@ const adminTabs = [
   { id: "faq", label: "FAQ", icon: HelpCircle },
   { id: "chat", label: "Live Chat", icon: MessageCircle },
   { id: "tickets", label: "Tickets", icon: Ticket },
+  { id: "returns", label: "Returns", icon: RotateCcw },
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
   { id: "ai-assistant", label: "AI Assistant", icon: Brain },
