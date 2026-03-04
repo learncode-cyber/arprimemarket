@@ -109,6 +109,7 @@ const App = () => (
                     </Layout>
                   } />
                 </Routes>
+                <PWAInstallPrompt />
                 </TrackingProvider>
               </CartProvider>
             </AuthProvider>
