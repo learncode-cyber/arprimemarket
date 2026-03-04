@@ -1559,6 +1559,71 @@ export type Database = {
           },
         ]
       }
+      return_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          details: string | null
+          id: string
+          order_id: string
+          product_items: Json
+          reason: string
+          refund_amount: number
+          refund_type: string
+          resolved_at: string | null
+          resolved_by: string | null
+          restock_items: boolean
+          return_number: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          order_id: string
+          product_items?: Json
+          reason: string
+          refund_amount?: number
+          refund_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restock_items?: boolean
+          return_number: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          order_id?: string
+          product_items?: Json
+          reason?: string
+          refund_amount?: number
+          refund_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restock_items?: boolean
+          return_number?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipping_rates: {
         Row: {
           base_cost: number

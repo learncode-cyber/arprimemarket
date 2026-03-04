@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Package, Settings, LogOut, ChevronRight, Clock, Truck, CheckCircle, XCircle, ArrowLeft, MapPin, Download, PackageCheck, CreditCard, Heart, MapPinned, Lock, Plus, Trash2, Star, ShoppingCart, Loader2, Bell, BellOff, KeyRound } from "lucide-react";
+import { User, Package, Settings, LogOut, ChevronRight, Clock, Truck, CheckCircle, XCircle, ArrowLeft, MapPin, Download, PackageCheck, CreditCard, Heart, MapPinned, Lock, Plus, Trash2, Star, ShoppingCart, Loader2, Bell, BellOff, KeyRound, RotateCcw } from "lucide-react";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +10,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWishlist, useAddresses, Address } from "@/hooks/useWishlist";
+import ReturnRequestForm from "@/components/ReturnRequestForm";
 import { useProducts } from "@/hooks/useProductData";
 
 const allStatuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered"] as const;
@@ -482,6 +483,8 @@ const OrderDetail = ({ order, items, loadingItems, config, StatusIcon, currentId
         </div>
       </div>
     </div>
+    {/* Return Request */}
+    <ReturnRequestForm order={order} items={items} l={l} formatPrice={formatPrice} />
   </motion.div>
 );
 
