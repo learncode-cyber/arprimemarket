@@ -13,7 +13,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       - run: npm run build
 
       - name: Upload to Hostinger
