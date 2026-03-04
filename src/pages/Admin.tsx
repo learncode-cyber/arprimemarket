@@ -33,6 +33,7 @@ import AIAssistantDashboard from "@/components/admin/AIAssistantDashboard";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import AdminARChat from "@/components/admin/AdminARChat";
 import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
+import ReturnsManagement from "@/components/admin/ReturnsManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
