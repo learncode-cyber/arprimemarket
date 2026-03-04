@@ -36,6 +36,7 @@ import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "bi", label: "Analytics BI", icon: Activity },
   { id: "site-content", label: "Site Content", icon: PanelLeft },
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingBag },
@@ -183,6 +184,7 @@ const Admin = () => {
               transition={{ duration: 0.15 }}
             >
               {activeTab === "dashboard" && <AdminDashboard />}
+              {activeTab === "bi" && <BusinessIntelligence />}
               {activeTab === "site-content" && <SiteContentManagement />}
               {activeTab === "products" && <ProductManagement />}
               {activeTab === "orders" && <OrderManagement />}
