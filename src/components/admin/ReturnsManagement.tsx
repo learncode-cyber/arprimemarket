@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { RotateCcw, Check, X, Eye, Package, RefreshCw, Loader2 } from "lucide-react";
+import { RotateCcw, Check, X, Eye, Package, RefreshCw, Loader2, ImageIcon } from "lucide-react";
 
 interface ReturnRequest {
   id: string;
@@ -38,6 +38,8 @@ const ReturnsManagement = () => {
   const [refundAmount, setRefundAmount] = useState("");
   const [restockItems, setRestockItems] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [returnImages, setReturnImages] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
 
   const fetchReturns = async () => {
     setLoading(true);
@@ -50,6 +52,56 @@ const ReturnsManagement = () => {
   };
 
   useEffect(() => { fetchReturns(); }, [filter]);
+
+  const fetchReturnImages = async (returnNumber: string, userId: string) => {
+    setLoadingImages(true);
+    setReturnImages([]);
+    const { data } = await supabase.storage.from("return-images").list(`${userId}/${returnNumber}`);
+    if (data && data.length > 0) {
+      const urls = data.map(file => {
+        const { data: urlData } = supabase.storage.from("return-images").getPublicUrl(`${userId}/${returnNumber}/${file.name}`);
+        return urlData.publicUrl;
+      });
+      // Since bucket is private, use createSignedUrls
+      const paths = data.map(f => `${userId}/${returnNumber}/${f.name}`);
+      const { data: signed } = await supabase.storage.from("return-images").createSignedUrls(paths, 3600);
+      if (signed) setReturnImages(signed.map(s => s.signedUrl));
+    }
+    setLoadingImages(false);
+  };
+
+  const selectReturn = (r: ReturnRequest) => {
+    setSelected(r);
+    setRefundAmount(String(r.refund_amount));
+    setAdminNotes(r.admin_notes || "");
+    setRestockItems(r.restock_items);
+    fetchReturnImages(r.return_number, r.user_id);
+  };
+
+  const sendReturnStatusEmail = async (returnReq: ReturnRequest, newStatus: string, notes: string) => {
+    try {
+      // Get order info for the email
+      const { data: orderData } = await supabase.from("orders").select("order_number, shipping_email, shipping_name").eq("id", returnReq.order_id).maybeSingle();
+      if (!orderData?.shipping_email) return;
+
+      await supabase.functions.invoke("send-email", {
+        body: {
+          action: "return_status_update",
+          returnRequest: {
+            return_number: returnReq.return_number,
+            order_number: orderData.order_number,
+            status: newStatus,
+            admin_notes: notes || null,
+            refund_amount: returnReq.refund_amount,
+            email: orderData.shipping_email,
+            name: orderData.shipping_name || "Customer",
+          },
+        },
+      });
+    } catch (err) {
+      console.warn("Failed to send return status email:", err);
+    }
+  };
 
   const handleAction = async (action: "approved" | "rejected" | "refunded") => {
     if (!selected) return;
@@ -80,11 +132,15 @@ const ReturnsManagement = () => {
       }
     }
 
+    // Send email notification
+    await sendReturnStatusEmail(selected, action, adminNotes);
+
     toast.success(`Return ${action} successfully`);
     setSelected(null);
     setAdminNotes("");
     setRefundAmount("");
     setRestockItems(false);
+    setReturnImages([]);
     setProcessing(false);
     fetchReturns();
   };
@@ -141,7 +197,7 @@ const ReturnsManagement = () => {
           {returns.map(r => {
             const c = statusColors[r.status] || statusColors.pending;
             return (
-              <button key={r.id} onClick={() => { setSelected(r); setRefundAmount(String(r.refund_amount)); setAdminNotes(r.admin_notes || ""); setRestockItems(r.restock_items); }}
+              <button key={r.id} onClick={() => selectReturn(r)}
                 className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
@@ -164,11 +220,11 @@ const ReturnsManagement = () => {
 
       {/* Detail Modal */}
       {selected && (
-        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setSelected(null); setReturnImages([]); }}>
           <div onClick={e => e.stopPropagation()} className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-lg font-bold text-foreground">{selected.return_number}</h3>
-              <button onClick={() => setSelected(null)} className="p-1 rounded-lg hover:bg-secondary"><X className="w-4 h-4" /></button>
+              <button onClick={() => { setSelected(null); setReturnImages([]); }} className="p-1 rounded-lg hover:bg-secondary"><X className="w-4 h-4" /></button>
             </div>
 
             <div className="space-y-3 text-sm">
@@ -198,6 +254,24 @@ const ReturnsManagement = () => {
                   </div>
                 </div>
               )}
+
+              {/* Return Images */}
+              <div>
+                <span className="text-xs text-muted-foreground flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Customer Photos</span>
+                {loadingImages ? (
+                  <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
+                ) : returnImages.length > 0 ? (
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {returnImages.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-colors">
+                        <img src={url} alt={`Return photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">No photos uploaded</p>
+                )}
+              </div>
             </div>
 
             {selected.status === "pending" && (
