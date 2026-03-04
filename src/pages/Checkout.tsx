@@ -235,6 +235,23 @@ const Checkout = () => {
         body: { action: "process_order", order_id: order.id },
       }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
 
+      // Send order confirmation email (fire-and-forget)
+      supabase.functions.invoke("send-email", {
+        body: {
+          action: "order_confirmation",
+          order: {
+            id: order.id,
+            order_number: order.order_number,
+            name: form.name,
+            email: form.email,
+            items: orderItems.map(i => ({ title: i.title, quantity: i.quantity, total: i.total })),
+            subtotal,
+            shipping_cost: shippingCost,
+            total,
+          },
+        },
+      }).catch(err => console.warn("Email failed (non-blocking):", err));
+
       clearCart();
       setOrderPlaced(order.order_number);
       toast({ title: lang.code === "bn" ? "অর্ডার সম্পন্ন!" : "Order placed!", description: `${order.order_number}` });
