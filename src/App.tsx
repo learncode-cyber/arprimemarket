@@ -41,6 +41,7 @@ import TicketDetail from "./pages/TicketDetail";
 import AISetup from "./pages/AISetup";
 import WidgetChat from "./pages/WidgetChat";
 import ResetPassword from "./pages/ResetPassword";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,7 @@ const App = () => (
                     </Layout>
                   } />
                 </Routes>
+                <PWAInstallPrompt />
                 </TrackingProvider>
               </CartProvider>
             </AuthProvider>

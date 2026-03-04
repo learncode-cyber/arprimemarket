@@ -187,6 +187,43 @@ function contactFormTemplate(data: { name: string; email: string; subject?: stri
   };
 }
 
+function returnStatusTemplate(data: any): EmailPayload {
+  const statusLabels: Record<string, { label: string; color: string; gradient: string; emoji: string }> = {
+    approved: { label: "Approved", color: "#dcfce7", gradient: "linear-gradient(135deg,#3b82f6,#6366f1)", emoji: "✅" },
+    rejected: { label: "Rejected", color: "#fecaca", gradient: "linear-gradient(135deg,#ef4444,#dc2626)", emoji: "❌" },
+    refunded: { label: "Refunded", color: "#dcfce7", gradient: "linear-gradient(135deg,#22c55e,#10b981)", emoji: "💰" },
+  };
+  const s = statusLabels[data.status] || statusLabels.approved;
+
+  return {
+    to: data.email,
+    subject: `Return ${s.label} — ${data.return_number} ${s.emoji}`,
+    html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<div style="max-width:600px;margin:0 auto;padding:20px">
+  <div style="background:${s.gradient};border-radius:16px;padding:32px;text-align:center;margin-bottom:24px">
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:24px">${s.emoji} Return ${s.label}</h1>
+    <p style="color:${s.color};margin:0;font-size:14px">Return ${data.return_number}</p>
+  </div>
+  <div style="background:#f8fafc;border-radius:12px;padding:24px;margin-bottom:24px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:8px 0;color:#64748b;font-size:13px">Order</td><td style="padding:8px 0;font-weight:600;color:#1e293b;font-size:13px">${data.order_number}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b;font-size:13px">Return ID</td><td style="padding:8px 0;font-weight:600;color:#1e293b;font-size:13px">${data.return_number}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b;font-size:13px">Status</td><td style="padding:8px 0;font-weight:600;color:#1e293b;font-size:13px;text-transform:capitalize">${data.status}</td></tr>
+      ${data.status !== "rejected" ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px">Refund Amount</td><td style="padding:8px 0;font-weight:600;color:#1e293b;font-size:13px">৳${Number(data.refund_amount).toLocaleString()}</td></tr>` : ""}
+    </table>
+    ${data.admin_notes ? `<div style="margin-top:16px;padding:12px;background:#fff;border-radius:8px;border:1px solid #e2e8f0"><p style="margin:0 0 4px;color:#64748b;font-size:11px">ADMIN NOTE</p><p style="margin:0;color:#1e293b;font-size:13px">${data.admin_notes}</p></div>` : ""}
+  </div>
+  <div style="text-align:center;margin-bottom:24px">
+    <a href="https://arprimemarket.lovable.app/dashboard" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:14px">View Dashboard</a>
+  </div>
+  <p style="text-align:center;color:#94a3b8;font-size:12px">AR Prime Market • Your trusted shopping destination</p>
+</div>
+</body></html>`,
+  };
+}
+
 // ─── Auth helper ───
 async function requireAuth(req: Request): Promise<string> {
   const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
@@ -314,6 +351,15 @@ Deno.serve(async (req) => {
         return json({ success: true, id: result.id });
       }
 
+      case "return_status_update": {
+        const returnData = body.returnRequest;
+        if (!returnData?.email) return json({ error: "No email provided" }, 400);
+        const payload = returnStatusTemplate(returnData);
+        const result = await sendEmail(RESEND_API_KEY, payload);
+        await logEmail("return_status_update", payload, result);
+        return json({ success: true, id: result.id });
+      }
+
       case "custom": {
         // Restrict custom emails to admin role only
         const userId = await requireAuth(req);
@@ -340,7 +386,7 @@ Deno.serve(async (req) => {
           return json({ error: "Invalid recipient email" }, 400);
         }
 
-        // Strip dangerous tags (script, iframe, object, embed, form, on* attributes)
+        // Strip dangerous tags
         const sanitizedHtml = String(body.html)
           .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
           .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, "")
@@ -350,7 +396,6 @@ Deno.serve(async (req) => {
           .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
           .replace(/\son\w+\s*=\s*[^\s>]*/gi, "");
 
-        // Log custom email send for audit
         console.log(`[AUDIT] Custom email sent by admin ${userId} to ${body.to} subject: ${String(body.subject).slice(0, 50)}`);
 
         const result = await sendEmail(RESEND_API_KEY, {
