@@ -483,6 +483,8 @@ const OrderDetail = ({ order, items, loadingItems, config, StatusIcon, currentId
         </div>
       </div>
     </div>
+    {/* Return Request */}
+    <ReturnRequestForm order={order} items={items} l={l} formatPrice={formatPrice} />
   </motion.div>
 );
 
