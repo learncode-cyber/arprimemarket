@@ -227,7 +227,7 @@ const ReturnsManagement = () => {
                   </button>
                 </div>
                 <button onClick={() => handleAction("refunded")} disabled={processing}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium hover:brightness-105 disabled:opacity-60">
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:brightness-105 disabled:opacity-60">
                   {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Approve & Refund
                 </button>
               </div>

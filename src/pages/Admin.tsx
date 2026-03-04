@@ -213,6 +213,7 @@ const Admin = () => {
               {activeTab === "chat" && <ChatManagement />}
               {activeTab === "tickets" && <TicketManagement />}
               {activeTab === "tracking" && <TrackingManagement />}
+              {activeTab === "returns" && <ReturnsManagement />}
               {activeTab === "seo" && <SEOManagement />}
               {activeTab === "ai-assistant" && <AIAssistantDashboard />}
               {activeTab === "backup" && (
