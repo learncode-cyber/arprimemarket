@@ -14,6 +14,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
 import { ProductReviews } from "@/components/ProductReviews";
 import { VariantSelector } from "@/components/VariantSelector";
+import { RelatedProducts } from "@/components/RelatedProducts";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -185,6 +186,9 @@ const ProductDetail = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Related Products / Cross-sell */}
+      <RelatedProducts productId={product.id} categoryId={product.category_id} />
 
       {/* Product Reviews */}
       <ProductReviews productId={product.id} />
