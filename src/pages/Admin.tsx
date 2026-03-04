@@ -32,6 +32,7 @@ import TicketManagement from "@/components/admin/TicketManagement";
 import AIAssistantDashboard from "@/components/admin/AIAssistantDashboard";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import AdminARChat from "@/components/admin/AdminARChat";
+import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
