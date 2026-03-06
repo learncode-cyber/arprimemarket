@@ -23,6 +23,7 @@ const ProductManagement = () => {
   const [enhancedImages, setEnhancedImages] = useState<Record<string, string>>({});
   const [newProduct, setNewProduct] = useState({
     title: "", price: "", compare_at_price: "", category_id: "", image_url: "",
+    image_2: "", image_3: "", image_4: "",
     description: "", stock_quantity: "0", sku: "", tags: "", weight: "",
   });
 
@@ -49,10 +50,12 @@ const ProductManagement = () => {
     if (!newProduct.title || !newProduct.price) { toast.error("Title and price required"); return; }
     setSaving(true);
     const slug = newProduct.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+    const images = [newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].filter(Boolean);
     const { error } = await supabase.from("products").insert({
       title: newProduct.title, slug, price: parseFloat(newProduct.price),
       compare_at_price: newProduct.compare_at_price ? parseFloat(newProduct.compare_at_price) : null,
       category_id: newProduct.category_id || null, image_url: newProduct.image_url || null,
+      images: images,
       description: newProduct.description || null, stock_quantity: parseInt(newProduct.stock_quantity) || 0,
       sku: newProduct.sku || null, weight: newProduct.weight ? parseFloat(newProduct.weight) : null,
       tags: newProduct.tags ? newProduct.tags.split(",").map(t => t.trim()) : [],
@@ -61,7 +64,7 @@ const ProductManagement = () => {
     if (error) toast.error(error.message);
     else {
       toast.success("Product added!");
-      setNewProduct({ title: "", price: "", compare_at_price: "", category_id: "", image_url: "", description: "", stock_quantity: "0", sku: "", tags: "", weight: "" });
+      setNewProduct({ title: "", price: "", compare_at_price: "", category_id: "", image_url: "", image_2: "", image_3: "", image_4: "", description: "", stock_quantity: "0", sku: "", tags: "", weight: "" });
       setShowAdd(false);
       refetch();
     }
@@ -331,7 +334,23 @@ const ProductManagement = () => {
                 <div><label className="text-xs text-muted-foreground">Weight (kg)</label><input type="number" value={newProduct.weight} onChange={e => setNewProduct(p => ({ ...p, weight: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
                 <div><label className="text-xs text-muted-foreground">Tags (comma separated)</label><input value={newProduct.tags} onChange={e => setNewProduct(p => ({ ...p, tags: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
               </div>
-              <div><label className="text-xs text-muted-foreground">Image URL</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground font-medium">Product Images (up to 4)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div><label className="text-[10px] text-muted-foreground">Main Image URL *</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                  <div><label className="text-[10px] text-muted-foreground">Image 2</label><input value={newProduct.image_2} onChange={e => setNewProduct(p => ({ ...p, image_2: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                  <div><label className="text-[10px] text-muted-foreground">Image 3</label><input value={newProduct.image_3} onChange={e => setNewProduct(p => ({ ...p, image_3: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                  <div><label className="text-[10px] text-muted-foreground">Image 4</label><input value={newProduct.image_4} onChange={e => setNewProduct(p => ({ ...p, image_4: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                </div>
+                {/* Image previews */}
+                {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].some(Boolean) && (
+                  <div className="flex gap-2 flex-wrap">
+                    {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].map((url, i) => url ? (
+                      <img key={i} src={url} alt={`Preview ${i+1}`} className="w-16 h-16 rounded-lg object-cover border border-border" onError={e => (e.currentTarget.style.display = 'none')} />
+                    ) : null)}
+                  </div>
+                )}
+              </div>
               <div><label className="text-xs text-muted-foreground">Description</label><textarea rows={3} value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
               
               {/* SEO Score Widget */}
