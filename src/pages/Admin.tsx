@@ -35,6 +35,7 @@ import AdminARChat from "@/components/admin/AdminARChat";
 import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
 import ReturnsManagement from "@/components/admin/ReturnsManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
+import AdminPasswordChange from "@/components/admin/AdminPasswordChange";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -221,6 +222,7 @@ const Admin = () => {
               {activeTab === "ai-assistant" && <AIAssistantDashboard />}
               {activeTab === "backup" && (
                 <div className="space-y-6">
+                  <AdminPasswordChange />
                   <APIHealthDashboard />
                   <BackupManagement />
                 </div>

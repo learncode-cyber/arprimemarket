@@ -217,6 +217,31 @@ const Dashboard = () => {
                     {l("Save Changes", "পরিবর্তন সংরক্ষণ", "حفظ التغييرات")}
                   </button>
                 </div>
+
+                {/* Password Change in Profile */}
+                <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 space-y-4">
+                  <h2 className="font-display text-lg font-semibold text-foreground flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-primary" />
+                    {l("Change Password", "পাসওয়ার্ড পরিবর্তন", "تغيير كلمة المرور")}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">{l("New Password", "নতুন পাসওয়ার্ড", "كلمة المرور الجديدة")}</label>
+                      <input type="password" value={passwordForm.password} onChange={e => setPasswordForm(p => ({ ...p, password: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">{l("Confirm Password", "পাসওয়ার্ড নিশ্চিত করুন", "تأكيد كلمة المرور")}</label>
+                      <input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                  </div>
+                  <button onClick={handleChangePassword} disabled={changingPassword}
+                    className="px-5 py-2 rounded-xl bg-primary text-primary-foreground font-medium text-xs hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation disabled:opacity-60 flex items-center gap-2">
+                    {changingPassword && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {l("Update Password", "পাসওয়ার্ড আপডেট", "تحديث كلمة المرور")}
+                  </button>
+                </div>
               </motion.div>
             )}
 
