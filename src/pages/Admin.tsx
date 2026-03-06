@@ -34,12 +34,14 @@ import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import AdminARChat from "@/components/admin/AdminARChat";
 import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
 import ReturnsManagement from "@/components/admin/ReturnsManagement";
+import CategoryManagement from "@/components/admin/CategoryManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "bi", label: "Analytics BI", icon: Activity },
   { id: "site-content", label: "Site Content", icon: PanelLeft },
   { id: "products", label: "Products", icon: Package },
+  { id: "categories", label: "Categories", icon: Store },
   { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "customers", label: "Customers", icon: Users },
   { id: "coupons", label: "Coupons", icon: Tag },
@@ -189,6 +191,7 @@ const Admin = () => {
               {activeTab === "bi" && <BusinessIntelligence />}
               {activeTab === "site-content" && <SiteContentManagement />}
               {activeTab === "products" && <ProductManagement />}
+              {activeTab === "categories" && <CategoryManagement />}
               {activeTab === "orders" && <OrderManagement />}
               {activeTab === "customers" && <CustomerManagement />}
               {activeTab === "coupons" && <CouponManagement />}
