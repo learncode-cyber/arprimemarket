@@ -26,6 +26,7 @@ export interface DbCategory {
   id: string;
   name: string;
   slug: string;
+  image_url?: string | null;
 }
 
 // Mapped product for UI compatibility
@@ -96,13 +97,13 @@ export const useCategories = () => {
     queryFn: async (): Promise<DbCategory[]> => {
       const res = await api.categories.list();
       if (res.data) {
-        return (res.data as ApiCategory[]).map(c => ({ id: c.id, name: c.name, slug: c.slug }));
+        return (res.data as ApiCategory[]).map(c => ({ id: c.id, name: c.name, slug: c.slug, image_url: c.image_url || null }));
       }
 
       // Fallback
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, slug")
+        .select("id, name, slug, image_url")
         .order("name");
       if (error) throw error;
       return data || [];
