@@ -118,6 +118,117 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          id: string
+          order_id: string
+          order_total: number
+          paid_at: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_amount: number
+          commission_rate: number
+          created_at?: string
+          id?: string
+          order_id: string
+          order_total?: number
+          paid_at?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          order_total?: number
+          paid_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          affiliate_code: string
+          commission_rate: number
+          commission_type: string
+          created_at: string
+          id: string
+          last_sale_at: string | null
+          paid_earnings: number
+          payout_details: Json | null
+          payout_method: string | null
+          pending_earnings: number
+          status: string
+          total_clicks: number
+          total_earnings: number
+          total_orders: number
+          total_sales: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_code: string
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          last_sale_at?: string | null
+          paid_earnings?: number
+          payout_details?: Json | null
+          payout_method?: string | null
+          pending_earnings?: number
+          status?: string
+          total_clicks?: number
+          total_earnings?: number
+          total_orders?: number
+          total_sales?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_code?: string
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          last_sale_at?: string | null
+          paid_earnings?: number
+          payout_details?: Json | null
+          payout_method?: string | null
+          pending_earnings?: number
+          status?: string
+          total_clicks?: number
+          total_earnings?: number
+          total_orders?: number
+          total_sales?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_activity_log: {
         Row: {
           action: string
@@ -2571,6 +2682,15 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_inactive_affiliates: { Args: never; Returns: number }
+      credit_affiliate_commission: {
+        Args: {
+          _affiliate_code: string
+          _order_id: string
+          _order_total: number
+        }
+        Returns: undefined
+      }
       get_guest_order: {
         Args: { _order_number: string; _tracking_token: string }
         Returns: {
