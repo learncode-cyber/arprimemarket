@@ -61,7 +61,7 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const body = await req.json();
-    const { action, scanResultId, fixQuery, message, context: clientContext, stream: wantStream } = body;
+    const { action, scanResultId, fixQuery, message, context: clientContext, stream: wantStream, attachments: bodyAttachments } = body;
 
     // ─── PUBLIC CHAT (streaming supported) ───
     if (action === "chat") {
@@ -960,12 +960,28 @@ RESPONSE RULES:
 - Warn about potential risks before suggesting changes.
 - If unsure about something, say so honestly.`;
 
+      // Build multimodal messages - use vision model if images attached
+      const hasImages = bodyAttachments && bodyAttachments.length > 0;
+      const modelToUse = hasImages ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
+
+      // Build the user message content (multimodal if images)
+      let userContent: any = message;
+      if (hasImages) {
+        userContent = [
+          { type: "text", text: message },
+          ...bodyAttachments.map((img: { type: string; base64: string }) => ({
+            type: "image_url",
+            image_url: { url: `data:${img.type};base64,${img.base64}` },
+          })),
+        ];
+      }
+
       const aiResponse = await callLovableAIWithRetry(lovableApiKey, {
-        model: "google/gemini-3-flash-preview",
+        model: modelToUse,
         messages: [
           { role: "system", content: adminArPrompt },
           ...history.map((h: any) => ({ role: h.role, content: h.content })),
-          { role: "user", content: message },
+          { role: "user", content: userContent },
         ],
       }, 2);
 
