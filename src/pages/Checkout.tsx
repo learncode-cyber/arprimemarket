@@ -156,6 +156,10 @@ const Checkout = () => {
     }
     if (items.length === 0) return;
 
+    // Check email verification status
+    const isEmailVerified = user.email_confirmed_at != null;
+    const isFullyVerified = isEmailVerified && phoneVerified;
+
     setLoading(true);
     try {
       // Fraud detection check
@@ -172,12 +176,12 @@ const Checkout = () => {
       }
 
       if (fraudCheck.action === "review") {
-        // Order will be placed but flagged for review
         console.info("Order flagged for review:", fraudCheck.flags);
       }
 
       const isCOD = paymentMethod === "cod";
-      const orderStatus = isCOD ? "pending" : "awaiting_payment";
+      // Order locking: unverified users get "awaiting_verification" status
+      const orderStatus = !isFullyVerified ? "awaiting_verification" : (isCOD ? "pending" : "awaiting_payment");
       const orderPaymentStatus = isCOD ? "unpaid" : "unpaid";
 
       const { data: order, error: orderError } = await supabase
