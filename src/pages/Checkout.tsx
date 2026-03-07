@@ -315,6 +315,27 @@ const Checkout = () => {
 
       clearCart();
       setOrderPlaced(order.order_number);
+      // Store order data for invoice download on success page
+      setPlacedOrderData({
+        order_number: order.order_number,
+        created_at: new Date().toISOString(),
+        status: orderStatus,
+        payment_status: orderPaymentStatus,
+        shipping_name: form.name,
+        shipping_phone: form.phone,
+        shipping_email: form.email,
+        shipping_address: form.address,
+        shipping_city: form.city,
+        shipping_country: form.country,
+        subtotal,
+        discount_amount: couponDiscount,
+        shipping_cost: shippingCost,
+        tax_amount: 0,
+        total,
+        tracking_number: null,
+        payment_method: paymentMethod,
+      });
+      setPlacedOrderItems(orderItems.map(i => ({ title: i.title, quantity: i.quantity, price: i.price, total: i.total })));
       toast({ title: lang.code === "bn" ? "অর্ডার সম্পন্ন!" : "Order placed!", description: `${order.order_number}` });
     } catch (err: any) {
       console.error("Order error:", err);
