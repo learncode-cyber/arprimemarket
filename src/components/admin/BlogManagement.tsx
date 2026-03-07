@@ -112,6 +112,8 @@ const BlogManagement = () => {
   const [showForm, setShowForm] = useState(false);
   const [catForm, setCatForm] = useState({ name: "", slug: "", description: "" });
   const [imageUploading, setImageUploading] = useState(false);
+  const [aiProductUrl, setAiProductUrl] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: posts } = useQuery({
