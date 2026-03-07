@@ -54,7 +54,6 @@ const Products = () => {
         rating: product.rating,
         review_count: product.review_count,
         stock_quantity: product.stock_quantity,
-        weight: product.weight,
         description: product.description,
       }];
     });
