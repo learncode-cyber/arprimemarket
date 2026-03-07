@@ -68,7 +68,7 @@ serve(async (req) => {
     }
 
     // 3. Parse request
-    const { message, context, source = "external" } = await req.json();
+    const { message, context, source = "external", attachments } = await req.json();
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -82,12 +82,30 @@ serve(async (req) => {
       });
     }
 
-    // 4. Call AI via Lovable AI Gateway
+    // 4. Call AI via Lovable AI Gateway (multimodal support)
     const startTime = Date.now();
-    const systemPrompt = `You are AR Prime Market's AI assistant. You help with customer queries, product info, orders, and general assistance. ${context ? `Context: ${context}` : ""} Source: ${source}. Be concise and helpful.`;
+    const systemPrompt = `You are AR Prime Market's AI assistant. You help with customer queries, product info, orders, and general assistance. ${context ? `Context: ${context}` : ""} Source: ${source}. Be concise and helpful. If images are attached, analyze them thoroughly and provide detailed insights.`;
 
     if (!lovableKey) {
       throw new Error("LOVABLE_API_KEY not configured");
+    }
+
+    // Detect if attachments contain images for multimodal
+    const hasImages = attachments && Array.isArray(attachments) && attachments.some((a: any) => a.type?.startsWith("image/"));
+    const modelToUse = hasImages ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
+
+    // Build user content (multimodal if images present)
+    let userContent: any = message;
+    if (hasImages) {
+      userContent = [
+        { type: "text", text: message },
+        ...attachments
+          .filter((a: any) => a.type?.startsWith("image/"))
+          .map((img: { type: string; base64: string }) => ({
+            type: "image_url",
+            image_url: { url: `data:${img.type};base64,${img.base64}` },
+          })),
+      ];
     }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -97,18 +115,18 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: message },
+          { role: "user", content: userContent },
         ],
-        max_tokens: 1024,
+        max_tokens: 2048,
       }),
     });
 
     const latencyMs = Date.now() - startTime;
-    let engine = "lovable-gemini";
-    let model = "gemini-3-flash-preview";
+    let engine = hasImages ? "lovable-gemini-pro" : "lovable-gemini";
+    let model = hasImages ? "gemini-2.5-pro" : "gemini-3-flash-preview";
     let reply = "";
     let tokensUsed = 0;
     let fallbackTriggered = false;
@@ -118,7 +136,7 @@ serve(async (req) => {
       reply = data.choices?.[0]?.message?.content || "No response generated";
       tokensUsed = (data.usage?.total_tokens) || 0;
     } else if (aiResponse.status === 429 || aiResponse.status === 402) {
-      // Fallback: try lighter model
+      // Fallback: try lighter model (text-only)
       fallbackTriggered = true;
       engine = "lovable-gemini-lite";
       model = "gemini-2.5-flash-lite";
@@ -132,7 +150,7 @@ serve(async (req) => {
           model: "google/gemini-2.5-flash-lite",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: message },
+            { role: "user", content: typeof userContent === "string" ? userContent : message },
           ],
           max_tokens: 512,
         }),
@@ -166,6 +184,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       reply, tokens_used: tokensUsed, source, engine, model, latency_ms: latencyMs,
+      multimodal: hasImages, fallback_triggered: fallbackTriggered,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,32 @@ import { Plus, Pencil, Trash2, Eye, X, Bold, Italic, List, ListOrdered, Link as 
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Simple Rich Text Editor using contentEditable
+// Rich Text Editor using contentEditable with proper cursor handling
 const RichTextEditor = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isSourceMode, setIsSourceMode] = useState(false);
+  const lastValueRef = useRef(value);
+  const editorImageRef = useRef<HTMLInputElement>(null);
+
+  // Only set innerHTML when value changes externally (e.g. AI generation, edit load)
+  useEffect(() => {
+    if (editorRef.current && !isSourceMode) {
+      // Only update if the value changed externally (not from user typing)
+      if (lastValueRef.current !== value && editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value || "";
+      }
+      lastValueRef.current = value;
+    }
+  }, [value, isSourceMode]);
 
   const execCmd = useCallback((cmd: string, val?: string) => {
+    editorRef.current?.focus();
     document.execCommand(cmd, false, val);
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      lastValueRef.current = html;
+      onChange(html);
+    }
   }, [onChange]);
 
   const insertLink = () => {
@@ -25,14 +43,28 @@ const RichTextEditor = ({ value, onChange }: { value: string; onChange: (v: stri
     if (url) execCmd("createLink", url);
   };
 
+  const handleEditorImageUpload = async (file: File) => {
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `blog/inline-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("blog-images").upload(path, file);
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("blog-images").getPublicUrl(path);
+      execCmd("insertImage", publicUrl);
+    } catch {
+      // Fallback to URL prompt
+      const url = prompt("Upload failed. Enter image URL manually:");
+      if (url) execCmd("insertImage", url);
+    }
+  };
+
   const insertImage = () => {
-    const url = prompt("Enter image URL:");
-    if (url) execCmd("insertImage", url);
+    editorImageRef.current?.click();
   };
 
   const toolbarButtons = [
-    { icon: Bold, cmd: "bold", title: "Bold" },
-    { icon: Italic, cmd: "italic", title: "Italic" },
+    { icon: Bold, cmd: "bold", title: "Bold (Ctrl+B)" },
+    { icon: Italic, cmd: "italic", title: "Italic (Ctrl+I)" },
     { icon: Heading1, cmd: "formatBlock", val: "h2", title: "Heading" },
     { icon: Heading2, cmd: "formatBlock", val: "h3", title: "Subheading" },
     { icon: List, cmd: "insertUnorderedList", title: "Bullet List" },
@@ -43,12 +75,24 @@ const RichTextEditor = ({ value, onChange }: { value: string; onChange: (v: stri
 
   return (
     <div className="border border-border rounded-xl overflow-hidden bg-background">
+      <input
+        type="file"
+        ref={editorImageRef}
+        className="hidden"
+        accept="image/*"
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleEditorImageUpload(file);
+          e.target.value = "";
+        }}
+      />
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-muted/30 border-b border-border flex-wrap">
         {toolbarButtons.map(btn => (
           <button
             key={btn.cmd + (btn.val || "")}
             type="button"
+            onMouseDown={e => e.preventDefault()}
             onClick={() => btn.val ? execCmd(btn.cmd, btn.val) : execCmd(btn.cmd)}
             title={btn.title}
             className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
@@ -57,10 +101,10 @@ const RichTextEditor = ({ value, onChange }: { value: string; onChange: (v: stri
           </button>
         ))}
         <div className="w-px h-5 bg-border mx-1" />
-        <button type="button" onClick={insertLink} title="Insert Link" className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={insertLink} title="Insert Link" className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
           <LinkIcon className="w-3.5 h-3.5" />
         </button>
-        <button type="button" onClick={insertImage} title="Insert Image" className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={insertImage} title="Upload Image" className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
           <Image className="w-3.5 h-3.5" />
         </button>
         <div className="flex-1" />
@@ -87,19 +131,26 @@ const RichTextEditor = ({ value, onChange }: { value: string; onChange: (v: stri
           contentEditable
           suppressContentEditableWarning
           onInput={() => {
-            if (editorRef.current) onChange(editorRef.current.innerHTML);
+            if (editorRef.current) {
+              const html = editorRef.current.innerHTML;
+              lastValueRef.current = html;
+              onChange(html);
+            }
           }}
           onPaste={(e) => {
-            // Allow rich paste from word processors
             const html = e.clipboardData.getData("text/html");
             if (html) {
               e.preventDefault();
               document.execCommand("insertHTML", false, html);
-              if (editorRef.current) onChange(editorRef.current.innerHTML);
+              if (editorRef.current) {
+                const newHtml = editorRef.current.innerHTML;
+                lastValueRef.current = newHtml;
+                onChange(newHtml);
+              }
             }
           }}
-          dangerouslySetInnerHTML={{ __html: value }}
-          className="min-h-[250px] p-4 text-sm text-foreground focus:outline-none prose prose-sm dark:prose-invert max-w-none [&_img]:rounded-lg [&_img]:max-w-full [&_a]:text-primary [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:italic"
+          className="min-h-[250px] p-4 text-sm text-foreground focus:outline-none prose prose-sm dark:prose-invert max-w-none [&_img]:rounded-lg [&_img]:max-w-full [&_a]:text-primary [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:italic empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
+          data-placeholder="Start writing or paste formatted text here..."
         />
       )}
     </div>
