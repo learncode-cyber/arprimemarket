@@ -60,6 +60,7 @@ const Checkout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
   const shippingCost = selectedShipping?.totalCost ?? 0;
