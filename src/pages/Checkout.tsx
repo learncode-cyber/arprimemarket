@@ -108,8 +108,29 @@ const Checkout = () => {
       setErrors(fieldErrors);
       return false;
     }
+    // Strict phone validation with libphonenumber-js
+    const countryCode = (COUNTRY_NAME_TO_CODE[form.country] || "BD") as CountryCode;
+    const parsed = parsePhoneNumberFromString(form.phone, countryCode);
+    if (!parsed || !parsed.isValid()) {
+      setErrors(prev => ({ ...prev, phone: `Invalid phone number for ${form.country}` }));
+      return false;
+    }
     setErrors({});
     return true;
+  };
+
+  // Country name to code map for validation
+  const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+    "Bangladesh": "BD", "India": "IN", "Pakistan": "PK", "United States": "US",
+    "United Kingdom": "GB", "United Arab Emirates": "AE", "Saudi Arabia": "SA",
+    "Qatar": "QA", "Kuwait": "KW", "Malaysia": "MY", "Singapore": "SG",
+    "Australia": "AU", "Canada": "CA", "Germany": "DE", "France": "FR",
+    "Italy": "IT", "Spain": "ES", "Turkey": "TR", "Egypt": "EG",
+    "Nigeria": "NG", "Japan": "JP", "South Korea": "KR", "China": "CN",
+    "Indonesia": "ID", "Thailand": "TH", "Brazil": "BR", "Mexico": "MX",
+    "Nepal": "NP", "Sri Lanka": "LK", "Philippines": "PH", "Vietnam": "VN",
+    "Bahrain": "BH", "Oman": "OM", "Kenya": "KE", "Myanmar": "MM",
+    "Iraq": "IQ", "Jordan": "JO", "Lebanon": "LB",
   };
 
   const applyCoupon = async () => {
@@ -158,6 +179,15 @@ const Checkout = () => {
     if (!user) {
       toast({ title: lang.code === "bn" ? "লগইন করুন" : "Please login", description: lang.code === "bn" ? "অর্ডার দিতে লগইন প্রয়োজন।" : "You need to be logged in.", variant: "destructive" });
       navigate("/login");
+      return;
+    }
+    // Strict email verification enforcement
+    if (!user.email_confirmed_at) {
+      toast({
+        title: lang.code === "bn" ? "ইমেইল ভেরিফাই করুন" : "Email not verified",
+        description: lang.code === "bn" ? "অর্ডার দিতে আপনার ইমেইল ভেরিফাই করতে হবে। ইনবক্স চেক করুন।" : "You must verify your email before placing an order. Please check your inbox.",
+        variant: "destructive",
+      });
       return;
     }
     if (items.length === 0) return;
