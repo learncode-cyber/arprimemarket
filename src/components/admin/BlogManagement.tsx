@@ -264,9 +264,27 @@ const BlogManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="font-display text-xl font-bold text-foreground">Blog Management</h2>
-        <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" />New Post</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" />New Post</Button>
+        </div>
+      </div>
+
+      {/* AI Draft Generator */}
+      <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
+        <Sparkles className="w-4 h-4 text-primary shrink-0" />
+        <Input
+          placeholder="Paste product link or title to generate a blog draft..."
+          value={aiProductUrl}
+          onChange={e => setAiProductUrl(e.target.value)}
+          className="flex-1 text-sm"
+          onKeyDown={e => e.key === "Enter" && generateFromProduct()}
+        />
+        <Button size="sm" onClick={generateFromProduct} disabled={aiGenerating || !aiProductUrl.trim()}>
+          {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
+          {aiGenerating ? "Generating..." : "AI Draft"}
+        </Button>
       </div>
 
       <Tabs defaultValue="posts">
