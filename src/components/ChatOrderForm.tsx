@@ -102,7 +102,7 @@ const ChatOrderForm = ({ onClose, onOrderComplete }: { onClose: () => void; onOr
     setStep(2);
   };
 
-  const selectPayment = (method: string) => {
+  const selectPayment = async (method: string) => {
     setPaymentMethod(method);
     if (method === "binance_pay") {
       setStep(3); // Show crypto options
@@ -113,9 +113,9 @@ const ChatOrderForm = ({ onClose, onOrderComplete }: { onClose: () => void; onOr
     }
   };
 
-  const selectCrypto = (crypto: typeof CRYPTO_OPTIONS[0]) => {
+  const selectCrypto = async (crypto: typeof CRYPTO_OPTIONS[0]) => {
     setSelectedCrypto(crypto);
-    setStep(4); // Show QR
+    setStep(4); // Show QR (static fallback or API-generated)
   };
 
   const copyAddress = async (addr: string) => {
