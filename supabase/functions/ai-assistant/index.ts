@@ -1007,6 +1007,20 @@ RESPONSE RULES:
 
       const aiData = await aiResponse.json();
       const reply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const tokensUsed = aiData.usage?.total_tokens || 0;
+
+      // Log to ai_engine_logs for monitoring
+      try {
+        await adminClient.from("ai_engine_logs").insert({
+          engine: hasImages ? "lovable-gemini-pro" : "lovable-gemini",
+          model: modelToUse.replace("google/", ""),
+          tokens_input: Math.floor(tokensUsed * 0.3),
+          tokens_output: Math.floor(tokensUsed * 0.7),
+          latency_ms: 0,
+          fallback_triggered: false,
+          source: "admin_ar",
+        });
+      } catch {}
 
       return new Response(JSON.stringify({ reply }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
