@@ -9,26 +9,43 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
 import PromotionsBanner from "@/components/PromotionsBanner";
 import RecentlyViewed from "@/components/RecentlyViewed";
-import { useProducts } from "@/hooks/useProductData";
+import { useProducts, useCategories } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
 import { organizationSchema, websiteSchema } from "@/lib/seoSchemas";
 
-const categoryImages = [
-  { name: "Electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=85&auto=format&fit=crop" },
-  { name: "Fashion", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=85&auto=format&fit=crop" },
-  { name: "Accessories", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop" },
-  { name: "Home", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&q=85&auto=format&fit=crop" },
-];
+const fallbackCategoryImages: Record<string, string> = {
+  electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=85&auto=format&fit=crop",
+  fashion: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=85&auto=format&fit=crop",
+  accessories: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop",
+  home: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&q=85&auto=format&fit=crop",
+};
 
 const Index = () => {
   const { data: products = [], isLoading } = useProducts();
+  const { data: dbCategories = [] } = useCategories();
   const { t } = useLanguage();
 
   const featured = useMemo(() => products.filter(p => p.is_featured).slice(0, 10), [products]);
   const bestSelling = useMemo(() => products.filter(p => p.tags?.includes("best-selling")).slice(0, 10), [products]);
   const newArrivals = useMemo(() => products.filter(p => p.tags?.includes("new-arrival")).slice(0, 10), [products]);
   const trending = useMemo(() => products.filter(p => p.tags?.includes("trending")).slice(0, 10), [products]);
+
+  const categories = useMemo(() => {
+    if (dbCategories.length > 0) {
+      return dbCategories.slice(0, 4).map(cat => ({
+        name: cat.name,
+        slug: cat.slug,
+        image: cat.image_url || fallbackCategoryImages[cat.slug.toLowerCase()] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop",
+      }));
+    }
+    return [
+      { name: "Electronics", slug: "Electronics", image: fallbackCategoryImages.electronics },
+      { name: "Fashion", slug: "Fashion", image: fallbackCategoryImages.fashion },
+      { name: "Accessories", slug: "Accessories", image: fallbackCategoryImages.accessories },
+      { name: "Home", slug: "Home", image: fallbackCategoryImages.home },
+    ];
+  }, [dbCategories]);
 
   return (
     <div className="relative">
@@ -49,9 +66,9 @@ const Index = () => {
           </div>
         </motion.div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {categoryImages.map((cat, i) => (
+          {categories.map((cat, i) => (
             <motion.div key={cat.name} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
-              <Link to={`/products?category=${cat.name}`} className="group block relative aspect-[4/5] rounded-2xl overflow-hidden card-hover touch-manipulation">
+              <Link to={`/products?category=${cat.slug}`} className="group block relative aspect-[4/5] rounded-2xl overflow-hidden card-hover touch-manipulation">
                 <img src={cat.image} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async" />
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
