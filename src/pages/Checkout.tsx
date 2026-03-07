@@ -12,6 +12,8 @@ import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
 import CountrySelector from "@/components/checkout/CountrySelector";
+import InternationalPhoneInput from "@/components/InternationalPhoneInput";
+import PhoneVerification from "@/components/PhoneVerification";
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
@@ -58,6 +60,7 @@ const Checkout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
   const shippingCost = selectedShipping?.totalCost ?? 0;
@@ -153,6 +156,10 @@ const Checkout = () => {
     }
     if (items.length === 0) return;
 
+    // Check email verification status
+    const isEmailVerified = user.email_confirmed_at != null;
+    const isFullyVerified = isEmailVerified && phoneVerified;
+
     setLoading(true);
     try {
       // Fraud detection check
@@ -169,12 +176,12 @@ const Checkout = () => {
       }
 
       if (fraudCheck.action === "review") {
-        // Order will be placed but flagged for review
         console.info("Order flagged for review:", fraudCheck.flags);
       }
 
       const isCOD = paymentMethod === "cod";
-      const orderStatus = isCOD ? "pending" : "awaiting_payment";
+      // Order locking: unverified users get "awaiting_verification" status
+      const orderStatus = !isFullyVerified ? "awaiting_verification" : (isCOD ? "pending" : "awaiting_payment");
       const orderPaymentStatus = isCOD ? "unpaid" : "unpaid";
 
       const { data: order, error: orderError } = await supabase
@@ -235,8 +242,8 @@ const Checkout = () => {
         category: i.product.category, quantity: i.quantity,
       })));
 
-      // Only auto-forward COD orders (non-COD must wait for payment confirmation)
-      if (isCOD) {
+      // Only auto-forward verified COD orders (non-COD must wait for payment, unverified must wait for verification)
+      if (isCOD && isFullyVerified) {
         supabase.functions.invoke("order-processor", {
           body: { action: "process_order", order_id: order.id },
         }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
@@ -342,8 +349,7 @@ const Checkout = () => {
 
   const formFields: { key: keyof ShippingForm; label: string; span: number; type?: string }[] = [
     { key: "name", label: tx("Full Name", "পূর্ণ নাম", "الاسم الكامل"), span: 1 },
-    { key: "phone", label: tx("Phone Number", "ফোন নম্বর", "رقم الهاتف"), span: 1 },
-    { key: "email", label: tx("Email", "ইমেইল", "البريد الإلكتروني"), span: 2, type: "email" },
+    { key: "email", label: tx("Email", "ইমেইল", "البريد الإلكتروني"), span: 1, type: "email" },
     { key: "address", label: tx("Address", "ঠিকানা", "العنوان"), span: 2 },
     { key: "city", label: tx("City", "শহর", "المدينة"), span: 1 },
     { key: "postalCode", label: tx("Postal Code", "পোস্টাল কোড", "الرمز البريدي"), span: 1 },
@@ -448,15 +454,50 @@ const Checkout = () => {
                       )}
                     </div>
                   ))}
+
+                  {/* International Phone Input */}
+                  <div className="sm:col-span-2">
+                    <InternationalPhoneInput
+                      value={form.phone}
+                      onChange={(val) => handleChange("phone", val)}
+                      country={form.country}
+                      label={tx("Phone Number", "ফোন নম্বর", "رقم الهاتف")}
+                      error={errors.phone}
+                      placeholder="1XXXXXXXXX"
+                    />
+                    {/* Phone Verification */}
+                    <div className="mt-2">
+                      <PhoneVerification
+                        phone={form.phone}
+                        isVerified={phoneVerified}
+                        onVerified={() => setPhoneVerified(true)}
+                      />
+                    </div>
+                  </div>
+
                   {/* Country selector */}
                   <div>
                     <CountrySelector
                       value={form.country}
                       onChange={(val) => handleChange("country", val)}
-                      label={tx("Country", "দেশ", "البلد")}
+                      label={tx("Country", "দেশ", "البলد")}
                     />
                   </div>
                 </div>
+
+                {/* Email verification notice */}
+                {user && !user.email_confirmed_at && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                    <p className="text-[11px] text-foreground">
+                      {tx(
+                        "Please verify your email to ensure faster order processing. Check your inbox for a verification link.",
+                        "দ্রুত অর্ডার প্রসেসিংয়ের জন্য আপনার ইমেইল ভেরিফাই করুন। ভেরিফিকেশন লিংকের জন্য ইনবক্স চেক করুন।",
+                        "يرجى التحقق من بريدك الإلكتروني لضمان معالجة أسرع للطلب."
+                      )}
+                    </p>
+                  </motion.div>
+                )}
 
                 {/* Shipping Method */}
                 <div className="mt-2">
