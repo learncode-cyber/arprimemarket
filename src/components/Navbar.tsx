@@ -86,7 +86,7 @@ export const Navbar = () => {
             <LanguageSelector />
             <ThemeToggle />
 
-            <button className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
+            <button onClick={() => navigate("/products")} className="lg:hidden flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
               <Search className="w-[18px] h-[18px]" />
             </button>
 
