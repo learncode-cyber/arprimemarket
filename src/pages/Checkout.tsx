@@ -450,12 +450,33 @@ const Checkout = () => {
                       )}
                     </div>
                   ))}
+
+                  {/* International Phone Input */}
+                  <div className="sm:col-span-2">
+                    <InternationalPhoneInput
+                      value={form.phone}
+                      onChange={(val) => handleChange("phone", val)}
+                      country={form.country}
+                      label={tx("Phone Number", "ফোন নম্বর", "رقم الهاتف")}
+                      error={errors.phone}
+                      placeholder="1XXXXXXXXX"
+                    />
+                    {/* Phone Verification */}
+                    <div className="mt-2">
+                      <PhoneVerification
+                        phone={form.phone}
+                        isVerified={phoneVerified}
+                        onVerified={() => setPhoneVerified(true)}
+                      />
+                    </div>
+                  </div>
+
                   {/* Country selector */}
                   <div>
                     <CountrySelector
                       value={form.country}
                       onChange={(val) => handleChange("country", val)}
-                      label={tx("Country", "দেশ", "البلد")}
+                      label={tx("Country", "দেশ", "البলد")}
                     />
                   </div>
                 </div>
