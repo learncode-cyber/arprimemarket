@@ -12,6 +12,8 @@ import { z } from "zod";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
 import CountrySelector from "@/components/checkout/CountrySelector";
+import InternationalPhoneInput from "@/components/InternationalPhoneInput";
+import PhoneVerification from "@/components/PhoneVerification";
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
