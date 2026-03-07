@@ -74,19 +74,6 @@ CREATE TABLE public.product_variants (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ─── Profiles ───
-CREATE TABLE public.profiles (
-  id uuid PRIMARY KEY,
-  full_name text,
-  phone text,
-  address text,
-  city text,
-  country text,
-  avatar_url text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
 -- ─── User Roles ───
 CREATE TABLE public.user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
