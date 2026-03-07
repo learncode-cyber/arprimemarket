@@ -485,6 +485,20 @@ const Checkout = () => {
                   </div>
                 </div>
 
+                {/* Email verification notice */}
+                {user && !user.email_confirmed_at && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                    <p className="text-[11px] text-foreground">
+                      {tx(
+                        "Please verify your email to ensure faster order processing. Check your inbox for a verification link.",
+                        "দ্রুত অর্ডার প্রসেসিংয়ের জন্য আপনার ইমেইল ভেরিফাই করুন। ভেরিফিকেশন লিংকের জন্য ইনবক্স চেক করুন।",
+                        "يرجى التحقق من بريدك الإلكتروني لضمان معالجة أسرع للطلب."
+                      )}
+                    </p>
+                  </motion.div>
+                )}
+
                 {/* Shipping Method */}
                 <div className="mt-2">
                   <ShippingMethodSelector options={shippingOptions} selectedType={shippingType} onSelect={setShippingType} tx={tx} />
