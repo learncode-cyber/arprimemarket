@@ -255,15 +255,29 @@ async function syncPaymentVerification(supabase: any) {
   for (const tx of confirmed) {
     const { data: order } = await supabase
       .from("orders")
-      .select("id, payment_status")
+      .select("id, payment_status, status")
       .eq("id", tx.order_id)
       .neq("payment_status", "paid")
       .maybeSingle();
 
     if (order) {
-      await supabase.from("orders").update({ payment_status: "paid" }).eq("id", order.id);
+      // Update payment status and move from awaiting_payment to pending/processing
+      const statusUpdate: any = { payment_status: "paid" };
+      if (order.status === "awaiting_payment") {
+        statusUpdate.status = "pending";
+      }
+      await supabase.from("orders").update(statusUpdate).eq("id", order.id);
       await createAlert(supabase, order.id, "success", "Payment verified",
         `Payment of ${tx.amount} confirmed.`);
+      
+      // Auto-forward to supplier now that payment is confirmed
+      try {
+        await processNewOrder(supabase, order.id);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown";
+        console.warn("Auto-forward after payment failed:", msg);
+      }
+      
       updated++;
     }
   }
