@@ -41,3 +41,12 @@ verify_jwt = false
 
 [functions.binance-pay]
 verify_jwt = false
+
+[functions.ai-bridge]
+verify_jwt = false
+
+[functions.webhook-receiver]
+verify_jwt = false
+
+[functions.webhook-dispatcher]
+verify_jwt = false
