@@ -2,12 +2,13 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, SlidersHorizontal, Loader2, X, ArrowUpDown, ChevronDown, PackageX } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { useProducts, useCategories } from "@/hooks/useProductData";
+import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { ProductCard } from "@/components/ProductCard";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { SEOHead } from "@/components/SEOHead";
 import { collectionPageSchema } from "@/lib/seoSchemas";
+import ProductComparison, { CompareProduct } from "@/components/ProductComparison";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -35,6 +36,30 @@ const Products = () => {
   const { t } = useLanguage();
   const { formatPrice } = useCurrency();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [compareProducts, setCompareProducts] = useState<CompareProduct[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
+
+  const handleCompare = useCallback((product: Product) => {
+    setCompareProducts(prev => {
+      const exists = prev.find(p => p.id === product.id);
+      if (exists) return prev.filter(p => p.id !== product.id);
+      if (prev.length >= 4) return prev;
+      return [...prev, {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        price: product.price,
+        compare_at_price: product.compare_at_price,
+        image_url: product.image,
+        rating: product.rating,
+        review_count: product.review_count,
+        stock_quantity: product.stock_quantity,
+        weight: product.weight,
+        description: product.description,
+      }];
+    });
+    setShowCompare(true);
+  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -306,7 +331,13 @@ const Products = () => {
       ) : paginated.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
           {paginated.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              index={i}
+              onCompare={handleCompare}
+              isComparing={compareProducts.some(cp => cp.id === p.id)}
+            />
           ))}
         </div>
       ) : (
@@ -336,6 +367,16 @@ const Products = () => {
           ))}
         </nav>
       )}
+
+      <AnimatePresence>
+        {showCompare && compareProducts.length > 0 && (
+          <ProductComparison
+            products={compareProducts}
+            onRemove={(id) => setCompareProducts(prev => prev.filter(p => p.id !== id))}
+            onClose={() => setShowCompare(false)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 };
