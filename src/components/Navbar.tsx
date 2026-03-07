@@ -11,6 +11,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSectionContent } from "@/hooks/useSiteContent";
+import { AdvancedSearch } from "./AdvancedSearch";
 
 export const Navbar = () => {
   const [hidden, setHidden] = useState(false);
@@ -74,6 +75,10 @@ export const Navbar = () => {
                 {link.label}
               </Link>
             ))}
+          </div>
+
+          <div className="hidden lg:block">
+            <AdvancedSearch />
           </div>
 
           <div className="flex items-center gap-0.5 sm:gap-1">
