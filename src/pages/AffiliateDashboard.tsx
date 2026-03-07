@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency } from "@/context/CurrencyContext";
-import SEOHead from "@/components/SEOHead";
+import { SEOHead } from "@/components/SEOHead";
 import {
   Users, DollarSign, TrendingUp, Copy, Check, Link as LinkIcon,
   BarChart3, Clock, ShieldCheck, Loader2, ArrowLeft, Share2, Gift
