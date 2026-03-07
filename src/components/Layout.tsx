@@ -17,6 +17,15 @@ export const Layout = ({ children }: LayoutProps) => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
 
+  // Capture affiliate referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      sessionStorage.setItem("affiliate_ref", ref);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />

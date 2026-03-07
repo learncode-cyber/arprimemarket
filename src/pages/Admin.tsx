@@ -36,6 +36,7 @@ import BusinessIntelligence from "@/components/admin/BusinessIntelligence";
 import ReturnsManagement from "@/components/admin/ReturnsManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import AdminPasswordChange from "@/components/admin/AdminPasswordChange";
+import AffiliateManagement from "@/components/admin/AffiliateManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -49,6 +50,7 @@ const adminTabs = [
   { id: "promotions", label: "Promotions", icon: Zap },
   { id: "referrals", label: "Referrals", icon: Gift },
   { id: "campaigns", label: "Campaigns", icon: Megaphone },
+  { id: "affiliates", label: "Affiliates", icon: Users },
   { id: "payments", label: "Payments", icon: Wallet },
   { id: "shipping", label: "Shipping", icon: Truck },
   { id: "suppliers", label: "Suppliers", icon: Store },
@@ -199,6 +201,7 @@ const Admin = () => {
               {activeTab === "promotions" && <PromotionManagement />}
               {activeTab === "referrals" && <ReferralManagement />}
               {activeTab === "campaigns" && <CampaignManagement />}
+              {activeTab === "affiliates" && <AffiliateManagement />}
               {activeTab === "payments" && (
                 <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
                   <PaymentSettings />

@@ -42,6 +42,7 @@ import TicketDetail from "./pages/TicketDetail";
 import AISetup from "./pages/AISetup";
 import WidgetChat from "./pages/WidgetChat";
 import ResetPassword from "./pages/ResetPassword";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 const queryClient = new QueryClient({
@@ -105,6 +106,7 @@ const App = () => (
                         <Route path="/tickets/new" element={<NewTicket />} />
                         <Route path="/tickets/:id" element={<TicketDetail />} />
                         <Route path="/ai-setup" element={<AISetup />} />
+                        <Route path="/affiliate" element={<AffiliateDashboard />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
