@@ -242,8 +242,8 @@ const Checkout = () => {
         category: i.product.category, quantity: i.quantity,
       })));
 
-      // Only auto-forward COD orders (non-COD must wait for payment confirmation)
-      if (isCOD) {
+      // Only auto-forward verified COD orders (non-COD must wait for payment, unverified must wait for verification)
+      if (isCOD && isFullyVerified) {
         supabase.functions.invoke("order-processor", {
           body: { action: "process_order", order_id: order.id },
         }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
