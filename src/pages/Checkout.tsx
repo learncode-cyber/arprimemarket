@@ -345,8 +345,7 @@ const Checkout = () => {
 
   const formFields: { key: keyof ShippingForm; label: string; span: number; type?: string }[] = [
     { key: "name", label: tx("Full Name", "পূর্ণ নাম", "الاسم الكامل"), span: 1 },
-    { key: "phone", label: tx("Phone Number", "ফোন নম্বর", "رقم الهاتف"), span: 1 },
-    { key: "email", label: tx("Email", "ইমেইল", "البريد الإلكتروني"), span: 2, type: "email" },
+    { key: "email", label: tx("Email", "ইমেইল", "البريد الإلكتروني"), span: 1, type: "email" },
     { key: "address", label: tx("Address", "ঠিকানা", "العنوان"), span: 2 },
     { key: "city", label: tx("City", "শহর", "المدينة"), span: 1 },
     { key: "postalCode", label: tx("Postal Code", "পোস্টাল কোড", "الرمز البريدي"), span: 1 },
