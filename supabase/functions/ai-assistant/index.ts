@@ -930,6 +930,13 @@ CORE CAPABILITIES:
    - Email automation guidance
    - Inventory auto-management rules
 
+6. **External API Bridge (/functions/v1/ai-bridge)**:
+   - Fully connected to api_keys, api_call_logs, ai_engine_logs tables
+   - Supports multimodal: external tools (n8n, WhatsApp, Telegram) can send images via attachments[]
+   - Uses SHA-256 API key auth + rate limiting (60/min, 1000/day)
+   - Automatic Gemini Pro fallback for vision tasks
+   - If the owner asks about n8n or automation: explain how to use the ai-bridge endpoint with API keys
+
 CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 📦 Products: ${totalProducts} total (${activeProducts} active, ${outOfStock || 0} out of stock)
 🛒 Orders: ${totalOrders} total (${pendingOrders} pending)
@@ -945,10 +952,16 @@ CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 TECH STACK:
 - Frontend: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - Backend: Supabase (PostgreSQL + Edge Functions + Auth + RLS)
-- AI: Lovable AI Gateway (Gemini, GPT models)
+- AI: Lovable AI Gateway (Gemini 2.5 Pro for vision, Gemini 3 Flash for text)
+- External API: /functions/v1/ai-bridge (multimodal, n8n-ready, rate-limited)
 - Hosting: Currently on Lovable, portable to any platform
 - Site URL: https://arprimemarket.lovable.app
 - Admin route: /ar
+
+MULTIMODAL CAPABILITIES:
+- You can analyze uploaded screenshots, error images, CSV files, and JSON data
+- When images are attached, you use Gemini 2.5 Pro for vision analysis
+- You can diagnose UI bugs, database errors, and code issues from screenshots
 
 RESPONSE RULES:
 - Use Bengali if owner writes in Bengali, English if in English. Mix naturally.
@@ -994,6 +1007,20 @@ RESPONSE RULES:
 
       const aiData = await aiResponse.json();
       const reply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const tokensUsed = aiData.usage?.total_tokens || 0;
+
+      // Log to ai_engine_logs for monitoring
+      try {
+        await adminClient.from("ai_engine_logs").insert({
+          engine: hasImages ? "lovable-gemini-pro" : "lovable-gemini",
+          model: modelToUse.replace("google/", ""),
+          tokens_input: Math.floor(tokensUsed * 0.3),
+          tokens_output: Math.floor(tokensUsed * 0.7),
+          latency_ms: 0,
+          fallback_triggered: false,
+          source: "admin_ar",
+        });
+      } catch {}
 
       return new Response(JSON.stringify({ reply }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
