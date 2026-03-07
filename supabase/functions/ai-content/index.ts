@@ -210,6 +210,87 @@ ${generate_type === "description" || generate_type === "both" ? "- Create an SEO
       }
     }
 
+    if (action === "blog_from_product") {
+      const { product_url, product_title, product_description, product_category, product_price } = body;
+      if (!product_url && !product_title) return json({ error: "Product URL or title required" }, 400);
+
+      const blogSystemPrompt = `You are an expert ecommerce content marketer and blogger. Write engaging, SEO-optimized blog posts that naturally showcase products without being overly salesy. Write in a conversational, helpful tone. Avoid AI-sounding phrases.`;
+
+      const blogUserPrompt = `Create a complete blog post that features/reviews this product:
+${product_url ? `Product URL: ${product_url}` : ""}
+${product_title ? `Product Title: ${product_title}` : ""}
+${product_description ? `Product Description: ${product_description}` : ""}
+${product_category ? `Category: ${product_category}` : ""}
+${product_price ? `Price: ${product_price}` : ""}
+
+Requirements:
+- Blog title: Catchy, SEO-friendly, 50-70 chars
+- Slug: URL-friendly version of title
+- Excerpt: 1-2 sentence hook, max 160 chars
+- Content: 400-600 word blog post in HTML format with proper <h2>, <h3>, <p>, <ul> tags. Include introduction, product highlights, use cases, and a conclusion with CTA.
+- Meta title: Under 60 chars with primary keyword
+- Meta description: Under 160 chars with CTA
+- Read time estimate`;
+
+      const blogTools = [{
+        type: "function",
+        function: {
+          name: "blog_post_content",
+          description: "Return generated blog post content",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Blog post title, 50-70 chars" },
+              slug: { type: "string", description: "URL-friendly slug" },
+              excerpt: { type: "string", description: "Short excerpt, max 160 chars" },
+              content: { type: "string", description: "Full blog post in HTML format, 400-600 words" },
+              meta_title: { type: "string", description: "SEO meta title, max 60 chars" },
+              meta_description: { type: "string", description: "SEO meta description, max 160 chars" },
+              read_time: { type: "string", description: "Estimated read time like '4 min'" },
+            },
+            required: ["title", "slug", "excerpt", "content", "meta_title", "meta_description", "read_time"],
+            additionalProperties: false,
+          },
+        },
+      }];
+
+      const blogRes = await fetch(GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: blogSystemPrompt },
+            { role: "user", content: blogUserPrompt },
+          ],
+          tools: blogTools,
+          tool_choice: { type: "function", function: { name: "blog_post_content" } },
+        }),
+      });
+
+      if (!blogRes.ok) {
+        if (blogRes.status === 429) return json({ error: "Rate limited. Try again shortly." }, 429);
+        if (blogRes.status === 402) return json({ error: "AI credits exhausted." }, 402);
+        const t = await blogRes.text();
+        console.error("AI blog error:", blogRes.status, t);
+        return json({ error: "AI blog generation failed" }, 500);
+      }
+
+      const blogData = await blogRes.json();
+      const blogToolCall = blogData.choices?.[0]?.message?.tool_calls?.[0];
+      if (!blogToolCall) return json({ error: "No blog content generated" }, 500);
+
+      try {
+        const content = JSON.parse(blogToolCall.function.arguments);
+        return json({ success: true, content });
+      } catch {
+        return json({ error: "Failed to parse AI blog response" }, 500);
+      }
+    }
+
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
