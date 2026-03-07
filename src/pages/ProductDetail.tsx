@@ -16,6 +16,7 @@ import { ProductReviews } from "@/components/ProductReviews";
 import { VariantSelector } from "@/components/VariantSelector";
 import { RelatedProducts } from "@/components/RelatedProducts";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { StockAlertButton } from "@/components/StockAlertButton";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -176,6 +177,9 @@ const ProductDetail = () => {
               <Heart className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
+
+          {/* Stock Alert */}
+          <StockAlertButton productId={product.id} stockQuantity={selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity} />
 
           {/* Share Buttons */}
           <ShareButtons url={`/products/${product.slug}`} title={product.title} />

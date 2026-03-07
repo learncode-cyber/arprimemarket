@@ -11,6 +11,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSectionContent } from "@/hooks/useSiteContent";
+import { AdvancedSearch } from "./AdvancedSearch";
 
 export const Navbar = () => {
   const [hidden, setHidden] = useState(false);
@@ -76,12 +77,16 @@ export const Navbar = () => {
             ))}
           </div>
 
+          <div className="hidden lg:block">
+            <AdvancedSearch />
+          </div>
+
           <div className="flex items-center gap-0.5 sm:gap-1">
             <CurrencySelector />
             <LanguageSelector />
             <ThemeToggle />
 
-            <button className="hidden md:flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
+            <button onClick={() => navigate("/products")} className="lg:hidden flex p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors">
               <Search className="w-[18px] h-[18px]" />
             </button>
 
