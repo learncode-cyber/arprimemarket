@@ -61,6 +61,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const affiliateRef = sessionStorage.getItem("affiliate_ref") || null;
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
   const shippingCost = selectedShipping?.totalCost ?? 0;
@@ -241,6 +242,17 @@ const Checkout = () => {
         id: i.product.id, title: i.product.title, price: i.product.price,
         category: i.product.category, quantity: i.quantity,
       })));
+
+      // Credit affiliate commission if referred
+      if (affiliateRef) {
+        supabase.rpc("credit_affiliate_commission", {
+          _affiliate_code: affiliateRef,
+          _order_id: order.id,
+          _order_total: total,
+        }).then(() => {
+          sessionStorage.removeItem("affiliate_ref");
+        }).catch(err => console.warn("Affiliate credit failed (non-blocking):", err));
+      }
 
       // Only auto-forward verified COD orders (non-COD must wait for payment, unverified must wait for verification)
       if (isCOD && isFullyVerified) {
