@@ -57,6 +57,15 @@ export const ProductCard = memo(({ product, index = 0, onCompare, isComparing }:
             )}
           </div>
           <div className="absolute top-2 right-2 flex items-center gap-1">
+            {onCompare && (
+              <button
+                onClick={(e) => { e.preventDefault(); onCompare(product); }}
+                className={`p-1.5 rounded-lg backdrop-blur-sm transition-all ${isComparing ? "bg-primary text-primary-foreground" : "bg-card/80 text-muted-foreground hover:text-foreground"}`}
+                aria-label="Compare"
+              >
+                <GitCompare className="w-3.5 h-3.5" />
+              </button>
+            )}
             <WishlistButton productId={product.id} className="bg-card/80 backdrop-blur-sm rounded-lg" />
           </div>
         </div>
