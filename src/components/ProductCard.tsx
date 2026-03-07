@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTranslatedText } from "@/hooks/useTranslatedText";
-import { ShoppingCart, Star, Zap } from "lucide-react";
+import { ShoppingCart, Star, Zap, GitCompare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { WishlistButton } from "@/components/WishlistButton";
 import { performanceUtils } from "@/lib/services";
@@ -14,9 +14,11 @@ import { QuickOrderModal } from "@/components/QuickOrderModal";
 interface ProductCardProps {
   product: Product;
   index?: number;
+  onCompare?: (product: Product) => void;
+  isComparing?: boolean;
 }
 
-export const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
+export const ProductCard = memo(({ product, index = 0, onCompare, isComparing }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
