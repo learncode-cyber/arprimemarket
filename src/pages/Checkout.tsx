@@ -173,6 +173,10 @@ const Checkout = () => {
         console.info("Order flagged for review:", fraudCheck.flags);
       }
 
+      const isCOD = paymentMethod === "cod";
+      const orderStatus = isCOD ? "pending" : "awaiting_payment";
+      const orderPaymentStatus = isCOD ? "unpaid" : "unpaid";
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -184,7 +188,8 @@ const Checkout = () => {
           currency: "BDT",
           order_number: "TEMP",
           payment_method: paymentMethod,
-          payment_status: "unpaid",
+          payment_status: orderPaymentStatus,
+          status: orderStatus,
           payment_reference: txReference.trim() || null,
           shipping_name: form.name,
           shipping_phone: form.phone,
@@ -230,10 +235,12 @@ const Checkout = () => {
         category: i.product.category, quantity: i.quantity,
       })));
 
-      // Trigger auto supplier forwarding (fire-and-forget)
-      supabase.functions.invoke("order-processor", {
-        body: { action: "process_order", order_id: order.id },
-      }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
+      // Only auto-forward COD orders (non-COD must wait for payment confirmation)
+      if (isCOD) {
+        supabase.functions.invoke("order-processor", {
+          body: { action: "process_order", order_id: order.id },
+        }).catch(err => console.warn("Auto-forward failed (non-blocking):", err));
+      }
 
       // Send order confirmation email (fire-and-forget)
       supabase.functions.invoke("send-email", {
@@ -278,12 +285,16 @@ const Checkout = () => {
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-            {tx("Order Confirmed!", "অর্ডার নিশ্চিত!", "تم تأكيد الطلب!")}
+            {paymentMethod === "cod"
+              ? tx("Order Confirmed!", "অর্ডার নিশ্চিত!", "تم تأكيد الطلب!")
+              : tx("Order Placed — Awaiting Payment", "অর্ডার দেওয়া হয়েছে — পেমেন্ট অপেক্ষায়", "تم تقديم الطلب — في انتظار الدفع")}
           </h1>
           <p className="text-sm text-muted-foreground">
             {tx("Your order", "আপনার অর্ডার", "طلبك")}{" "}
             <span className="font-bold text-foreground">{orderPlaced}</span>{" "}
-            {tx("has been placed successfully.", "সফলভাবে দেওয়া হয়েছে।", "تم بنجاح.")}
+            {paymentMethod === "cod"
+              ? tx("has been confirmed successfully.", "সফলভাবে নিশ্চিত হয়েছে।", "تم تأكيده بنجاح.")
+              : tx("will be processed after payment verification.", "পেমেন্ট যাচাইয়ের পর প্রসেস করা হবে।", "ستتم معالجته بعد التحقق من الدفع.")}
           </p>
 
           <div className="bg-card border border-border rounded-2xl p-4 space-y-2 text-left">
