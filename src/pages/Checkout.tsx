@@ -560,15 +560,15 @@ const Checkout = () => {
                   </div>
                 </div>
 
-                {/* Email verification notice */}
+                {/* Email verification notice - STRICT */}
                 {user && !user.email_confirmed_at && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
-                    <p className="text-[11px] text-foreground">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-[11px] text-foreground font-medium">
                       {tx(
-                        "Please verify your email to ensure faster order processing. Check your inbox for a verification link.",
-                        "দ্রুত অর্ডার প্রসেসিংয়ের জন্য আপনার ইমেইল ভেরিফাই করুন। ভেরিফিকেশন লিংকের জন্য ইনবক্স চেক করুন।",
-                        "يرجى التحقق من بريدك الإلكتروني لضمان معالجة أسرع للطلب."
+                        "⚠️ Email verification required. You cannot place an order until your email is verified. Check your inbox.",
+                        "⚠️ ইমেইল ভেরিফিকেশন প্রয়োজন। ইমেইল ভেরিফাই না হওয়া পর্যন্ত অর্ডার দেওয়া যাবে না। ইনবক্স চেক করুন।",
+                        "⚠️ التحقق من البريد مطلوب. لا يمكنك تقديم طلب حتى يتم التحقق من بريدك الإلكتروني."
                       )}
                     </p>
                   </motion.div>
