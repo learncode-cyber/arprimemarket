@@ -15,6 +15,7 @@ import { productSchema, breadcrumbSchema } from "@/lib/seoSchemas";
 import { ProductReviews } from "@/components/ProductReviews";
 import { VariantSelector } from "@/components/VariantSelector";
 import { RelatedProducts } from "@/components/RelatedProducts";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -27,10 +28,12 @@ const ProductDetail = () => {
   const [qty, setQty] = useState(1);
   const [quickOrder, setQuickOrder] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const { addProduct: addToRecentlyViewed } = useRecentlyViewed();
 
   useEffect(() => {
     if (product) {
       trackViewContent({ id: product.id, title: product.title, price: product.price, category: product.category, currency: product.currency });
+      addToRecentlyViewed({ id: product.id, title: product.title, slug: product.slug, price: product.price, image_url: product.image });
     }
   }, [product, trackViewContent]);
 
