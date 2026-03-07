@@ -385,6 +385,13 @@ const Checkout = () => {
             )}
           </div>
 
+          {/* Invoice Download */}
+          {placedOrderData && placedOrderItems.length > 0 && (
+            <div className="flex justify-center">
+              <InvoiceDownload order={placedOrderData} items={placedOrderItems} />
+            </div>
+          )}
+
           <div className="flex gap-3 justify-center pt-2">
             <Link to="/dashboard" className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation hover:brightness-105 transition-all">
               {t("dashboard")}
@@ -531,7 +538,7 @@ const Checkout = () => {
                       country={form.country}
                       label={tx("Phone Number", "ফোন নম্বর", "رقم الهاتف")}
                       error={errors.phone}
-                      placeholder="1XXXXXXXXX"
+                      onValidationChange={setPhoneValid}
                     />
                     {/* Phone Verification */}
                     <div className="mt-2">
