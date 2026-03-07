@@ -18,6 +18,8 @@ import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
 import { api } from "@/lib/api";
+import { InvoiceDownload } from "@/components/InvoiceDownload";
+import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
 const shippingSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -61,6 +63,9 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneValid, setPhoneValid] = useState(false);
+  const [placedOrderData, setPlacedOrderData] = useState<any>(null);
+  const [placedOrderItems, setPlacedOrderItems] = useState<any[]>([]);
   const affiliateRef = sessionStorage.getItem("affiliate_ref") || null;
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
@@ -103,8 +108,29 @@ const Checkout = () => {
       setErrors(fieldErrors);
       return false;
     }
+    // Strict phone validation with libphonenumber-js
+    const countryCode = (COUNTRY_NAME_TO_CODE[form.country] || "BD") as CountryCode;
+    const parsed = parsePhoneNumberFromString(form.phone, countryCode);
+    if (!parsed || !parsed.isValid()) {
+      setErrors(prev => ({ ...prev, phone: `Invalid phone number for ${form.country}` }));
+      return false;
+    }
     setErrors({});
     return true;
+  };
+
+  // Country name to code map for validation
+  const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+    "Bangladesh": "BD", "India": "IN", "Pakistan": "PK", "United States": "US",
+    "United Kingdom": "GB", "United Arab Emirates": "AE", "Saudi Arabia": "SA",
+    "Qatar": "QA", "Kuwait": "KW", "Malaysia": "MY", "Singapore": "SG",
+    "Australia": "AU", "Canada": "CA", "Germany": "DE", "France": "FR",
+    "Italy": "IT", "Spain": "ES", "Turkey": "TR", "Egypt": "EG",
+    "Nigeria": "NG", "Japan": "JP", "South Korea": "KR", "China": "CN",
+    "Indonesia": "ID", "Thailand": "TH", "Brazil": "BR", "Mexico": "MX",
+    "Nepal": "NP", "Sri Lanka": "LK", "Philippines": "PH", "Vietnam": "VN",
+    "Bahrain": "BH", "Oman": "OM", "Kenya": "KE", "Myanmar": "MM",
+    "Iraq": "IQ", "Jordan": "JO", "Lebanon": "LB",
   };
 
   const applyCoupon = async () => {
@@ -153,6 +179,15 @@ const Checkout = () => {
     if (!user) {
       toast({ title: lang.code === "bn" ? "লগইন করুন" : "Please login", description: lang.code === "bn" ? "অর্ডার দিতে লগইন প্রয়োজন।" : "You need to be logged in.", variant: "destructive" });
       navigate("/login");
+      return;
+    }
+    // Strict email verification enforcement
+    if (!user.email_confirmed_at) {
+      toast({
+        title: lang.code === "bn" ? "ইমেইল ভেরিফাই করুন" : "Email not verified",
+        description: lang.code === "bn" ? "অর্ডার দিতে আপনার ইমেইল ভেরিফাই করতে হবে। ইনবক্স চেক করুন।" : "You must verify your email before placing an order. Please check your inbox.",
+        variant: "destructive",
+      });
       return;
     }
     if (items.length === 0) return;
@@ -280,6 +315,27 @@ const Checkout = () => {
 
       clearCart();
       setOrderPlaced(order.order_number);
+      // Store order data for invoice download on success page
+      setPlacedOrderData({
+        order_number: order.order_number,
+        created_at: new Date().toISOString(),
+        status: orderStatus,
+        payment_status: orderPaymentStatus,
+        shipping_name: form.name,
+        shipping_phone: form.phone,
+        shipping_email: form.email,
+        shipping_address: form.address,
+        shipping_city: form.city,
+        shipping_country: form.country,
+        subtotal,
+        discount_amount: couponDiscount,
+        shipping_cost: shippingCost,
+        tax_amount: 0,
+        total,
+        tracking_number: null,
+        payment_method: paymentMethod,
+      });
+      setPlacedOrderItems(orderItems.map(i => ({ title: i.title, quantity: i.quantity, price: i.price, total: i.total })));
       toast({ title: lang.code === "bn" ? "অর্ডার সম্পন্ন!" : "Order placed!", description: `${order.order_number}` });
     } catch (err: any) {
       console.error("Order error:", err);
@@ -328,6 +384,13 @@ const Checkout = () => {
               </div>
             )}
           </div>
+
+          {/* Invoice Download */}
+          {placedOrderData && placedOrderItems.length > 0 && (
+            <div className="flex justify-center">
+              <InvoiceDownload order={placedOrderData} items={placedOrderItems} />
+            </div>
+          )}
 
           <div className="flex gap-3 justify-center pt-2">
             <Link to="/dashboard" className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation hover:brightness-105 transition-all">
@@ -475,7 +538,7 @@ const Checkout = () => {
                       country={form.country}
                       label={tx("Phone Number", "ফোন নম্বর", "رقم الهاتف")}
                       error={errors.phone}
-                      placeholder="1XXXXXXXXX"
+                      onValidationChange={setPhoneValid}
                     />
                     {/* Phone Verification */}
                     <div className="mt-2">
@@ -497,15 +560,15 @@ const Checkout = () => {
                   </div>
                 </div>
 
-                {/* Email verification notice */}
+                {/* Email verification notice - STRICT */}
                 {user && !user.email_confirmed_at && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
-                    <p className="text-[11px] text-foreground">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-[11px] text-foreground font-medium">
                       {tx(
-                        "Please verify your email to ensure faster order processing. Check your inbox for a verification link.",
-                        "দ্রুত অর্ডার প্রসেসিংয়ের জন্য আপনার ইমেইল ভেরিফাই করুন। ভেরিফিকেশন লিংকের জন্য ইনবক্স চেক করুন।",
-                        "يرجى التحقق من بريدك الإلكتروني لضمان معالجة أسرع للطلب."
+                        "⚠️ Email verification required. You cannot place an order until your email is verified. Check your inbox.",
+                        "⚠️ ইমেইল ভেরিফিকেশন প্রয়োজন। ইমেইল ভেরিফাই না হওয়া পর্যন্ত অর্ডার দেওয়া যাবে না। ইনবক্স চেক করুন।",
+                        "⚠️ التحقق من البريد مطلوب. لا يمكنك تقديم طلب حتى يتم التحقق من بريدك الإلكتروني."
                       )}
                     </p>
                   </motion.div>

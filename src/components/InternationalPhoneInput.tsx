@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Phone, Search } from "lucide-react";
+import { ChevronDown, Phone, Search, AlertCircle, CheckCircle2 } from "lucide-react";
+import { parsePhoneNumberFromString, getExampleNumber, type CountryCode } from "libphonenumber-js";
+import examples from "libphonenumber-js/mobile/examples";
 
 const COUNTRY_CODES = [
   { name: "Bangladesh", code: "BD", dial: "+880", flag: "🇧🇩" },
@@ -45,16 +47,8 @@ const COUNTRY_CODES = [
   { name: "Lebanon", code: "LB", dial: "+961", flag: "🇱🇧" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const COUNTRY_NAME_TO_CODE: Record<string, string> = {
-  "Bangladesh": "BD", "India": "IN", "Pakistan": "PK", "United States": "US",
-  "United Kingdom": "GB", "United Arab Emirates": "AE", "Saudi Arabia": "SA",
-  "Qatar": "QA", "Kuwait": "KW", "Malaysia": "MY", "Singapore": "SG",
-  "Australia": "AU", "Canada": "CA", "Germany": "DE", "France": "FR",
-  "Italy": "IT", "Spain": "ES", "Turkey": "TR", "Egypt": "EG",
-  "Nigeria": "NG", "Japan": "JP", "South Korea": "KR", "China": "CN",
-  "Indonesia": "ID", "Thailand": "TH", "Brazil": "BR", "Mexico": "MX",
-  "Nepal": "NP", "Sri Lanka": "LK", "Philippines": "PH", "Vietnam": "VN",
-};
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {};
+COUNTRY_CODES.forEach(c => { COUNTRY_NAME_TO_CODE[c.name] = c.code; });
 
 interface InternationalPhoneInputProps {
   value: string;
@@ -63,6 +57,7 @@ interface InternationalPhoneInputProps {
   label?: string;
   error?: string;
   placeholder?: string;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const InternationalPhoneInput = ({
@@ -71,14 +66,14 @@ const InternationalPhoneInput = ({
   country = "Bangladesh",
   label = "Phone Number",
   error,
-  placeholder = "1XXXXXXXXX",
+  placeholder,
+  onValidationChange,
 }: InternationalPhoneInputProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Derive selected country from the shipping country prop
   const derivedCode = COUNTRY_NAME_TO_CODE[country] || "BD";
   const [selectedCode, setSelectedCode] = useState(derivedCode);
 
@@ -86,7 +81,6 @@ const InternationalPhoneInput = ({
     const newCode = COUNTRY_NAME_TO_CODE[country];
     if (newCode && newCode !== selectedCode) {
       setSelectedCode(newCode);
-      // Update the phone value with new dial code if it starts with old dial code
       const oldCountry = COUNTRY_CODES.find(c => c.code === selectedCode);
       const newCountry = COUNTRY_CODES.find(c => c.code === newCode);
       if (oldCountry && newCountry && value.startsWith(oldCountry.dial)) {
@@ -100,10 +94,36 @@ const InternationalPhoneInput = ({
 
   const selected = COUNTRY_CODES.find(c => c.code === selectedCode) || COUNTRY_CODES[0];
 
-  // Extract local number from full phone
   const localNumber = value.startsWith(selected.dial)
     ? value.slice(selected.dial.length)
     : value.replace(/^\+\d+\s*/, "");
+
+  // Validate phone number using libphonenumber-js
+  const validationResult = useMemo(() => {
+    if (!localNumber || localNumber.length < 4) return null;
+    const fullNumber = selected.dial + localNumber;
+    const parsed = parsePhoneNumberFromString(fullNumber, selectedCode as CountryCode);
+    if (!parsed) return { valid: false, reason: "Invalid format" };
+    return { valid: parsed.isValid(), reason: parsed.isValid() ? "" : "Invalid number for this country" };
+  }, [localNumber, selectedCode, selected.dial]);
+
+  // Notify parent of validation state
+  useEffect(() => {
+    onValidationChange?.(validationResult?.valid ?? false);
+  }, [validationResult?.valid, onValidationChange]);
+
+  // Generate placeholder from example number
+  const dynamicPlaceholder = useMemo(() => {
+    if (placeholder) return placeholder;
+    try {
+      const example = getExampleNumber(selectedCode as CountryCode, examples);
+      if (example) {
+        const national = example.formatNational();
+        return national.replace(/\d/g, "X").replace(/^0/, "");
+      }
+    } catch { /* ignore */ }
+    return "XXXXXXXXX";
+  }, [selectedCode, placeholder]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return COUNTRY_CODES;
@@ -125,22 +145,28 @@ const InternationalPhoneInput = ({
     if (open) { setSearch(""); setTimeout(() => searchRef.current?.focus(), 50); }
   }, [open]);
 
-  const handleLocalChange = (local: string) => {
+  const handleLocalChange = useCallback((local: string) => {
     const cleaned = local.replace(/[^\d]/g, "");
     onChange(selected.dial + cleaned);
-  };
+  }, [selected.dial, onChange]);
 
-  const handleCountrySelect = (c: typeof COUNTRY_CODES[0]) => {
+  const handleCountrySelect = useCallback((c: typeof COUNTRY_CODES[0]) => {
     setSelectedCode(c.code);
     onChange(c.dial + localNumber);
     setOpen(false);
-  };
+  }, [localNumber, onChange]);
+
+  const showValidIcon = localNumber.length >= 4 && validationResult;
+  const borderClass = error
+    ? "border-destructive ring-1 ring-destructive/20"
+    : validationResult?.valid
+      ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+      : "border-border focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/30";
 
   return (
     <div ref={ref} className="relative">
       {label && <label className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</label>}
-      <div className={`flex items-center rounded-xl border bg-background transition-all ${error ? "border-destructive ring-1 ring-destructive/20" : "border-border focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/30"}`}>
-        {/* Country code button */}
+      <div className={`flex items-center rounded-xl border bg-background transition-all ${borderClass}`}>
         <button
           type="button"
           onClick={() => setOpen(!open)}
@@ -150,17 +176,25 @@ const InternationalPhoneInput = ({
           <span className="text-xs text-muted-foreground font-mono">{selected.dial}</span>
           <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
-        {/* Phone number input */}
         <div className="relative flex-1">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
             type="tel"
             value={localNumber}
             onChange={e => handleLocalChange(e.target.value)}
-            placeholder={placeholder}
+            placeholder={dynamicPlaceholder}
             maxLength={15}
-            className="w-full pl-9 pr-3 py-3 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none rounded-r-xl"
+            className="w-full pl-9 pr-9 py-3 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none rounded-r-xl"
           />
+          {showValidIcon && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              {validationResult.valid ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-destructive" />
+              )}
+            </span>
+          )}
         </div>
       </div>
 
@@ -169,8 +203,12 @@ const InternationalPhoneInput = ({
           {error}
         </motion.p>
       )}
+      {!error && validationResult && !validationResult.valid && localNumber.length >= 6 && (
+        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-[11px] text-destructive mt-1">
+          Invalid phone number for {selected.name}
+        </motion.p>
+      )}
 
-      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
