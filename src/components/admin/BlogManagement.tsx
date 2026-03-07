@@ -152,6 +152,34 @@ const BlogManagement = () => {
     setShowForm(false);
   };
 
+  const generateFromProduct = async () => {
+    if (!aiProductUrl.trim()) { toast.error("Enter a product link or title"); return; }
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-content", {
+        body: { action: "blog_from_product", product_url: aiProductUrl, product_title: aiProductUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const c = data.content;
+      setForm(f => ({
+        ...f,
+        title: c.title || f.title,
+        slug: c.slug || f.slug,
+        excerpt: c.excerpt || f.excerpt,
+        content: c.content || f.content,
+        meta_title: c.meta_title || f.meta_title,
+        meta_description: c.meta_description || f.meta_description,
+        read_time: c.read_time || f.read_time,
+      }));
+      setShowForm(true);
+      toast.success("AI draft generated! Review and edit before publishing.");
+    } catch (e: any) {
+      toast.error(e.message || "AI generation failed");
+    }
+    setAiGenerating(false);
+  };
+
   const uploadImage = async (file: File) => {
     setImageUploading(true);
     try {
