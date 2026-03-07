@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Eye, X, Bold, Italic, List, ListOrdered, Link as LinkIcon, Image, Heading1, Heading2, Quote, Code, Upload, Loader2, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, X, Bold, Italic, List, ListOrdered, Link as LinkIcon, Image, Heading1, Heading2, Quote, Code, Upload, Loader2, Calendar, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -112,6 +112,8 @@ const BlogManagement = () => {
   const [showForm, setShowForm] = useState(false);
   const [catForm, setCatForm] = useState({ name: "", slug: "", description: "" });
   const [imageUploading, setImageUploading] = useState(false);
+  const [aiProductUrl, setAiProductUrl] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: posts } = useQuery({
@@ -148,6 +150,34 @@ const BlogManagement = () => {
     setForm({ title: "", slug: "", excerpt: "", content: "", image_url: "", category_id: "", author_name: "AR Prime Team", meta_title: "", meta_description: "", is_published: false, read_time: "5 min", scheduled_at: "" });
     setEditPost(null);
     setShowForm(false);
+  };
+
+  const generateFromProduct = async () => {
+    if (!aiProductUrl.trim()) { toast.error("Enter a product link or title"); return; }
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-content", {
+        body: { action: "blog_from_product", product_url: aiProductUrl, product_title: aiProductUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const c = data.content;
+      setForm(f => ({
+        ...f,
+        title: c.title || f.title,
+        slug: c.slug || f.slug,
+        excerpt: c.excerpt || f.excerpt,
+        content: c.content || f.content,
+        meta_title: c.meta_title || f.meta_title,
+        meta_description: c.meta_description || f.meta_description,
+        read_time: c.read_time || f.read_time,
+      }));
+      setShowForm(true);
+      toast.success("AI draft generated! Review and edit before publishing.");
+    } catch (e: any) {
+      toast.error(e.message || "AI generation failed");
+    }
+    setAiGenerating(false);
   };
 
   const uploadImage = async (file: File) => {
@@ -234,9 +264,27 @@ const BlogManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="font-display text-xl font-bold text-foreground">Blog Management</h2>
-        <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" />New Post</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" />New Post</Button>
+        </div>
+      </div>
+
+      {/* AI Draft Generator */}
+      <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
+        <Sparkles className="w-4 h-4 text-primary shrink-0" />
+        <Input
+          placeholder="Paste product link or title to generate a blog draft..."
+          value={aiProductUrl}
+          onChange={e => setAiProductUrl(e.target.value)}
+          className="flex-1 text-sm"
+          onKeyDown={e => e.key === "Enter" && generateFromProduct()}
+        />
+        <Button size="sm" onClick={generateFromProduct} disabled={aiGenerating || !aiProductUrl.trim()}>
+          {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
+          {aiGenerating ? "Generating..." : "AI Draft"}
+        </Button>
       </div>
 
       <Tabs defaultValue="posts">
