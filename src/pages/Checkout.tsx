@@ -18,6 +18,8 @@ import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
 import { api } from "@/lib/api";
+import { InvoiceDownload } from "@/components/InvoiceDownload";
+import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
 const shippingSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -61,6 +63,9 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneValid, setPhoneValid] = useState(false);
+  const [placedOrderData, setPlacedOrderData] = useState<any>(null);
+  const [placedOrderItems, setPlacedOrderItems] = useState<any[]>([]);
   const affiliateRef = sessionStorage.getItem("affiliate_ref") || null;
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType, loading: shippingLoading } = useShipping(form.country, subtotal);
