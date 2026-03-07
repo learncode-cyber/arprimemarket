@@ -13,12 +13,13 @@ import { useProducts, useCategories } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
 import { organizationSchema, websiteSchema } from "@/lib/seoSchemas";
+import { resolveStorageImageUrl, STORAGE_CATEGORY_FALLBACK_URL } from "@/lib/storageImage";
 
 const fallbackCategoryImages: Record<string, string> = {
-  electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=85&auto=format&fit=crop",
-  fashion: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=85&auto=format&fit=crop",
-  accessories: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop",
-  home: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&q=85&auto=format&fit=crop",
+  electronics: STORAGE_CATEGORY_FALLBACK_URL,
+  fashion: STORAGE_CATEGORY_FALLBACK_URL,
+  accessories: STORAGE_CATEGORY_FALLBACK_URL,
+  home: STORAGE_CATEGORY_FALLBACK_URL,
 };
 
 const Index = () => {
@@ -26,19 +27,23 @@ const Index = () => {
   const { data: dbCategories = [] } = useCategories();
   const { t } = useLanguage();
 
-  const featured = useMemo(() => products.filter(p => p.is_featured).slice(0, 10), [products]);
-  const bestSelling = useMemo(() => products.filter(p => p.tags?.includes("best-selling")).slice(0, 10), [products]);
-  const newArrivals = useMemo(() => products.filter(p => p.tags?.includes("new-arrival")).slice(0, 10), [products]);
-  const trending = useMemo(() => products.filter(p => p.tags?.includes("trending")).slice(0, 10), [products]);
+  const featured = useMemo(() => products.filter((p) => p.is_featured).slice(0, 10), [products]);
+  const bestSelling = useMemo(() => products.filter((p) => p.tags?.includes("best-selling")).slice(0, 10), [products]);
+  const newArrivals = useMemo(() => products.filter((p) => p.tags?.includes("new-arrival")).slice(0, 10), [products]);
+  const trending = useMemo(() => products.filter((p) => p.tags?.includes("trending")).slice(0, 10), [products]);
 
   const categories = useMemo(() => {
     if (dbCategories.length > 0) {
-      return dbCategories.slice(0, 4).map(cat => ({
+      return dbCategories.slice(0, 4).map((cat) => ({
         name: cat.name,
         slug: cat.slug,
-        image: cat.image_url || fallbackCategoryImages[cat.slug.toLowerCase()] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=85&auto=format&fit=crop",
+        image: resolveStorageImageUrl(
+          cat.image_url,
+          fallbackCategoryImages[cat.slug.toLowerCase()] || STORAGE_CATEGORY_FALLBACK_URL,
+        ),
       }));
     }
+
     return [
       { name: "Electronics", slug: "Electronics", image: fallbackCategoryImages.electronics },
       { name: "Fashion", slug: "Fashion", image: fallbackCategoryImages.fashion },
@@ -104,3 +109,4 @@ const Index = () => {
 };
 
 export default Index;
+

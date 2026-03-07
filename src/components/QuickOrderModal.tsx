@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import PhoneInput from "react-phone-input-2";
 import { X, Zap, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -9,6 +10,14 @@ import { useShipping } from "@/hooks/useShipping";
 import ShippingMethodSelector from "@/components/checkout/ShippingMethodSelector";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import CountrySelector from "@/components/checkout/CountrySelector";
+import {
+  getCountryCodeFromName,
+  getCountryNameFromCode,
+  getDialPrefixForCountry,
+  isValidPhoneForCountry,
+  normalizePhoneForCountry,
+} from "@/lib/phoneUtils";
+import "react-phone-input-2/lib/style.css";
 
 interface QuickOrderProduct {
   id: string;
@@ -23,6 +32,10 @@ interface QuickOrderModalProps {
   product: QuickOrderProduct;
 }
 
+interface PhoneInputCountryData {
+  countryCode?: string;
+}
+
 export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps) => {
   const { formatPrice } = useCurrency();
   const { lang } = useLanguage();
@@ -31,6 +44,14 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const [txReference, setTxReference] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+
+  const selectedCountryCode = useMemo(() => getCountryCodeFromName(form.country), [form.country]);
+  const phoneInputValue = useMemo(() => form.phone.replace(/^\+/, ""), [form.phone]);
+  const hasPhoneDigits = useMemo(() => form.phone.replace(/\D/g, "").length >= 6, [form.phone]);
+  const isPhoneValid = useMemo(
+    () => isValidPhoneForCountry(form.phone, selectedCountryCode),
+    [form.phone, selectedCountryCode],
+  );
 
   const { options: shippingOptions, selected: selectedShipping, selectedType: shippingType, setSelectedType: setShippingType } = useShipping(form.country, product.price);
   const shippingCost = selectedShipping?.totalCost ?? 0;
@@ -47,20 +68,65 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
     if (!open) return;
     try {
       const saved = localStorage.getItem("arp-detected-country");
-      if (saved) setForm(f => ({ ...f, country: saved }));
-    } catch {}
+      if (saved) {
+        setForm((f) => ({ ...f, country: saved }));
+      }
+    } catch {
+      // no-op
+    }
   }, [open]);
+
+  // Keep phone prefix in sync with selected country
+  useEffect(() => {
+    if (!open) return;
+
+    setForm((prev) => {
+      const nextPhone = normalizePhoneForCountry(prev.phone, selectedCountryCode);
+      if (nextPhone === prev.phone) return prev;
+      return { ...prev, phone: nextPhone };
+    });
+  }, [open, selectedCountryCode]);
+
+  const handlePhoneChange = (value: string, data: PhoneInputCountryData) => {
+    const nextCode = getCountryCodeFromName(getCountryNameFromCode(data?.countryCode));
+    const nextPhone = value ? `+${value}` : getDialPrefixForCountry(nextCode);
+
+    setForm((f) => ({
+      ...f,
+      country: getCountryNameFromCode(nextCode),
+      phone: nextPhone,
+    }));
+  };
+
+  const requiredFieldsFilled = Boolean(
+    form.name.trim() && form.email.trim() && form.address.trim() && form.phone.trim(),
+  );
+
+  const canSubmit =
+    requiredFieldsFilled &&
+    isPhoneValid &&
+    Boolean(paymentMethod) &&
+    (shippingOptions.length === 0 || Boolean(selectedShipping)) &&
+    !sending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim() || !form.email.trim() || !form.address.trim()) {
+
+    if (!requiredFieldsFilled) {
       toast.error("Name, Phone, Email and Address are required");
       return;
     }
+
+    if (!isPhoneValid) {
+      toast.error(tx("Please enter a valid phone number for the selected country.", "নির্বাচিত দেশের জন্য সঠিক ফোন নম্বর দিন।", "يرجى إدخال رقم هاتف صالح للبلد المحدد."));
+      return;
+    }
+
     if (!paymentMethod) {
       toast.error("Please select a payment method");
       return;
     }
+
     if (shippingOptions.length > 0 && !selectedShipping) {
       toast.error("Please select a shipping method");
       return;
@@ -68,6 +134,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
     const normalizedTxReference = txReference.trim();
     const shippingMethod = selectedShipping?.rate.shipping_type || shippingType || null;
+    const phoneForOrder = normalizePhoneForCountry(form.phone, selectedCountryCode);
 
     setSending(true);
     try {
@@ -87,7 +154,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
           shipping_cost: shippingCost,
           total,
           shipping_name: form.name.trim(),
-          shipping_phone: form.phone.trim(),
+          shipping_phone: phoneForOrder,
           shipping_email: form.email.trim(),
           shipping_address: form.address.trim(),
           shipping_country: form.country,
@@ -120,12 +187,14 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
             status: "pending",
             transaction_reference: normalizedTxReference || null,
           });
-        } catch {} // non-blocking for guest
+        } catch {
+          // non-blocking for guest
+        }
       }
 
       setDone(true);
       toast.success(tx("Order placed successfully!", "অর্ডার সফলভাবে দেওয়া হয়েছে!", "تم تقديم الطلب بنجاح!"));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast.error("Failed to place order. Please try again.");
     } finally {
@@ -175,7 +244,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
             {done ? (
               <div className="p-8 text-center">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <CheckCircle className="w-12 h-12 text-primary mx-auto mb-3" />
                 <h3 className="font-display font-bold text-lg text-foreground mb-1">
                   {tx("Order Placed!", "অর্ডার সম্পন্ন!", "تم الطلب!")}
                 </h3>
@@ -203,25 +272,48 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                     type="text"
                     placeholder={tx("Your Name *", "আপনার নাম *", "اسمك *")}
                     value={form.name}
-                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     required
                     maxLength={100}
                   />
-                  <input
-                    type="tel"
-                    placeholder={tx("Phone Number *", "ফোন নম্বর *", "رقم الهاتف *")}
-                    value={form.phone}
-                    onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    required
-                    maxLength={20}
-                  />
+
+                  <div className="space-y-1">
+                    <PhoneInput
+                      country={selectedCountryCode.toLowerCase()}
+                      value={phoneInputValue}
+                      onChange={(value, data) => handlePhoneChange(value, (data || {}) as PhoneInputCountryData)}
+                      enableSearch
+                      disableSearchIcon
+                      countryCodeEditable={false}
+                      placeholder={tx("Phone Number *", "ফোন নম্বর *", "رقم الهاتف *")}
+                      inputProps={{
+                        name: "quick-order-phone",
+                        required: true,
+                        autoComplete: "tel",
+                      }}
+                      containerClass="arp-phone-input-container"
+                      inputClass="arp-phone-input-field"
+                      buttonClass="arp-phone-input-button"
+                      dropdownClass="arp-phone-input-dropdown"
+                      searchClass="arp-phone-input-search"
+                    />
+                    {hasPhoneDigits && !isPhoneValid && (
+                      <p className="text-[11px] text-destructive px-1">
+                        {tx(
+                          "Please enter a valid phone number for the selected country.",
+                          "নির্বাচিত দেশের জন্য সঠিক ফোন নম্বর দিন।",
+                          "يرجى إدخال رقم هاتف صالح للبلد المحدد.",
+                        )}
+                      </p>
+                    )}
+                  </div>
+
                   <input
                     type="email"
                     placeholder={tx("Email *", "ইমেইল *", "البريد الإلكتروني *")}
                     value={form.email}
-                    onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     required
                     maxLength={255}
@@ -229,7 +321,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                   <textarea
                     placeholder={tx("Delivery Address *", "ডেলিভারি ঠিকানা *", "عنوان التوصيل *")}
                     value={form.address}
-                    onChange={(e) => setForm(f => ({ ...f, address: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
                     className="w-full h-16 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                     required
                     maxLength={500}
@@ -238,7 +330,14 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                   {/* Country Selector */}
                   <CountrySelector
                     value={form.country}
-                    onChange={(val) => setForm(f => ({ ...f, country: val }))}
+                    onChange={(val) => {
+                      const nextCode = getCountryCodeFromName(val);
+                      setForm((f) => ({
+                        ...f,
+                        country: val,
+                        phone: normalizePhoneForCountry(f.phone, nextCode),
+                      }));
+                    }}
                     label={tx("Country", "দেশ", "البلد")}
                   />
 
@@ -293,8 +392,8 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
 
                   <button
                     type="submit"
-                    disabled={sending}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+                    disabled={!canSubmit}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                     {sending ? tx("Placing Order...", "অর্ডার হচ্ছে...", "جارٍ تقديم الطلب...") : tx("Place Order", "অর্ডার দিন", "تقديم الطلب")}

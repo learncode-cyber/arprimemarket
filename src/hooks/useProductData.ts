@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
+import {
+  resolveStorageImageUrl,
+  STORAGE_CATEGORY_FALLBACK_URL,
+  STORAGE_PRODUCT_FALLBACK_URL,
+} from "@/lib/storageImage";
 
 export interface DbProduct {
   id: string;
@@ -97,7 +102,12 @@ export const useCategories = () => {
     queryFn: async (): Promise<DbCategory[]> => {
       const res = await api.categories.list();
       if (res.data) {
-        return (res.data as ApiCategory[]).map(c => ({ id: c.id, name: c.name, slug: c.slug, image_url: c.image_url || null }));
+        return (res.data as ApiCategory[]).map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          image_url: resolveStorageImageUrl(c.image_url, STORAGE_CATEGORY_FALLBACK_URL),
+        }));
       }
 
       // Fallback
@@ -106,7 +116,11 @@ export const useCategories = () => {
         .select("id, name, slug, image_url")
         .order("name");
       if (error) throw error;
-      return data || [];
+
+      return (data || []).map((category) => ({
+        ...category,
+        image_url: resolveStorageImageUrl(category.image_url, STORAGE_CATEGORY_FALLBACK_URL),
+      }));
     },
   });
 };
@@ -119,7 +133,7 @@ function mapApiProduct(p: ApiProduct): Product {
     slug: p.slug,
     description: p.description || "",
     price: p.price,
-    image: p.image || "/placeholder.svg",
+    image: resolveStorageImageUrl(p.image, STORAGE_PRODUCT_FALLBACK_URL),
     category: p.category || "Uncategorized",
     category_id: p.category_id || null,
     rating: p.rating || 0,
@@ -128,7 +142,7 @@ function mapApiProduct(p: ApiProduct): Product {
     is_featured: p.is_featured,
     compare_at_price: p.compare_at_price,
     currency: p.currency,
-    images: p.images || [],
+    images: (p.images || []).map((img) => resolveStorageImageUrl(img, STORAGE_PRODUCT_FALLBACK_URL)),
     tags: p.tags || [],
   };
 }
@@ -149,7 +163,7 @@ async function fallbackProductQuery(): Promise<Product[]> {
     slug: p.slug,
     description: p.description || "",
     price: Number(p.price),
-    image: p.image_url || "/placeholder.svg",
+    image: resolveStorageImageUrl(p.image_url, STORAGE_PRODUCT_FALLBACK_URL),
     category: p.categories?.name || "Uncategorized",
     category_id: p.category_id,
     rating: Number(p.rating) || 0,
@@ -158,7 +172,7 @@ async function fallbackProductQuery(): Promise<Product[]> {
     is_featured: p.is_featured,
     compare_at_price: p.compare_at_price ? Number(p.compare_at_price) : null,
     currency: p.currency,
-    images: p.images || [],
+    images: (p.images || []).map((img: string) => resolveStorageImageUrl(img, STORAGE_PRODUCT_FALLBACK_URL)),
     tags: p.tags || [],
   }));
 }
@@ -174,10 +188,12 @@ async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> 
 
   const p: any = data;
   return {
-    id: p.id, title: p.title, slug: p.slug,
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
     description: p.description || "",
     price: Number(p.price),
-    image: p.image_url || "/placeholder.svg",
+    image: resolveStorageImageUrl(p.image_url, STORAGE_PRODUCT_FALLBACK_URL),
     category: p.categories?.name || "Uncategorized",
     category_id: p.category_id,
     rating: Number(p.rating) || 0,
@@ -186,7 +202,8 @@ async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> 
     is_featured: p.is_featured,
     compare_at_price: p.compare_at_price ? Number(p.compare_at_price) : null,
     currency: p.currency,
-    images: p.images || [],
+    images: (p.images || []).map((img: string) => resolveStorageImageUrl(img, STORAGE_PRODUCT_FALLBACK_URL)),
     tags: p.tags || [],
   };
 }
+
