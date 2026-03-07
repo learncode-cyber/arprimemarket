@@ -245,11 +245,11 @@ const Checkout = () => {
 
       // Credit affiliate commission if referred
       if (affiliateRef) {
-        supabase.rpc("credit_affiliate_commission", {
+        Promise.resolve(supabase.rpc("credit_affiliate_commission", {
           _affiliate_code: affiliateRef,
           _order_id: order.id,
           _order_total: total,
-        }).then(() => {
+        })).then(() => {
           sessionStorage.removeItem("affiliate_ref");
         }).catch(err => console.warn("Affiliate credit failed (non-blocking):", err));
       }
