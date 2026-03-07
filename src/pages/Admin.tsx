@@ -37,6 +37,8 @@ import ReturnsManagement from "@/components/admin/ReturnsManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import AdminPasswordChange from "@/components/admin/AdminPasswordChange";
 import AffiliateManagement from "@/components/admin/AffiliateManagement";
+import APIKeyManagement from "@/components/admin/APIKeyManagement";
+import WebhookManagement from "@/components/admin/WebhookManagement";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -64,6 +66,8 @@ const adminTabs = [
   { id: "tracking", label: "Tracking", icon: Activity },
   { id: "seo", label: "SEO", icon: Globe },
   { id: "ai-assistant", label: "AI Assistant", icon: Brain },
+  { id: "api-keys", label: "API Keys", icon: Zap },
+  { id: "webhooks", label: "Webhooks", icon: Globe },
   { id: "backup", label: "System", icon: Database },
 ];
 
@@ -223,6 +227,8 @@ const Admin = () => {
               {activeTab === "returns" && <ReturnsManagement />}
               {activeTab === "seo" && <SEOManagement />}
               {activeTab === "ai-assistant" && <AIAssistantDashboard />}
+              {activeTab === "api-keys" && <APIKeyManagement />}
+              {activeTab === "webhooks" && <WebhookManagement />}
               {activeTab === "backup" && (
                 <div className="space-y-6">
                   <AdminPasswordChange />
