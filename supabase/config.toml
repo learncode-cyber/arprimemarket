@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.cart-recovery]
 verify_jwt = false
+
+[functions.binance-pay]
+verify_jwt = false

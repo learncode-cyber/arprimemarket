@@ -8,6 +8,7 @@ import FlashSaleTimer from "@/components/FlashSaleTimer";
 import { TrustBadges } from "@/components/TrustBadges";
 import { CustomerReviews } from "@/components/CustomerReviews";
 import PromotionsBanner from "@/components/PromotionsBanner";
+import RecentlyViewed from "@/components/RecentlyViewed";
 import { useProducts } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
@@ -79,6 +80,7 @@ const Index = () => {
 
       <ProductSection title={t("newArrivals")} products={newArrivals} scrollable loading={isLoading} />
       <CustomerReviews />
+      <RecentlyViewed />
       <ProductSection title={t("trending")} products={trending} loading={isLoading} />
     </div>
   );
