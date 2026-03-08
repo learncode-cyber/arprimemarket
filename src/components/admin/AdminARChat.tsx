@@ -307,6 +307,7 @@ const AdminARChat = () => {
     }
   };
 
+  if (!open) {
     return (
       <motion.button
         onClick={() => { setOpen(true); setHasNotification(false); }}
