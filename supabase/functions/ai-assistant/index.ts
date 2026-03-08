@@ -1141,6 +1141,39 @@ RESPONSE RULES:
           result = { success: true, message: `Order ${order_id} status updated to '${newStatus}'.` };
           break;
         }
+        case "create_category": {
+          const { name, slug, description, image_url } = params || {};
+          if (!name) {
+            return new Response(JSON.stringify({ error: "name is required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const categorySlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+          // Check for duplicate slug
+          const { data: existingCat } = await adminClient
+            .from("categories")
+            .select("id")
+            .eq("slug", categorySlug)
+            .maybeSingle();
+          if (existingCat) {
+            return new Response(JSON.stringify({ error: `Category with slug '${categorySlug}' already exists` }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const { data: newCat, error: catError } = await adminClient
+            .from("categories")
+            .insert({
+              name,
+              slug: categorySlug,
+              description: description || null,
+              image_url: image_url || null,
+            })
+            .select("id, name, slug")
+            .single();
+          if (catError) throw catError;
+          result = { success: true, message: `Category "${name}" created! (slug: ${categorySlug})`, data: newCat };
+          break;
+        }
         default:
           return new Response(JSON.stringify({ error: `Unknown tool: ${tool}` }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
