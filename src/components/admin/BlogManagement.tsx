@@ -10,8 +10,7 @@ import { Plus, Pencil, Trash2, Eye, X, Upload, Loader2, Calendar, Sparkles } fro
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-
+const BlogManagement = () => {
   const queryClient = useQueryClient();
   const [editPost, setEditPost] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
