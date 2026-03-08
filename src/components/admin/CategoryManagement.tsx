@@ -81,6 +81,25 @@ const CategoryManagement = () => {
 
   return (
     <div className="space-y-5">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {[
+          { label: "Total Categories", value: categories.length, color: "text-foreground" },
+          { label: "With Image", value: categories.filter(c => c.image_url).length, color: "text-primary" },
+          { label: "No Image", value: categories.filter(c => !c.image_url).length, color: categories.filter(c => !c.image_url).length > 0 ? "text-amber-500" : "text-green-500" },
+        ].map(s => (
+          <motion.div
+            key={s.label}
+            whileHover={{ y: -2, boxShadow: "0 4px 20px -4px hsl(var(--primary) / 0.15)" }}
+            whileTap={{ scale: 0.97 }}
+            className="bg-card border border-border rounded-xl p-3 text-center cursor-pointer hover:border-primary/40 transition-all duration-200 select-none"
+          >
+            <p className={`font-display text-lg font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FolderTree className="w-5 h-5 text-primary" />
