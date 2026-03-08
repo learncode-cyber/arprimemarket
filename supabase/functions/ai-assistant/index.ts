@@ -999,32 +999,35 @@ CORE CAPABILITIES:
    - Then include an action block using this EXACT format:
      <!--ACTION:{"tool":"cancel_pending_orders","description":"Cancel all pending orders","params":{}}-->
 
-   **⚠️ CRITICAL UUID RULE — NEVER BREAK THIS:**
-   - When a tool requires "order_id", you MUST provide a REAL UUID from the database (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
-   - NEVER pass text descriptions like "all_recent_cancelled", "latest_order", "pending_ones" as order_id — these will cause database errors.
-   - If the owner asks to update/cancel multiple orders by status, use the BULK tools (update_orders_by_status, cancel_pending_orders) — NOT cancel_order with fake IDs.
-   - If you need a specific order's UUID, first look at the RECENT ORDERS data in your system state, or ask the owner for the order number/tracking ID.
-   - To find an order by tracking ID or order number, use the search_order tool FIRST, then use the returned UUID.
+    **⚠️ CRITICAL UUID RULE — ABSOLUTE REQUIREMENT — VIOLATION = SYSTEM ERROR:**
+    - When a tool requires "order_id", you MUST provide a REAL UUID from the database (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
+    - NEVER pass ANY of these as order_id: "all", "multiple", "latest", "recent", "pending_ones", "all_recent_cancelled", or ANY descriptive text. These WILL crash the system.
+    - For BULK operations (multiple orders): ALWAYS use cancel_pending_orders or update_orders_by_status. NEVER try to pass multiple IDs to cancel_order.
+    - For SINGLE order operations: You MUST have the exact UUID. Get it from RECENT ORDERS data or use search_order first.
+    - If the owner says "cancel this order" but doesn't give a specific ID: ASK them for the order number or tracking ID. NEVER guess.
+    - ARP-TRK-xxx and ARP-xxx are NOT UUIDs. Use search_order to convert them to UUIDs first, or pass them directly (the system will auto-resolve).
 
-   Available tools:
-     • cancel_pending_orders — Bulk cancel ALL orders with status='pending'. No params needed.
-     • cancel_order — Cancel ONE specific order. params: {"order_id":"REAL-UUID-HERE"}
-     • update_order_status — Update ONE order's status. params: {"order_id":"REAL-UUID-HERE","status":"shipped|delivered|cancelled|processing"}
-     • update_orders_by_status — Bulk update orders from one status to another. params: {"from_status":"pending|processing|shipped","to_status":"processing|shipped|delivered|cancelled"}
-     • search_order — Find an order by tracking ID (ARP-TRK-xxx), order number (ARP-xxx), or UUID. Returns order details. params: {"query":"ARP-TRK-XXXXXXXX or ARP-20260308-XXXXXX or UUID"}
-     • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0. No params needed.
-     • create_category — Create a new category with SEO-optimized data. params: {"name":"Category Name","slug":"seo-slug","description":"SEO meta description","image_url":"optional"}
-     • create_product — Create a new product. params: {"title":"Product Title","price":number,"description":"HTML desc","stock_quantity":number,"tags":[],"meta_title":"max 60","meta_description":"max 160","sku":"optional","brand":"optional","is_featured":boolean,"category_id":"uuid optional","compare_at_price":number optional}
-     • create_supplier — Create a supplier. params: {"name":"Name","platform":"cj_dropshipping|aliexpress|custom","api_endpoint":"URL","contact_info":"optional"}
-     • bulk_seo_optimize — Auto-optimize SEO for all products missing metadata. No params needed.
+    Available tools:
+      • cancel_pending_orders — Bulk cancel ALL orders with status='pending'. No params needed. USE THIS for "cancel all pending".
+      • cancel_order — Cancel ONE specific order. params: {"order_id":"REAL-UUID-HERE"}. ONLY for single orders with known UUID.
+      • update_order_status — Update ONE order's status. params: {"order_id":"REAL-UUID-HERE","status":"shipped|delivered|cancelled|processing"}
+      • update_orders_by_status — Bulk update orders from one status to another. params: {"from_status":"pending|processing|shipped","to_status":"processing|shipped|delivered|cancelled"}. USE THIS for "move all X to Y".
+      • search_order — Find an order by tracking ID (ARP-TRK-xxx), order number (ARP-xxx), or UUID. Returns order details including UUID. params: {"query":"ARP-TRK-XXXXXXXX or ARP-20260308-XXXXXX or UUID"}
+      • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0. No params needed.
+      • create_category — Create a new category with SEO-optimized data. params: {"name":"Category Name","slug":"seo-slug","description":"SEO meta description","image_url":"optional"}
+      • create_product — Create a new product. params: {"title":"Product Title","price":number,"description":"HTML desc","stock_quantity":number,"tags":[],"meta_title":"max 60","meta_description":"max 160","sku":"optional","brand":"optional","is_featured":boolean,"category_id":"uuid optional","compare_at_price":number optional}
+      • create_supplier — Create a supplier. params: {"name":"Name","platform":"cj_dropshipping|aliexpress|custom","api_endpoint":"URL","contact_info":"optional"}
+      • bulk_seo_optimize — Auto-optimize SEO for all products missing metadata. No params needed.
 
-   TOOL SELECTION GUIDE:
-   - "Cancel all pending orders" → use cancel_pending_orders (NOT cancel_order)
-   - "Cancel order ARP-TRK-XXXX" → use search_order first to get UUID, then cancel_order
-   - "Move all pending to processing" → use update_orders_by_status {"from_status":"pending","to_status":"processing"}
-   - "Cancel order abc123-..." → use cancel_order with the exact UUID
-   
-   The UI will parse action blocks and show Confirm/Cancel buttons. NEVER execute without the action block.
+    TOOL SELECTION GUIDE (MEMORIZE THIS):
+    - "Cancel all pending orders" → cancel_pending_orders (NO params needed)
+    - "Move all pending to processing" → update_orders_by_status {"from_status":"pending","to_status":"processing"}
+    - "Cancel order ARP-TRK-XXXX" → cancel_order {"order_id":"ARP-TRK-XXXX"} (system auto-resolves to UUID)
+    - "Cancel order ARP-20260308-XXXX" → cancel_order {"order_id":"ARP-20260308-XXXX"} (system auto-resolves to UUID)
+    - "Cancel order abc123-..." → cancel_order {"order_id":"abc123-..."} (must be valid UUID)
+    - "Update multiple orders" → update_orders_by_status (NEVER cancel_order with fake IDs)
+    
+    The UI will parse action blocks and show Confirm/Cancel buttons with the exact details. NEVER execute without the action block.
 
 CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 📦 Products: ${totalProducts} total (${activeProducts} active, ${outOfStock || 0} out of stock)
@@ -1127,6 +1130,31 @@ RESPONSE RULES:
 
       // UUID validation helper
       const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+      // ─── GLOBAL PARAM SANITIZER: Reject any *_id param that isn't a valid UUID ───
+      if (params && typeof params === "object") {
+        for (const [key, value] of Object.entries(params)) {
+          if (key.endsWith("_id") && typeof value === "string" && value.length > 0 && !isValidUUID(value)) {
+            // Check if it's a tracking ID or order number that needs resolution first
+            if (value.startsWith("ARP-TRK-") || value.startsWith("ARP-")) {
+              // Auto-resolve: look up the UUID from tracking/order number
+              const lookupField = value.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
+              const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, value).maybeSingle();
+              if (resolvedOrder) {
+                params[key] = resolvedOrder.id;
+                continue;
+              }
+              return new Response(JSON.stringify({ 
+                error: `Could not find order with ${lookupField} "${value}". Please verify the ID.`,
+                suggestion: "Use search_order tool to find the correct order first."
+              }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+            return new Response(JSON.stringify({ 
+              error: `Parameter "${key}" must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Received: "${value}". Use search_order to find the correct UUID, or use bulk tools (update_orders_by_status, cancel_pending_orders) for multiple orders.`,
+            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
+      }
 
       let result: any = { success: false };
 
