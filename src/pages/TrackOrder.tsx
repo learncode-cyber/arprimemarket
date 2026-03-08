@@ -161,7 +161,7 @@ const TrackOrder = () => {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
-              placeholder={l("Enter order number (e.g. ARP-20260225-1234)", "অর্ডার নম্বর দিন (যেমন ARP-20260225-1234)", "أدخل رقم الطلب")}
+              placeholder={l("Enter order or tracking ID (e.g. ARP-20260225-1234 or ARP-TRK-XXXXX)", "অর্ডার/ট্র্যাকিং নম্বর দিন", "أدخل رقم الطلب أو التتبع")}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
             />
           </div>
