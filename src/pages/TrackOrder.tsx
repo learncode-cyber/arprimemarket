@@ -61,7 +61,7 @@ const TrackOrder = () => {
       // Try with email if provided
       if (email.trim()) {
         const res = await supabase.rpc("verify_guest_order", {
-          _order_number: orderNum,
+          _order_number: searchTerm,
           _email: email.trim(),
         });
         data = res.data?.[0] || null;
