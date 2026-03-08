@@ -106,6 +106,10 @@ const Index = () => {
       <CustomerReviews />
       <RecentlyViewed />
       <ProductSection title={t("trending")} products={trending} loading={isLoading} />
+
+      <div className="max-w-7xl mx-auto px-4 py-3 text-center">
+        <p className="text-[10px] text-muted-foreground/50">Last synced: 2026-03-08</p>
+      </div>
     </div>
   );
 };
