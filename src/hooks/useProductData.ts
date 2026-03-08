@@ -56,8 +56,9 @@ export interface Product {
 }
 
 /**
- * Fetches products via the API gateway (server-side cached, rate-limited).
- * Falls back to direct Supabase query if gateway is unavailable.
+ * Fetches products directly from the database.
+ * Tries API gateway first only if edge functions are available,
+ * otherwise goes straight to direct Supabase query for portability.
  */
 export const useProducts = (params?: {
   page?: number;
@@ -69,15 +70,26 @@ export const useProducts = (params?: {
   return useQuery({
     queryKey: ["products", params],
     queryFn: async (): Promise<Product[]> => {
-      // Try API gateway first
-      const res = await api.products.list(params);
-      if (res.data) {
-        return res.data.products.map(mapApiProduct);
+      // Always try direct DB query first for maximum portability
+      try {
+        const products = await directProductQuery(params);
+        if (products.length > 0) return products;
+      } catch (dbErr) {
+        console.warn("[Products] Direct DB query failed:", dbErr);
       }
 
-      // Fallback to direct query
-      console.warn("[Products] API gateway unavailable, using direct query");
-      return fallbackProductQuery();
+      // Then try API gateway as secondary
+      try {
+        const res = await api.products.list(params);
+        if (res.data) {
+          return res.data.products.map(mapApiProduct);
+        }
+      } catch (apiErr) {
+        console.warn("[Products] API gateway also failed:", apiErr);
+      }
+
+      console.error("[Products] All data sources failed");
+      return [];
     },
   });
 };
@@ -86,12 +98,23 @@ export const useProduct = (idOrSlug: string) => {
   return useQuery({
     queryKey: ["product", idOrSlug],
     queryFn: async (): Promise<Product | null> => {
-      const res = await api.products.detail(idOrSlug);
-      if (res.data) return mapApiProduct(res.data);
+      // Direct DB first
+      try {
+        const product = await directProductDetail(idOrSlug);
+        if (product) return product;
+      } catch (dbErr) {
+        console.warn("[Product] Direct DB query failed:", dbErr);
+      }
 
-      // Fallback
-      console.warn("[Product] API gateway unavailable, using direct query");
-      return fallbackProductDetail(idOrSlug);
+      // API gateway fallback
+      try {
+        const res = await api.products.detail(idOrSlug);
+        if (res.data) return mapApiProduct(res.data);
+      } catch (apiErr) {
+        console.warn("[Product] API gateway also failed:", apiErr);
+      }
+
+      return null;
     },
     enabled: !!idOrSlug,
   });
@@ -101,27 +124,39 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ["categories"],
     queryFn: async (): Promise<DbCategory[]> => {
-      const res = await api.categories.list();
-      if (res.data) {
-        return (res.data as ApiCategory[]).map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          image_url: resolveStorageImageUrl(c.image_url, CATEGORY_FALLBACK),
-        }));
+      // Direct DB first
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, slug, image_url")
+          .order("name");
+        if (!error && data && data.length > 0) {
+          return data.map((category) => ({
+            ...category,
+            image_url: resolveStorageImageUrl(category.image_url, CATEGORY_FALLBACK),
+          }));
+        }
+        if (error) console.warn("[Categories] Direct query error:", error.message);
+      } catch (err) {
+        console.warn("[Categories] Direct query failed:", err);
       }
 
-      // Fallback
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, slug, image_url")
-        .order("name");
-      if (error) throw error;
+      // API gateway fallback
+      try {
+        const res = await api.categories.list();
+        if (res.data) {
+          return (res.data as ApiCategory[]).map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            image_url: resolveStorageImageUrl(c.image_url, CATEGORY_FALLBACK),
+          }));
+        }
+      } catch (apiErr) {
+        console.warn("[Categories] API gateway also failed:", apiErr);
+      }
 
-      return (data || []).map((category) => ({
-        ...category,
-        image_url: resolveStorageImageUrl(category.image_url, CATEGORY_FALLBACK),
-      }));
+      return [];
     },
   });
 };
