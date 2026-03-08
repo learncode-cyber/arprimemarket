@@ -898,6 +898,9 @@ ${productContext}${learningContext}${strategyContext}`;
 
       const { data: trackingPixels } = await adminClient.from("tracking_pixels").select("platform, pixel_id, is_active");
 
+      // Fetch categories so AI knows UUIDs for update_category_seo
+      const { data: allCategories } = await adminClient.from("categories").select("id, name, slug, description").order("name").limit(50);
+
       // Country-wise order distribution
       const countryOrders: Record<string, number> = {};
       (recentOrders || []).forEach(o => {
@@ -994,10 +997,20 @@ CORE CAPABILITIES:
       - NEVER ask owner for keywords — research and apply automatically
 
 8. **SERVER-SIDE ACTION TOOLS** (CRITICAL — YOU CAN PERFORM DATABASE ACTIONS):
-   When the owner asks you to perform a database action, you MUST:
-   - First explain what the action will do and show affected data counts/details
-   - Then include an action block using this EXACT format:
+
+   🚨 **ABSOLUTE RULE #1: ACTION-FIRST, NOT CODE-FIRST** 🚨
+   - When the owner asks you to DO something (create category, update SEO, cancel orders, optimize products), you MUST use an action tool.
+   - NEVER respond with code blocks, SQL snippets, or "here's how to do it" explanations when an action tool exists for the task.
+   - NEVER show raw code unless the owner EXPLICITLY asks "show me the code" or "give me the code".
+   - If you catch yourself about to write a code block for something a tool can do → STOP → use the tool instead.
+   - Wrong: "Here's how to create a category: \`\`\`sql INSERT INTO...\`\`\`" ← FORBIDDEN
+   - Right: "I'll create the category for you." → <!--ACTION:{"tool":"create_category",...}-->
+
+   **HOW TO USE ACTION TOOLS:**
+   - Briefly explain what will happen (1-2 sentences max)
+   - Include the action block using this EXACT format:
      <!--ACTION:{"tool":"cancel_pending_orders","description":"Cancel all pending orders","params":{}}-->
+   - The UI will show Confirm/Cancel buttons. The owner clicks Confirm to execute.
 
     **⚠️ CRITICAL UUID RULE — ABSOLUTE REQUIREMENT — VIOLATION = SYSTEM ERROR:**
     - When a tool requires "order_id", you MUST provide a REAL UUID from the database (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
@@ -1007,7 +1020,7 @@ CORE CAPABILITIES:
     - If the owner says "cancel this order" but doesn't give a specific ID: ASK them for the order number or tracking ID. NEVER guess.
     - ARP-TRK-xxx and ARP-xxx are NOT UUIDs. Use search_order to convert them to UUIDs first, or pass them directly (the system will auto-resolve).
 
-    Available tools:
+     Available tools:
       • cancel_pending_orders — Bulk cancel ALL orders with status='pending'. No params needed. USE THIS for "cancel all pending".
       • cancel_order — Cancel ONE specific order. params: {"order_id":"REAL-UUID-HERE"}. ONLY for single orders with known UUID.
       • update_order_status — Update ONE order's status. params: {"order_id":"REAL-UUID-HERE","status":"shipped|delivered|cancelled|processing"}
@@ -1015,6 +1028,7 @@ CORE CAPABILITIES:
       • search_order — Find an order by tracking ID (ARP-TRK-xxx), order number (ARP-xxx), or UUID. Returns order details including UUID. params: {"query":"ARP-TRK-XXXXXXXX or ARP-20260308-XXXXXX or UUID"}
       • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0. No params needed.
       • create_category — Create a new category with SEO-optimized data. params: {"name":"Category Name","slug":"seo-slug","description":"SEO meta description","image_url":"optional"}
+      • update_category_seo — AI-powered: researches keywords and auto-updates a category's description and SEO fields. params: {"category_id":"uuid","focus_keywords":"optional comma-separated keywords"}. USE THIS when owner says "improve SEO for category X" or "optimize category".
       • create_product — Create a new product. params: {"title":"Product Title","price":number,"description":"HTML desc","stock_quantity":number,"tags":[],"meta_title":"max 60","meta_description":"max 160","sku":"optional","brand":"optional","is_featured":boolean,"category_id":"uuid optional","compare_at_price":number optional}
       • create_supplier — Create a supplier. params: {"name":"Name","platform":"cj_dropshipping|aliexpress|custom","api_endpoint":"URL","contact_info":"optional"}
       • bulk_seo_optimize — Auto-optimize SEO for all products missing metadata. No params needed.
@@ -1026,6 +1040,8 @@ CORE CAPABILITIES:
     - "Cancel order ARP-20260308-XXXX" → cancel_order {"order_id":"ARP-20260308-XXXX"} (system auto-resolves to UUID)
     - "Cancel order abc123-..." → cancel_order {"order_id":"abc123-..."} (must be valid UUID)
     - "Update multiple orders" → update_orders_by_status (NEVER cancel_order with fake IDs)
+    - "Improve SEO for Electronics category" → update_category_seo {"category_id":"<uuid from data>","focus_keywords":"electronics, gadgets"}
+    - "Optimize all product SEO" → bulk_seo_optimize (NO params needed)
     
     The UI will parse action blocks and show Confirm/Cancel buttons with the exact details. NEVER execute without the action block.
 
@@ -1040,6 +1056,7 @@ CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 🔍 Pending Issues: ${JSON.stringify((recentFindings || []).map(f => "[" + f.severity + "] " + f.title))}
 📊 Tracking: ${JSON.stringify((trackingPixels || []).map(p => ({ platform: p.platform, active: p.is_active })))}
 📋 Recent Orders: ${JSON.stringify((recentOrders || []).slice(0, 5).map(o => ({ num: o.order_number, status: o.status, payment: o.payment_status, total: o.total, country: o.shipping_country })))}
+📂 Categories (use these IDs for update_category_seo): ${JSON.stringify((allCategories || []).map(c => ({ id: c.id, name: c.name, slug: c.slug, desc: c.description?.slice(0, 50) || "none" })))}
 
 TECH STACK:
 - Frontend: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
@@ -1057,13 +1074,16 @@ MULTIMODAL CAPABILITIES:
 
 RESPONSE RULES:
 - Use Bengali if owner writes in Bengali, English if in English. Mix naturally.
-- Code blocks with proper syntax highlighting (\`\`\`tsx, \`\`\`sql, \`\`\`bash).
+- 🚨 **NO CODE BLOCKS** unless the owner explicitly says "show code", "give me code", or "code snippet". Default = action tools + plain text explanation.
+- If you're about to write \`\`\`tsx or \`\`\`sql → STOP. Use an action tool instead if one exists.
+- For tasks without a matching tool, explain steps in plain numbered list (NO code).
+- Only show code when: (a) owner asks for it, (b) it's a custom implementation with no matching tool, (c) owner is debugging.
 - Keep responses actionable and concise.
 - For complex tasks, break into numbered steps.
 - NEVER hallucinate data — only use real stats above.
-- For code changes, always specify the exact file path.
 - Warn about potential risks before suggesting changes.
-- If unsure about something, say so honestly.`;
+- If unsure about something, say so honestly.
+- After a successful action, show: ✅ **Task Completed** — [brief description of what was done]`;
 
       // Build multimodal messages - use vision model if images attached
       const hasImages = bodyAttachments && bodyAttachments.length > 0;
@@ -1408,6 +1428,92 @@ RESPONSE RULES:
             }
           }
           result = { success: true, message: `SEO optimized ${optimized}/${unseoProducts.length} products with AI-generated meta titles and descriptions.`, affected: optimized };
+          break;
+        }
+        case "update_category_seo": {
+          const { category_id, focus_keywords } = params || {};
+          if (!category_id) {
+            return new Response(JSON.stringify({ error: "category_id is required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Fetch current category
+          const { data: cat, error: catFetchErr } = await adminClient
+            .from("categories")
+            .select("id, name, slug, description")
+            .eq("id", category_id)
+            .maybeSingle();
+          if (catFetchErr || !cat) {
+            return new Response(JSON.stringify({ error: `Category not found: ${category_id}` }), {
+              status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Fetch products in this category for context
+          const { data: catProducts } = await adminClient
+            .from("products")
+            .select("title, tags, price")
+            .eq("category_id", category_id)
+            .eq("is_active", true)
+            .limit(20);
+          
+          const productContext = (catProducts || []).map(p => `${p.title} (৳${p.price}) tags: ${(p.tags || []).join(",")}`).join("; ");
+          
+          if (!lovableApiKey) {
+            return new Response(JSON.stringify({ error: "AI not configured for SEO research" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          // AI-powered keyword research and SEO generation
+          const seoRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: `You are an expert SEO strategist for ecommerce. Research high-ranking buyer-intent keywords and generate optimized content. Return ONLY valid JSON with NO markdown wrapping:
+{"description":"SEO-optimized category description (150-300 chars, include 2-3 keywords naturally, compelling for shoppers)","meta_title":"max 60 chars with primary keyword","meta_description":"max 160 chars with CTA and keywords","keywords_used":["keyword1","keyword2","keyword3"]}` },
+                { role: "user", content: `Category: "${cat.name}" (slug: ${cat.slug})
+Current description: ${cat.description || "none"}
+Products in this category: ${productContext || "none yet"}
+Focus keywords hint: ${focus_keywords || "auto-research based on category name and products"}
+Research trending buyer-intent keywords for this category niche and generate conversion-optimized SEO content.` },
+              ],
+            }),
+          });
+          
+          if (!seoRes.ok) {
+            return new Response(JSON.stringify({ error: "AI SEO research failed" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          const seoData = await seoRes.json();
+          const rawSeo = seoData.choices?.[0]?.message?.content || "";
+          const jsonMatch = rawSeo.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            return new Response(JSON.stringify({ error: "AI returned invalid SEO data" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          const seo = JSON.parse(jsonMatch[0]);
+          
+          // Update category in database
+          const { error: updateErr } = await adminClient
+            .from("categories")
+            .update({
+              description: seo.description || cat.description,
+            })
+            .eq("id", category_id);
+          
+          if (updateErr) throw updateErr;
+          
+          result = { 
+            success: true, 
+            message: `✅ Category "${cat.name}" SEO updated!\n\n📝 Description: ${seo.description}\n🏷️ Keywords: ${(seo.keywords_used || []).join(", ")}\n📊 Meta Title: ${seo.meta_title || "N/A"}\n📋 Meta Description: ${seo.meta_description || "N/A"}`,
+            data: seo,
+          };
           break;
         }
         default:
