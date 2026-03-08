@@ -11,6 +11,28 @@ export const STORAGE_CATEGORY_FALLBACK_URL = CLOUD_URL
 const PUBLIC_STORAGE_PATH = "storage/v1/object/public/";
 const PROTOCOL_REGEX = /^https?:\/\//i;
 const KNOWN_LOCAL_PREFIXES = ["images/", "assets/", "public/"];
+const CACHE_PARAM = "v";
+
+let storageImageVersion = Date.now();
+
+export const bumpStorageImageVersion = () => {
+  storageImageVersion = Date.now();
+  return storageImageVersion;
+};
+
+const withCacheVersion = (url: string, cacheBust: boolean) => {
+  if (!cacheBust) return url;
+
+  const hashIndex = url.indexOf("#");
+  const hash = hashIndex >= 0 ? url.slice(hashIndex) : "";
+  const base = hashIndex >= 0 ? url.slice(0, hashIndex) : url;
+
+  const [path, rawQuery = ""] = base.split("?");
+  const params = new URLSearchParams(rawQuery);
+  params.set(CACHE_PARAM, String(storageImageVersion));
+
+  return `${path}?${params.toString()}${hash}`;
+};
 
 export const resolveStorageImageUrl = (
   imageUrl: string | null | undefined,
@@ -23,13 +45,7 @@ export const resolveStorageImageUrl = (
   const trimmed = imageUrl.trim();
   if (!trimmed) return fallbackUrl;
 
-  const appendCacheBust = (url: string) => {
-    if (!cacheBust) return url;
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}t=${Date.now()}`;
-  };
-
-  if (PROTOCOL_REGEX.test(trimmed)) return appendCacheBust(trimmed);
+  if (PROTOCOL_REGEX.test(trimmed)) return withCacheVersion(trimmed, cacheBust);
 
   const normalized = trimmed.replace(/^\/+/, "");
 
@@ -38,14 +54,14 @@ export const resolveStorageImageUrl = (
   }
 
   if (normalized.startsWith(PUBLIC_STORAGE_PATH)) {
-    return CLOUD_URL ? appendCacheBust(`${CLOUD_URL}/${normalized}`) : fallbackUrl;
+    return CLOUD_URL ? withCacheVersion(`${CLOUD_URL}/${normalized}`, cacheBust) : fallbackUrl;
   }
 
   if (/^[a-z0-9][a-z0-9_-]*\/.+$/i.test(normalized)) {
-    return CLOUD_URL ? appendCacheBust(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${normalized}`) : fallbackUrl;
+    return CLOUD_URL ? withCacheVersion(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${normalized}`, cacheBust) : fallbackUrl;
   }
 
   return CLOUD_URL
-    ? appendCacheBust(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${defaultBucket}/${normalized}`)
+    ? withCacheVersion(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${defaultBucket}/${normalized}`, cacheBust)
     : fallbackUrl;
 };
