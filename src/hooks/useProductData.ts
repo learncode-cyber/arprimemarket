@@ -120,7 +120,7 @@ export const useCategories = () => {
 
       return (data || []).map((category) => ({
         ...category,
-        image_url: resolveStorageImageUrl(category.image_url, STORAGE_CATEGORY_FALLBACK_URL),
+        image_url: resolveStorageImageUrl(category.image_url, CATEGORY_FALLBACK),
       }));
     },
   });
