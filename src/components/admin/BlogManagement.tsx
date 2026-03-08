@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Eye, X, Bold, Italic, List, ListOrdered, Link as LinkIcon, Image, Heading1, Heading2, Quote, Code, Upload, Loader2, Calendar, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, X, Upload, Loader2, Calendar, Sparkles } from "lucide-react";
+import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
