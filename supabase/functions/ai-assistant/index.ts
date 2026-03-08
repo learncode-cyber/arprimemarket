@@ -977,7 +977,16 @@ CORE CAPABILITIES:
        2. Generate an SEO-optimized name with primary keywords
        3. Create a conversion-focused meta description (150-160 chars) with CTAs
        4. Generate an SEO-friendly slug with keywords
-       5. Show ALL generated data clearly before the action block
+        5. Show ALL generated data clearly before the action block
+     • create_product — Create a new product with full SEO-optimized data. params: {"title":"Product Title","price":number,"description":"Rich HTML description","category_id":"uuid (optional)","compare_at_price":number (optional),"stock_quantity":number,"tags":["tag1","tag2"],"meta_title":"SEO title (max 60 chars)","meta_description":"SEO description (max 160 chars)","sku":"optional","brand":"optional","is_featured":boolean}
+       When using create_product, YOU MUST:
+       1. Research high-ranking keywords for the product niche
+       2. Generate an SEO-optimized title with primary buying keywords (max 60 chars)
+       3. Create a compelling product description (HTML with features, benefits, specs)
+       4. Generate conversion-focused meta description (150-160 chars) with CTA
+       5. Suggest relevant tags for discoverability
+       6. Set a competitive price if owner provides a range
+       7. Show ALL generated data clearly in a formatted table before the action block
    - The UI will parse this and show a "Confirm" button to the owner.
    - NEVER execute actions without the action block — the owner must confirm first.
    - You can include multiple action blocks if the owner asks for multiple operations.
