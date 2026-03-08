@@ -60,6 +60,29 @@ const AffiliateDashboard = () => {
     loadData();
   }, [user]);
 
+  // Realtime subscription for earnings updates
+  useEffect(() => {
+    if (!affiliate?.id) return;
+
+    const channel = supabase
+      .channel(`affiliate-${affiliate.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "affiliate_commissions", filter: `affiliate_id=eq.${affiliate.id}` },
+        () => { loadData(); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "affiliates", filter: `id=eq.${affiliate.id}` },
+        (payload) => {
+          setAffiliate(payload.new as unknown as Affiliate);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [affiliate?.id]);
+
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
@@ -107,6 +130,20 @@ const AffiliateDashboard = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast({ title: tx("Copied!", "কপি হয়েছে!") });
+  };
+
+  const shareLink = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: tx("AR Prime Market — Referral", "AR Prime Market — রেফারেল"),
+          text: tx("Shop with my referral link and get great deals!", "আমার রেফারেল লিংক দিয়ে শপিং করুন!"),
+          url: referralLink,
+        });
+      } catch { /* user cancelled */ }
+    } else {
+      copyLink();
+    }
   };
 
   if (loading) {
@@ -220,6 +257,9 @@ const AffiliateDashboard = () => {
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? tx("Copied", "কপি হয়েছে") : tx("Copy", "কপি")}
               </button>
+              <button onClick={shareLink} className="px-3 py-2.5 bg-secondary text-secondary-foreground rounded-xl text-xs font-medium hover:brightness-105 transition-all flex items-center gap-1.5">
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
               {tx(
@@ -255,6 +295,9 @@ const AffiliateDashboard = () => {
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               {tx("Commission History", "কমিশন ইতিহাস")}
+              <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {tx("Live", "লাইভ")} 🟢
+              </span>
             </h2>
             {commissions.length === 0 ? (
               <div className="text-center py-8">
