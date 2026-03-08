@@ -46,6 +46,7 @@ const QUICK_ACTIONS = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_DOC_TYPES = ["text/csv", "application/json", "text/plain", "text/html"];
+const CODE_REQUEST_REGEX = /(show\s+(me\s+)?)?code|code\s*snippet|sql\s+query|typescript|javascript|tsx|jsx/i;
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
