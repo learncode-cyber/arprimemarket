@@ -416,6 +416,45 @@ const AdminARChat = () => {
                         <ReactMarkdown>{m.content}</ReactMarkdown>
                       </div>
                     ) : m.content}
+                    {/* Action confirmation buttons */}
+                    {m.actions && m.actions.length > 0 && m.actionResults && (
+                      <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
+                        {m.actions.map((act, i) => {
+                          const key = `${act.tool}_${i}`;
+                          const result = m.actionResults?.[key];
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              {result?.status === "pending" && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-7 text-xs gap-1.5"
+                                  onClick={() => executeAction(m.id, act, key)}
+                                >
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Confirm: {act.description}
+                                </Button>
+                              )}
+                              {result?.status === "loading" && (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Executing...
+                                </div>
+                              )}
+                              {result?.status === "done" && (
+                                <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                                  <CheckCircle2 className="w-3 h-3" /> {result.message || "Done!"}
+                                </div>
+                              )}
+                              {result?.status === "error" && (
+                                <div className="flex items-center gap-1.5 text-xs text-destructive">
+                                  <AlertTriangle className="w-3 h-3" /> {result.message || "Failed"}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
