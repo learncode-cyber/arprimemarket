@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronDown, ChevronUp, Package, Truck, CheckCircle, Clock, X, Eye, Save, Loader2, MapPin, CreditCard, Hash, AlertTriangle, RefreshCw, Zap, Bell, Send } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Package, Truck, CheckCircle, Clock, X, Eye, Save, Loader2, MapPin, CreditCard, Hash, AlertTriangle, RefreshCw, Zap, Bell, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -91,6 +91,8 @@ const OrderManagement = () => {
   const [alerts, setAlerts] = useState<OrderAlert[]>([]);
   const [showAlerts, setShowAlerts] = useState(false);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -250,6 +252,21 @@ const OrderManagement = () => {
     toast.success("Alert resolved");
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-tools", {
+      body: { action: "delete_order", order_id: orderId },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message || data?.error || "Delete failed");
+    } else {
+      toast.success("Order deleted");
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setDeleteConfirm(null);
+    }
+    setDeleting(false);
+  };
+
   const filtered = orders.filter(o => {
     const matchSearch = !search ||
       o.order_number.toLowerCase().includes(search.toLowerCase()) ||
@@ -361,6 +378,24 @@ const OrderManagement = () => {
         </select>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-card border-2 border-destructive/30 rounded-2xl p-6 space-y-4 z-10">
+            <h3 className="font-display font-bold text-destructive">Delete Order</h3>
+            <p className="text-sm text-muted-foreground">This will permanently delete this order and all related items, payments, and alerts. This cannot be undone.</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleDeleteOrder(deleteConfirm)} disabled={deleting}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-40">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete
+              </button>
+              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm font-medium">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Orders */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
@@ -376,28 +411,34 @@ const OrderManagement = () => {
 
             return (
               <div key={order.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-                <button onClick={() => toggleExpand(order.id)}
-                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-secondary/30 transition-colors touch-manipulation">
-                  <StatusIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
-                      {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}
-                      {order.is_dropship && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent">Dropship</span>}
-                      {orderAlerts.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive flex items-center gap-0.5">
-                          <AlertTriangle className="w-2.5 h-2.5" /> {orderAlerts.length}
-                        </span>
-                      )}
+                <div className="flex items-center">
+                  <button onClick={() => toggleExpand(order.id)}
+                    className="flex-1 flex items-center gap-3 p-4 text-left hover:bg-secondary/30 transition-colors touch-manipulation">
+                    <StatusIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
+                        {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}
+                        {order.is_dropship && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent">Dropship</span>}
+                        {orderAlerts.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive flex items-center gap-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> {orderAlerts.length}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {order.shipping_name || "—"} · {new Date(order.created_at).toLocaleDateString()} · ৳{Number(order.total).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {order.shipping_name || "—"} · {new Date(order.created_at).toLocaleDateString()} · ৳{Number(order.total).toLocaleString()}
-                    </p>
-                  </div>
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(order.id); }}
+                    className="p-3 mr-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0" title="Delete order">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 <AnimatePresence>
                   {isExpanded && edit && (

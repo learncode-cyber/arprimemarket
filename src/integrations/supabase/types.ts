@@ -1531,18 +1531,23 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          brand: string | null
           category_id: string | null
           compare_at_price: number | null
           cost_price: number | null
           created_at: string
           currency: string
           description: string | null
+          height_cm: number | null
           id: string
           image_url: string | null
           images: string[] | null
           is_active: boolean
           is_featured: boolean
+          length_cm: number | null
           low_stock_threshold: number | null
+          meta_description: string | null
+          meta_title: string | null
           price: number
           rating: number | null
           review_count: number | null
@@ -1555,21 +1560,27 @@ export type Database = {
           title: string
           updated_at: string
           weight: number | null
+          width_cm: number | null
         }
         Insert: {
           barcode?: string | null
+          brand?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           cost_price?: number | null
           created_at?: string
           currency?: string
           description?: string | null
+          height_cm?: number | null
           id?: string
           image_url?: string | null
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          length_cm?: number | null
           low_stock_threshold?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
           price?: number
           rating?: number | null
           review_count?: number | null
@@ -1582,21 +1593,27 @@ export type Database = {
           title: string
           updated_at?: string
           weight?: number | null
+          width_cm?: number | null
         }
         Update: {
           barcode?: string | null
+          brand?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           cost_price?: number | null
           created_at?: string
           currency?: string
           description?: string | null
+          height_cm?: number | null
           id?: string
           image_url?: string | null
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          length_cm?: number | null
           low_stock_threshold?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
           price?: number
           rating?: number | null
           review_count?: number | null
@@ -1609,6 +1626,7 @@ export type Database = {
           title?: string
           updated_at?: string
           weight?: number | null
+          width_cm?: number | null
         }
         Relationships: [
           {

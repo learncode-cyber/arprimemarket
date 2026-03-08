@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Package, ArrowUpRight, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -26,6 +27,7 @@ interface Order {
 }
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [customerCount, setCustomerCount] = useState(0);
   const [productCount, setProductCount] = useState(0);
@@ -123,10 +125,10 @@ const AdminDashboard = () => {
   ];
 
   const statCards = [
-    { label: "Revenue", value: `৳${stats.totalRevenue.toLocaleString()}`, change: stats.revenueChange, icon: DollarSign, color: "from-primary/20 to-primary/5" },
-    { label: "Orders", value: stats.totalOrders.toString(), change: stats.ordersChange, icon: ShoppingBag, color: "from-blue-500/20 to-blue-500/5" },
-    { label: "Customers", value: stats.totalCustomers.toString(), change: 0, icon: Users, color: "from-green-500/20 to-green-500/5" },
-    { label: "Avg. Order", value: `৳${Math.round(stats.avgOrderValue).toLocaleString()}`, change: 0, icon: Package, color: "from-amber-500/20 to-amber-500/5" },
+    { label: "Revenue", value: `৳${stats.totalRevenue.toLocaleString()}`, change: stats.revenueChange, icon: DollarSign, color: "from-primary/20 to-primary/5", link: "/ar/orders" },
+    { label: "Orders", value: stats.totalOrders.toString(), change: stats.ordersChange, icon: ShoppingBag, color: "from-blue-500/20 to-blue-500/5", link: "/ar/orders" },
+    { label: "Customers", value: stats.totalCustomers.toString(), change: 0, icon: Users, color: "from-green-500/20 to-green-500/5", link: "/ar/customers" },
+    { label: "Products", value: stats.totalProducts.toString(), change: 0, icon: Package, color: "from-amber-500/20 to-amber-500/5", link: "/ar/products" },
   ];
 
   if (loading) {
@@ -163,7 +165,8 @@ const AdminDashboard = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="bg-card border border-border rounded-2xl p-4 relative overflow-hidden"
+            onClick={() => navigate(stat.link)}
+            className="bg-card border border-border rounded-2xl p-4 relative overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-50`} />
             <div className="relative">

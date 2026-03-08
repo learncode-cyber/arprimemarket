@@ -18,7 +18,8 @@ import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
+import AdminLayout from "./components/admin/AdminLayout";
+import { adminRoutes } from "./pages/Admin";
 import Checkout from "./pages/Checkout";
 import TrackOrder from "./pages/TrackOrder";
 import NotFound from "./pages/NotFound";
@@ -70,8 +71,12 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <Routes>
-                  <Route path="/ar" element={<Admin />} />
-                  <Route path="/ar/*" element={<Admin />} />
+                  {/* Admin routes with layout + sub-routes */}
+                  <Route path="/ar" element={<AdminLayout />}>
+                    {adminRoutes.map(r => (
+                      <Route key={r.path} index={r.path === ""} path={r.path || undefined} element={r.element} />
+                    ))}
+                  </Route>
                   <Route path="/widget/chat" element={<WidgetChat />} />
                   <Route path="/admin" element={<Navigate to="/ar" replace />} />
                   <Route path="/admin/*" element={<Navigate to="/ar" replace />} />
