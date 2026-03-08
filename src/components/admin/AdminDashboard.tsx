@@ -165,7 +165,8 @@ const AdminDashboard = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="bg-card border border-border rounded-2xl p-4 relative overflow-hidden"
+            onClick={() => navigate(stat.link)}
+            className="bg-card border border-border rounded-2xl p-4 relative overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-50`} />
             <div className="relative">
