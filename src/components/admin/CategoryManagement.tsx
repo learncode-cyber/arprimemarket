@@ -74,16 +74,11 @@ const CategoryManagement = () => {
       image_url: editForm.image_url || null,
     }).eq("id", editingId);
     if (error) toast.error(error.message);
-    else { toast.success("Updated"); setEditingId(null); refetch(); }
+    else { toast.success("Updated"); setEditingId(null); await refreshCategories(); }
     setSaving(false);
   };
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-  const resolveImg = (url: string) => {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    return `${SUPABASE_URL}/storage/v1/object/public/category-images/${url}`;
-  };
+  const resolveImg = (url: string) => resolveStorageImageUrl(url, "/placeholder.svg", "category-images");
 
   return (
     <div className="space-y-5">
