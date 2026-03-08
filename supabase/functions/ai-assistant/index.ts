@@ -1183,6 +1183,38 @@ RESPONSE RULES:
           result = { success: true, message: `Category "${name}" created! (slug: ${categorySlug})`, data: newCat };
           break;
         }
+        case "create_product": {
+          const { title, price, description, category_id, compare_at_price, stock_quantity, tags, meta_title, meta_description, sku, brand, is_featured } = params || {};
+          if (!title || price === undefined) {
+            return new Response(JSON.stringify({ error: "title and price are required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const productSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+          const { data: newProduct, error: prodError } = await adminClient
+            .from("products")
+            .insert({
+              title,
+              slug: productSlug,
+              price: Number(price),
+              compare_at_price: compare_at_price ? Number(compare_at_price) : null,
+              description: description || null,
+              category_id: category_id || null,
+              stock_quantity: stock_quantity ? Number(stock_quantity) : 0,
+              tags: tags || [],
+              meta_title: meta_title || null,
+              meta_description: meta_description || null,
+              sku: sku || null,
+              brand: brand || null,
+              is_featured: is_featured || false,
+              is_active: true,
+            })
+            .select("id, title, slug, price")
+            .single();
+          if (prodError) throw prodError;
+          result = { success: true, message: `Product "${title}" created! (৳${price}, slug: ${productSlug})`, data: newProduct };
+          break;
+        }
         default:
           return new Response(JSON.stringify({ error: `Unknown tool: ${tool}` }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
