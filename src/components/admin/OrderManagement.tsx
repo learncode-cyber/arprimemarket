@@ -252,6 +252,21 @@ const OrderManagement = () => {
     toast.success("Alert resolved");
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-tools", {
+      body: { action: "delete_order", order_id: orderId },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message || data?.error || "Delete failed");
+    } else {
+      toast.success("Order deleted");
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setDeleteConfirm(null);
+    }
+    setDeleting(false);
+  };
+
   const filtered = orders.filter(o => {
     const matchSearch = !search ||
       o.order_number.toLowerCase().includes(search.toLowerCase()) ||
