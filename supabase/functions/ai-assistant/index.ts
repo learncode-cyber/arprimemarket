@@ -1669,7 +1669,7 @@ Research trending buyer-intent keywords for this category niche and generate con
           
           result = { 
             success: true, 
-            message: `✅ Category "${cat.name}" SEO updated!\n\n📝 Description: ${seo.description}\n🏷️ Keywords: ${(seo.keywords_used || []).join(", ")}\n📊 Meta Title: ${seo.meta_title || "N/A"}\n📋 Meta Description: ${seo.meta_description || "N/A"}`,
+            message: `✅ Task Completed — SEO updated for "${cat.name}". Keywords: ${(seo.keywords_used || []).join(", ")}`,
             data: seo,
           };
           break;
