@@ -393,28 +393,34 @@ const OrderManagement = () => {
 
             return (
               <div key={order.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-                <button onClick={() => toggleExpand(order.id)}
-                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-secondary/30 transition-colors touch-manipulation">
-                  <StatusIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
-                      {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}
-                      {order.is_dropship && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent">Dropship</span>}
-                      {orderAlerts.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive flex items-center gap-0.5">
-                          <AlertTriangle className="w-2.5 h-2.5" /> {orderAlerts.length}
-                        </span>
-                      )}
+                <div className="flex items-center">
+                  <button onClick={() => toggleExpand(order.id)}
+                    className="flex-1 flex items-center gap-3 p-4 text-left hover:bg-secondary/30 transition-colors touch-manipulation">
+                    <StatusIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
+                        {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}
+                        {order.is_dropship && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent">Dropship</span>}
+                        {orderAlerts.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive flex items-center gap-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> {orderAlerts.length}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {order.shipping_name || "—"} · {new Date(order.created_at).toLocaleDateString()} · ৳{Number(order.total).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {order.shipping_name || "—"} · {new Date(order.created_at).toLocaleDateString()} · ৳{Number(order.total).toLocaleString()}
-                    </p>
-                  </div>
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(order.id); }}
+                    className="p-3 mr-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0" title="Delete order">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 <AnimatePresence>
                   {isExpanded && edit && (
