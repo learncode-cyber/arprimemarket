@@ -1255,6 +1255,85 @@ RESPONSE RULES:
           result = { success: true, message: `Product "${title}" created! (৳${price}, slug: ${productSlug})`, data: newProduct };
           break;
         }
+        case "create_supplier": {
+          const { name, platform, api_endpoint, contact_info } = params || {};
+          if (!name || !platform) {
+            return new Response(JSON.stringify({ error: "name and platform are required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const validPlatforms = ["cj_dropshipping", "aliexpress", "custom"];
+          if (!validPlatforms.includes(platform)) {
+            return new Response(JSON.stringify({ error: `Invalid platform. Valid: ${validPlatforms.join(", ")}` }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const { data: newSupplier, error: supError } = await adminClient
+            .from("suppliers")
+            .insert({
+              name,
+              platform,
+              api_endpoint: api_endpoint || null,
+              contact_info: contact_info || null,
+              is_active: true,
+              auto_sync: true,
+              sync_interval_hours: 6,
+            })
+            .select("id, name, platform")
+            .single();
+          if (supError) throw supError;
+          result = { success: true, message: `Supplier "${name}" (${platform}) created and ready for sync!`, data: newSupplier };
+          break;
+        }
+        case "bulk_seo_optimize": {
+          // Find products missing SEO meta
+          const { data: unseoProducts } = await adminClient
+            .from("products")
+            .select("id, title, description, tags")
+            .eq("is_active", true)
+            .or("meta_title.is.null,meta_description.is.null")
+            .limit(20);
+          
+          if (!unseoProducts || unseoProducts.length === 0) {
+            result = { success: true, message: "All active products already have SEO metadata! 🎉", affected: 0 };
+            break;
+          }
+
+          let optimized = 0;
+          if (lovableApiKey) {
+            for (const p of unseoProducts) {
+              try {
+                const seoRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    model: "google/gemini-2.5-flash-lite",
+                    messages: [
+                      { role: "system", content: "Generate SEO metadata for this product. Return ONLY valid JSON: {\"meta_title\":\"max 60 chars with buying keywords\",\"meta_description\":\"max 160 chars conversion-focused with CTA\"}" },
+                      { role: "user", content: `Product: ${p.title}\nDescription: ${(p.description || "").slice(0, 200)}\nTags: ${(p.tags || []).join(", ")}` },
+                    ],
+                  }),
+                });
+                if (seoRes.ok) {
+                  const seoData = await seoRes.json();
+                  const raw = seoData.choices?.[0]?.message?.content || "";
+                  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                  if (jsonMatch) {
+                    const seo = JSON.parse(jsonMatch[0]);
+                    await adminClient.from("products").update({
+                      meta_title: seo.meta_title?.slice(0, 60) || null,
+                      meta_description: seo.meta_description?.slice(0, 160) || null,
+                      updated_at: new Date().toISOString(),
+                    }).eq("id", p.id);
+                    optimized++;
+                  }
+                }
+              } catch (e) { console.error("SEO optimize error for", p.id, e); }
+            }
+          }
+          result = { success: true, message: `SEO optimized ${optimized}/${unseoProducts.length} products with AI-generated meta titles and descriptions.`, affected: optimized };
+          break;
+        }
         default:
           return new Response(JSON.stringify({ error: `Unknown tool: ${tool}` }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
