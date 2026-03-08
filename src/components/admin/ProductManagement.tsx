@@ -291,70 +291,19 @@ const ProductManagement = () => {
             AI Generate ({selectedIds.size})
           </button>
         )}
-        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
+        <button onClick={openCreateModal} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
           <Plus className="w-4 h-4" /> Add Product
         </button>
       </div>
 
-      {/* Add Product Form */}
-      <AnimatePresence>
-        {showAdd && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-              <h3 className="font-display text-base font-semibold text-foreground">New Product</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="text-xs text-muted-foreground">Title *</label><input value={newProduct.title} onChange={e => setNewProduct(p => ({ ...p, title: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">SKU</label><input value={newProduct.sku} onChange={e => setNewProduct(p => ({ ...p, sku: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Price *</label><input type="number" value={newProduct.price} onChange={e => setNewProduct(p => ({ ...p, price: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Compare Price</label><input type="number" value={newProduct.compare_at_price} onChange={e => setNewProduct(p => ({ ...p, compare_at_price: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Category</label>
-                  <select value={newProduct.category_id} onChange={e => setNewProduct(p => ({ ...p, category_id: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    <option value="">Select</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-xs text-muted-foreground">Stock</label><input type="number" value={newProduct.stock_quantity} onChange={e => setNewProduct(p => ({ ...p, stock_quantity: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Weight (kg)</label><input type="number" value={newProduct.weight} onChange={e => setNewProduct(p => ({ ...p, weight: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Tags (comma separated)</label><input value={newProduct.tags} onChange={e => setNewProduct(p => ({ ...p, tags: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground font-medium">Product Images (up to 4)</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div><label className="text-[10px] text-muted-foreground">Main Image URL *</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 2</label><input value={newProduct.image_2} onChange={e => setNewProduct(p => ({ ...p, image_2: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 3</label><input value={newProduct.image_3} onChange={e => setNewProduct(p => ({ ...p, image_3: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 4</label><input value={newProduct.image_4} onChange={e => setNewProduct(p => ({ ...p, image_4: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                </div>
-                {/* Image previews */}
-                {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].some(Boolean) && (
-                  <div className="flex gap-2 flex-wrap">
-                    {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].map((url, i) => url ? (
-                      <img key={i} src={url} alt={`Preview ${i+1}`} className="w-16 h-16 rounded-lg object-cover border border-border" onError={e => (e.currentTarget.style.display = 'none')} />
-                    ) : null)}
-                  </div>
-                )}
-              </div>
-              <div><label className="text-xs text-muted-foreground">Description</label><textarea rows={3} value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
-              
-              {/* SEO Score Widget */}
-              <SEOScoreWidget
-                title={newProduct.title}
-                description={newProduct.description}
-                category={categories.find(c => c.id === newProduct.category_id)?.name}
-                price={newProduct.price ? parseFloat(newProduct.price) : undefined}
-                onTitleGenerated={(t) => setNewProduct(p => ({ ...p, title: t }))}
-                onDescriptionGenerated={(d) => setNewProduct(p => ({ ...p, description: d }))}
-              />
-
-              <div className="flex gap-2">
-                <button onClick={handleAdd} disabled={saving} className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60 flex items-center gap-1.5">
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Add Product
-                </button>
-                <button onClick={() => setShowAdd(false)} className="px-5 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-medium">Cancel</button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Product Modal */}
+      <ProductModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setModalProduct(null); }}
+        product={modalProduct}
+        categories={categories}
+        onSaved={refetch}
+      />
 
       {/* Products Table */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
