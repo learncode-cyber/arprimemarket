@@ -1320,14 +1320,14 @@ RESPONSE RULES:
             .from("suppliers")
             .insert({
               name,
-              platform,
-              api_endpoint: api_endpoint || null,
-              contact_info: contact_info || null,
+              api_type: platform,
+              api_url: api_endpoint || null,
+              notes: contact_info || null,
               is_active: true,
               auto_sync: true,
               sync_interval_hours: 6,
             })
-            .select("id, name, platform")
+            .select("id, name, api_type")
             .single();
           if (supError) throw supError;
           result = { success: true, message: `Supplier "${name}" (${platform}) created and ready for sync!`, data: newSupplier };
