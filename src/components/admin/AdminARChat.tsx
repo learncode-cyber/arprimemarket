@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Minus, Maximize2, Loader2, RefreshCw, Paperclip, ImageIcon, FileText } from "lucide-react";
+import { Bot, Send, X, Minus, Maximize2, Loader2, RefreshCw, Paperclip, ImageIcon, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -12,11 +12,19 @@ interface Attachment {
   preview?: string;
 }
 
+interface ParsedAction {
+  tool: string;
+  description: string;
+  params: Record<string, any>;
+}
+
 interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
   attachments?: Attachment[];
+  actions?: ParsedAction[];
+  actionResults?: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }>;
 }
 
 interface Alert {
@@ -229,11 +237,74 @@ const AdminARChat = () => {
       }
 
       const data = await resp.json();
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), content: data.reply || "No response.", role: "assistant" }]);
+      const rawReply = data.reply || "No response.";
+      
+      // Parse action blocks from AI response
+      const actionRegex = /<!--ACTION:(.*?)-->/g;
+      const actions: ParsedAction[] = [];
+      let match;
+      while ((match = actionRegex.exec(rawReply)) !== null) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          actions.push(parsed);
+        } catch {}
+      }
+      const cleanContent = rawReply.replace(/<!--ACTION:.*?-->/g, "").trim();
+      
+      const actionResults: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }> = {};
+      actions.forEach((a, i) => { actionResults[`${a.tool}_${i}`] = { status: "pending" }; });
+
+      setMessages(prev => [...prev, { 
+        id: crypto.randomUUID(), 
+        content: cleanContent, 
+        role: "assistant",
+        actions: actions.length > 0 ? actions : undefined,
+        actionResults: actions.length > 0 ? actionResults : undefined,
+      }]);
     } catch {
       setMessages(prev => [...prev, { id: crypto.randomUUID(), content: "Connection error. Please try again.", role: "assistant" }]);
     }
     setLoading(false);
+  };
+
+  const executeAction = async (messageId: string, action: ParsedAction, actionKey: string) => {
+    // Set loading
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "loading" as const } } };
+    }));
+
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "execute_action",
+          tool: action.tool,
+          params: action.params,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Action failed");
+
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "done" as const, message: data.message } } };
+      }));
+    } catch (err: any) {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "error" as const, message: err.message } } };
+      }));
+    }
   };
 
   if (!open) {
@@ -345,6 +416,45 @@ const AdminARChat = () => {
                         <ReactMarkdown>{m.content}</ReactMarkdown>
                       </div>
                     ) : m.content}
+                    {/* Action confirmation buttons */}
+                    {m.actions && m.actions.length > 0 && m.actionResults && (
+                      <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
+                        {m.actions.map((act, i) => {
+                          const key = `${act.tool}_${i}`;
+                          const result = m.actionResults?.[key];
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              {result?.status === "pending" && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-7 text-xs gap-1.5"
+                                  onClick={() => executeAction(m.id, act, key)}
+                                >
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Confirm: {act.description}
+                                </Button>
+                              )}
+                              {result?.status === "loading" && (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Executing...
+                                </div>
+                              )}
+                              {result?.status === "done" && (
+                                <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                                  <CheckCircle2 className="w-3 h-3" /> {result.message || "Done!"}
+                                </div>
+                              )}
+                              {result?.status === "error" && (
+                                <div className="flex items-center gap-1.5 text-xs text-destructive">
+                                  <AlertTriangle className="w-3 h-3" /> {result.message || "Failed"}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

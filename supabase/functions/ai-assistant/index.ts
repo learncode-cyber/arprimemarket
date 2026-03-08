@@ -961,6 +961,21 @@ CORE CAPABILITIES:
    - Automatic Gemini Pro fallback for vision tasks
    - If the owner asks about n8n or automation: explain how to use the ai-bridge endpoint with API keys
 
+7. **SERVER-SIDE ACTION TOOLS** (CRITICAL — YOU CAN PERFORM DATABASE ACTIONS):
+   When the owner asks you to perform a database action (cancel orders, update statuses, delete data, etc.), you MUST:
+   - First explain what the action will do and show affected data counts/details
+   - Then include an action block in your response using this EXACT format:
+     <!--ACTION:{"tool":"cancel_pending_orders","description":"Cancel all pending orders","params":{}}-->
+   - Available tools:
+     • cancel_pending_orders — Sets all orders with status='pending' to status='cancelled'
+     • cancel_order — Cancel a specific order. params: {"order_id":"uuid"}
+     • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0
+     • update_order_status — Update an order's status. params: {"order_id":"uuid","status":"shipped|delivered|cancelled|processing"}
+   - The UI will parse this and show a "Confirm" button to the owner.
+   - NEVER execute actions without the action block — the owner must confirm first.
+   - You can include multiple action blocks if the owner asks for multiple operations.
+   - Always show what will be affected BEFORE the action block.
+
 CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 📦 Products: ${totalProducts} total (${activeProducts} active, ${outOfStock || 0} out of stock)
 🛒 Orders: ${totalOrders} total (${pendingOrders} pending)
@@ -1047,6 +1062,92 @@ RESPONSE RULES:
       } catch {}
 
       return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── EXECUTE SERVER-SIDE ACTION (Admin AR Action Tools) ───
+    if (action === "execute_action") {
+      const { tool, params } = body;
+      if (!tool) {
+        return new Response(JSON.stringify({ error: "tool is required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let result: any = { success: false };
+
+      switch (tool) {
+        case "cancel_pending_orders": {
+          const { data, error } = await adminClient
+            .from("orders")
+            .update({ status: "cancelled", updated_at: new Date().toISOString() })
+            .eq("status", "pending")
+            .select("id");
+          if (error) throw error;
+          result = { success: true, affected: data?.length || 0, message: `${data?.length || 0} pending orders cancelled.` };
+          break;
+        }
+        case "cancel_order": {
+          const orderId = params?.order_id;
+          if (!orderId) {
+            return new Response(JSON.stringify({ error: "order_id required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const { error } = await adminClient
+            .from("orders")
+            .update({ status: "cancelled", updated_at: new Date().toISOString() })
+            .eq("id", orderId);
+          if (error) throw error;
+          result = { success: true, message: `Order ${orderId} cancelled.` };
+          break;
+        }
+        case "deactivate_out_of_stock": {
+          const { data, error } = await adminClient
+            .from("products")
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .lte("stock_quantity", 0)
+            .eq("is_active", true)
+            .select("id");
+          if (error) throw error;
+          result = { success: true, affected: data?.length || 0, message: `${data?.length || 0} out-of-stock products deactivated.` };
+          break;
+        }
+        case "update_order_status": {
+          const { order_id, status: newStatus } = params || {};
+          if (!order_id || !newStatus) {
+            return new Response(JSON.stringify({ error: "order_id and status required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          if (!validStatuses.includes(newStatus)) {
+            return new Response(JSON.stringify({ error: `Invalid status. Valid: ${validStatuses.join(", ")}` }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const updateData: any = { status: newStatus, updated_at: new Date().toISOString() };
+          if (newStatus === "delivered") updateData.delivered_at = new Date().toISOString();
+          const { error } = await adminClient.from("orders").update(updateData).eq("id", order_id);
+          if (error) throw error;
+          result = { success: true, message: `Order ${order_id} status updated to '${newStatus}'.` };
+          break;
+        }
+        default:
+          return new Response(JSON.stringify({ error: `Unknown tool: ${tool}` }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+      }
+
+      // Log the action
+      await adminClient.from("ai_activity_log").insert({
+        action: `action_tool:${tool}`,
+        details: JSON.stringify({ tool, params, result }),
+        performed_by: user.id,
+      });
+
+      return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
