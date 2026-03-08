@@ -54,7 +54,7 @@ const CategoryManagement = () => {
     if (!confirm("Delete this category?")) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Deleted"); refetch(); }
+    else { toast.success("Deleted"); await refreshCategories(); }
   };
 
   const startEdit = (cat: any) => {
