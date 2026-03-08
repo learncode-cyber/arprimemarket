@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Save, X, Loader2, FolderTree } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { bumpStorageImageVersion, resolveStorageImageUrl } from "@/lib/storageImage";
 import { CategoryImageUploader } from "./CategoryImageUploader";
 import { GoogleSEOPreview } from "./GoogleSEOPreview";
 
