@@ -43,29 +43,14 @@ const ProductManagement = () => {
     else setSelectedIds(new Set(filtered.map(p => p.id)));
   };
 
-  const handleAdd = async () => {
-    if (!newProduct.title || !newProduct.price) { toast.error("Title and price required"); return; }
-    setSaving(true);
-    const slug = newProduct.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
-    const images = [newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].filter(Boolean);
-    const { error } = await supabase.from("products").insert({
-      title: newProduct.title, slug, price: parseFloat(newProduct.price),
-      compare_at_price: newProduct.compare_at_price ? parseFloat(newProduct.compare_at_price) : null,
-      category_id: newProduct.category_id || null, image_url: newProduct.image_url || null,
-      images: images,
-      description: newProduct.description || null, stock_quantity: parseInt(newProduct.stock_quantity) || 0,
-      sku: newProduct.sku || null, weight: newProduct.weight ? parseFloat(newProduct.weight) : null,
-      tags: newProduct.tags ? newProduct.tags.split(",").map(t => t.trim()) : [],
-      is_active: true,
-    });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Product added!");
-      setNewProduct({ title: "", price: "", compare_at_price: "", category_id: "", image_url: "", image_2: "", image_3: "", image_4: "", description: "", stock_quantity: "0", sku: "", tags: "", weight: "" });
-      setShowAdd(false);
-      refetch();
-    }
-    setSaving(false);
+  const openCreateModal = () => {
+    setModalProduct(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (p: Product) => {
+    setModalProduct(p);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
