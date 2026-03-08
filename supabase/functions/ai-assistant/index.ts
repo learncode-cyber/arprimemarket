@@ -977,7 +977,16 @@ CORE CAPABILITIES:
        2. Generate an SEO-optimized name with primary keywords
        3. Create a conversion-focused meta description (150-160 chars) with CTAs
        4. Generate an SEO-friendly slug with keywords
-       5. Show ALL generated data clearly before the action block
+        5. Show ALL generated data clearly before the action block
+     • create_product — Create a new product with full SEO-optimized data. params: {"title":"Product Title","price":number,"description":"Rich HTML description","category_id":"uuid (optional)","compare_at_price":number (optional),"stock_quantity":number,"tags":["tag1","tag2"],"meta_title":"SEO title (max 60 chars)","meta_description":"SEO description (max 160 chars)","sku":"optional","brand":"optional","is_featured":boolean}
+       When using create_product, YOU MUST:
+       1. Research high-ranking keywords for the product niche
+       2. Generate an SEO-optimized title with primary buying keywords (max 60 chars)
+       3. Create a compelling product description (HTML with features, benefits, specs)
+       4. Generate conversion-focused meta description (150-160 chars) with CTA
+       5. Suggest relevant tags for discoverability
+       6. Set a competitive price if owner provides a range
+       7. Show ALL generated data clearly in a formatted table before the action block
    - The UI will parse this and show a "Confirm" button to the owner.
    - NEVER execute actions without the action block — the owner must confirm first.
    - You can include multiple action blocks if the owner asks for multiple operations.
@@ -1172,6 +1181,38 @@ RESPONSE RULES:
             .single();
           if (catError) throw catError;
           result = { success: true, message: `Category "${name}" created! (slug: ${categorySlug})`, data: newCat };
+          break;
+        }
+        case "create_product": {
+          const { title, price, description, category_id, compare_at_price, stock_quantity, tags, meta_title, meta_description, sku, brand, is_featured } = params || {};
+          if (!title || price === undefined) {
+            return new Response(JSON.stringify({ error: "title and price are required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const productSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+          const { data: newProduct, error: prodError } = await adminClient
+            .from("products")
+            .insert({
+              title,
+              slug: productSlug,
+              price: Number(price),
+              compare_at_price: compare_at_price ? Number(compare_at_price) : null,
+              description: description || null,
+              category_id: category_id || null,
+              stock_quantity: stock_quantity ? Number(stock_quantity) : 0,
+              tags: tags || [],
+              meta_title: meta_title || null,
+              meta_description: meta_description || null,
+              sku: sku || null,
+              brand: brand || null,
+              is_featured: is_featured || false,
+              is_active: true,
+            })
+            .select("id, title, slug, price")
+            .single();
+          if (prodError) throw prodError;
+          result = { success: true, message: `Product "${title}" created! (৳${price}, slug: ${productSlug})`, data: newProduct };
           break;
         }
         default:
