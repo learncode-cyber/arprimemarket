@@ -65,25 +65,7 @@ const ProductManagement = () => {
   };
 
   const startEdit = (p: Product) => {
-    setEditingId(p.id);
-    setEditForm({
-      title: p.title, price: p.price.toString(), stock_quantity: p.stock_quantity.toString(),
-      compare_at_price: p.compare_at_price?.toString() || "", image_url: p.image || "",
-      description: p.description || "",
-    });
-  };
-
-  const saveEdit = async () => {
-    if (!editingId) return;
-    setSaving(true);
-    const { error } = await supabase.from("products").update({
-      title: editForm.title, price: parseFloat(editForm.price),
-      stock_quantity: parseInt(editForm.stock_quantity) || 0,
-      compare_at_price: editForm.compare_at_price ? parseFloat(editForm.compare_at_price) : null,
-      image_url: editForm.image_url || null, description: editForm.description || null,
-    }).eq("id", editingId);
-    if (error) toast.error(error.message); else { toast.success("Updated"); setEditingId(null); refetch(); }
-    setSaving(false);
+    openEditModal(p);
   };
 
   // Single AI Content Generation
