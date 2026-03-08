@@ -125,10 +125,10 @@ const AdminDashboard = () => {
   ];
 
   const statCards = [
-    { label: "Revenue", value: `৳${stats.totalRevenue.toLocaleString()}`, change: stats.revenueChange, icon: DollarSign, color: "from-primary/20 to-primary/5" },
-    { label: "Orders", value: stats.totalOrders.toString(), change: stats.ordersChange, icon: ShoppingBag, color: "from-blue-500/20 to-blue-500/5" },
-    { label: "Customers", value: stats.totalCustomers.toString(), change: 0, icon: Users, color: "from-green-500/20 to-green-500/5" },
-    { label: "Avg. Order", value: `৳${Math.round(stats.avgOrderValue).toLocaleString()}`, change: 0, icon: Package, color: "from-amber-500/20 to-amber-500/5" },
+    { label: "Revenue", value: `৳${stats.totalRevenue.toLocaleString()}`, change: stats.revenueChange, icon: DollarSign, color: "from-primary/20 to-primary/5", link: "/ar/orders" },
+    { label: "Orders", value: stats.totalOrders.toString(), change: stats.ordersChange, icon: ShoppingBag, color: "from-blue-500/20 to-blue-500/5", link: "/ar/orders" },
+    { label: "Customers", value: stats.totalCustomers.toString(), change: 0, icon: Users, color: "from-green-500/20 to-green-500/5", link: "/ar/customers" },
+    { label: "Products", value: stats.totalProducts.toString(), change: 0, icon: Package, color: "from-amber-500/20 to-amber-500/5", link: "/ar/products" },
   ];
 
   if (loading) {
