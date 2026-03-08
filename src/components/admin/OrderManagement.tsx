@@ -264,6 +264,7 @@ const OrderManagement = () => {
   const filtered = orders.filter(o => {
     const matchSearch = !search ||
       o.order_number.toLowerCase().includes(search.toLowerCase()) ||
+      (o.tracking_number || "").toLowerCase().includes(search.toLowerCase()) ||
       (o.shipping_name || "").toLowerCase().includes(search.toLowerCase()) ||
       (o.shipping_phone || "").includes(search);
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
@@ -369,7 +370,7 @@ const OrderManagement = () => {
       <div className="flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by order #, name, phone..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by order #, tracking ID, name, phone..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -415,6 +416,13 @@ const OrderManagement = () => {
                     <Badge className={statusColors[order.status]}>{order.status}</Badge>
                     <Badge className={statusColors[order.payment_status]}>{order.payment_status}</Badge>
                   </DialogTitle>
+                  {order.tracking_number && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Hash className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs text-muted-foreground">Tracking:</span>
+                      <span className="font-mono text-xs font-bold text-primary">{order.tracking_number}</span>
+                    </div>
+                  )}
                 </DialogHeader>
 
                 {/* Timeline */}
@@ -604,6 +612,7 @@ const OrderManagement = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
+                        {order.tracking_number && <span className="font-mono text-[10px] text-primary">{order.tracking_number}</span>}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
                         {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}

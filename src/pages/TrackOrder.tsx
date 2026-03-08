@@ -42,7 +42,8 @@ const TrackOrder = () => {
     setOrder(null);
     setSupplierOrders([]);
 
-    const orderNum = query.trim().toUpperCase();
+    const searchTerm = query.trim().toUpperCase();
+    const isTrackingId = searchTerm.startsWith("ARP-TRK-");
 
     // Try authenticated user lookup first
     let data: any = null;
@@ -50,7 +51,7 @@ const TrackOrder = () => {
       const res = await supabase
         .from("orders")
         .select("*")
-        .eq("order_number", orderNum)
+        .or(isTrackingId ? `tracking_number.eq.${searchTerm}` : `order_number.eq.${searchTerm}`)
         .maybeSingle();
       data = res.data;
     }
@@ -60,7 +61,7 @@ const TrackOrder = () => {
       // Try with email if provided
       if (email.trim()) {
         const res = await supabase.rpc("verify_guest_order", {
-          _order_number: orderNum,
+          _order_number: searchTerm,
           _email: email.trim(),
         });
         data = res.data?.[0] || null;
@@ -72,7 +73,7 @@ const TrackOrder = () => {
         const token = urlParams.get("token");
         if (token) {
           const res = await supabase.rpc("get_guest_order", {
-            _order_number: orderNum,
+            _order_number: searchTerm,
             _tracking_token: token,
           });
           data = res.data?.[0] || null;
@@ -160,7 +161,7 @@ const TrackOrder = () => {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
-              placeholder={l("Enter order number (e.g. ARP-20260225-1234)", "অর্ডার নম্বর দিন (যেমন ARP-20260225-1234)", "أدخل رقم الطلب")}
+              placeholder={l("Enter order or tracking ID (e.g. ARP-20260225-1234 or ARP-TRK-XXXXX)", "অর্ডার/ট্র্যাকিং নম্বর দিন", "أدخل رقم الطلب أو التتبع")}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation"
             />
           </div>
