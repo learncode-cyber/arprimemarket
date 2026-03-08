@@ -1227,7 +1227,10 @@ RESPONSE RULES:
       }
 
       const aiData = await aiResponse.json();
-      const reply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const rawReply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const reply = ownerAskedForCode
+        ? rawReply
+        : rawReply.replace(/```[\s\S]*?```/g, "").trim();
       const tokensUsed = aiData.usage?.total_tokens || 0;
 
       // Log to ai_engine_logs for monitoring
@@ -1243,7 +1246,7 @@ RESPONSE RULES:
         });
       } catch {}
 
-      return new Response(JSON.stringify({ reply }), {
+      return new Response(JSON.stringify({ reply: reply || "Action prepared — confirm to execute." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
