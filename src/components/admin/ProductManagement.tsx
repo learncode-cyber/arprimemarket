@@ -25,6 +25,9 @@ const ProductManagement = () => {
   const filtered = products.filter(p => {
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
     const matchCat = categoryFilter === "all" || p.category_id === categoryFilter;
+    // Status card filters
+    if (statusCardFilter === "featured") return matchSearch && matchCat && p.is_featured;
+    if (statusCardFilter === "lowstock") return matchSearch && matchCat && p.stock_quantity <= 5;
     return matchSearch && matchCat;
   });
 
