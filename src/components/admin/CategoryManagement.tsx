@@ -24,6 +24,12 @@ const CategoryManagement = () => {
     return !categories.some(c => c.slug === slug && c.id !== excludeId);
   };
 
+  const refreshCategories = useCallback(async () => {
+    bumpStorageImageVersion();
+    await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    await refetch();
+  }, [queryClient, refetch]);
+
   const handleAdd = async () => {
     if (!newCategory.name) { toast.error("Category name required"); return; }
     const slug = newCategory.slug || autoSlug(newCategory.name);
