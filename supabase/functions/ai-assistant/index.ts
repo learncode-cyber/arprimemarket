@@ -1370,7 +1370,7 @@ RESPONSE RULES:
         case "update_orders_by_status": {
           const fromStatus = params?.from_status;
           const toStatus = params?.to_status;
-          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          const validStatuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"];
           if (!fromStatus || !toStatus || !validStatuses.includes(fromStatus) || !validStatuses.includes(toStatus)) {
             return new Response(JSON.stringify({ error: `from_status and to_status required. Valid: ${validStatuses.join(", ")}` }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
