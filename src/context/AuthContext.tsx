@@ -35,17 +35,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let initialLoad = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await checkAdmin(session.user.id);
+        // Use setTimeout to avoid async in onAuthStateChange callback
+        const userId = session.user.id;
+        setTimeout(() => {
+          checkAdmin(userId).then(() => {
+            if (!initialLoad) setLoading(false);
+          });
+        }, 0);
       } else {
         setIsAdmin(false);
-      }
-      // Only set loading false from listener after initial load is done
-      if (!initialLoad) {
-        setLoading(false);
+        if (!initialLoad) setLoading(false);
       }
     });
 
