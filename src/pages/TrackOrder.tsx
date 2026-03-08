@@ -42,7 +42,8 @@ const TrackOrder = () => {
     setOrder(null);
     setSupplierOrders([]);
 
-    const orderNum = query.trim().toUpperCase();
+    const searchTerm = query.trim().toUpperCase();
+    const isTrackingId = searchTerm.startsWith("ARP-TRK-");
 
     // Try authenticated user lookup first
     let data: any = null;
@@ -50,7 +51,7 @@ const TrackOrder = () => {
       const res = await supabase
         .from("orders")
         .select("*")
-        .eq("order_number", orderNum)
+        .or(isTrackingId ? `tracking_number.eq.${searchTerm}` : `order_number.eq.${searchTerm}`)
         .maybeSingle();
       data = res.data;
     }
