@@ -107,7 +107,7 @@ export const useCategories = () => {
           id: c.id,
           name: c.name,
           slug: c.slug,
-          image_url: resolveStorageImageUrl(c.image_url, STORAGE_CATEGORY_FALLBACK_URL),
+          image_url: resolveStorageImageUrl(c.image_url, CATEGORY_FALLBACK),
         }));
       }
 
