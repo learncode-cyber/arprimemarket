@@ -11,6 +11,7 @@ const ProductManagement = () => {
   const { data: categories = [] } = useCategories();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusCardFilter, setStatusCardFilter] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState<string | null>(null);
   const [aiContent, setAiContent] = useState<Record<string, any>>({});
