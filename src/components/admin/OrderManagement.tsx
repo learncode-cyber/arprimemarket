@@ -612,6 +612,7 @@ const OrderManagement = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm text-foreground">{order.order_number}</span>
+                        {order.tracking_number && <span className="font-mono text-[10px] text-primary">{order.tracking_number}</span>}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.status] || ""}`}>{order.status}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[order.payment_status] || ""}`}>{order.payment_status}</span>
                         {order.auto_forwarded && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Auto</span>}
