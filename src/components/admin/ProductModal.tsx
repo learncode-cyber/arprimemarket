@@ -432,12 +432,12 @@ export const ProductModal = ({ open, onClose, product, categories, onSaved }: Pr
           {tab === "description" && (
             <div className="space-y-3">
               <label className={labelClass}>Product Description</label>
-              <textarea
-                rows={12}
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => update("description", e.target.value)}
-                className={`${inputClass} resize-y min-h-[200px]`}
-                placeholder="Write a detailed product description..."
+                onChange={(v) => update("description", v)}
+                placeholder="Write a detailed product description with formatting..."
+                minHeight="280px"
+                storageBucket="product-images"
               />
               <p className="text-[10px] text-muted-foreground">{form.description.length} characters</p>
             </div>
