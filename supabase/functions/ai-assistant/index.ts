@@ -1056,6 +1056,7 @@ CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 🔍 Pending Issues: ${JSON.stringify((recentFindings || []).map(f => "[" + f.severity + "] " + f.title))}
 📊 Tracking: ${JSON.stringify((trackingPixels || []).map(p => ({ platform: p.platform, active: p.is_active })))}
 📋 Recent Orders: ${JSON.stringify((recentOrders || []).slice(0, 5).map(o => ({ num: o.order_number, status: o.status, payment: o.payment_status, total: o.total, country: o.shipping_country })))}
+📂 Categories (use these IDs for update_category_seo): ${JSON.stringify((allCategories || []).map(c => ({ id: c.id, name: c.name, slug: c.slug, desc: c.description?.slice(0, 50) || "none" })))}
 
 TECH STACK:
 - Frontend: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
