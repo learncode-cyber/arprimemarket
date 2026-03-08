@@ -1128,6 +1128,31 @@ RESPONSE RULES:
       // UUID validation helper
       const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
+      // ─── GLOBAL PARAM SANITIZER: Reject any *_id param that isn't a valid UUID ───
+      if (params && typeof params === "object") {
+        for (const [key, value] of Object.entries(params)) {
+          if (key.endsWith("_id") && typeof value === "string" && value.length > 0 && !isValidUUID(value)) {
+            // Check if it's a tracking ID or order number that needs resolution first
+            if (value.startsWith("ARP-TRK-") || value.startsWith("ARP-")) {
+              // Auto-resolve: look up the UUID from tracking/order number
+              const lookupField = value.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
+              const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, value).maybeSingle();
+              if (resolvedOrder) {
+                params[key] = resolvedOrder.id;
+                continue;
+              }
+              return new Response(JSON.stringify({ 
+                error: `Could not find order with ${lookupField} "${value}". Please verify the ID.`,
+                suggestion: "Use search_order tool to find the correct order first."
+              }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+            return new Response(JSON.stringify({ 
+              error: `Parameter "${key}" must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Received: "${value}". Use search_order to find the correct UUID, or use bulk tools (update_orders_by_status, cancel_pending_orders) for multiple orders.`,
+            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
+      }
+
       let result: any = { success: false };
 
       switch (tool) {
