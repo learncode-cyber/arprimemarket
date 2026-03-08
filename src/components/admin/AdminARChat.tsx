@@ -237,7 +237,30 @@ const AdminARChat = () => {
       }
 
       const data = await resp.json();
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), content: data.reply || "No response.", role: "assistant" }]);
+      const rawReply = data.reply || "No response.";
+      
+      // Parse action blocks from AI response
+      const actionRegex = /<!--ACTION:(.*?)-->/g;
+      const actions: ParsedAction[] = [];
+      let match;
+      while ((match = actionRegex.exec(rawReply)) !== null) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          actions.push(parsed);
+        } catch {}
+      }
+      const cleanContent = rawReply.replace(/<!--ACTION:.*?-->/g, "").trim();
+      
+      const actionResults: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }> = {};
+      actions.forEach((a, i) => { actionResults[`${a.tool}_${i}`] = { status: "pending" }; });
+
+      setMessages(prev => [...prev, { 
+        id: crypto.randomUUID(), 
+        content: cleanContent, 
+        role: "assistant",
+        actions: actions.length > 0 ? actions : undefined,
+        actionResults: actions.length > 0 ? actionResults : undefined,
+      }]);
     } catch {
       setMessages(prev => [...prev, { id: crypto.randomUUID(), content: "Connection error. Please try again.", role: "assistant" }]);
     }
