@@ -1220,6 +1220,11 @@ RESPONSE RULES:
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
+          if (!isValidUUID(order_id)) {
+            return new Response(JSON.stringify({ error: "order_id must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Use search_order to find the UUID first, or use update_orders_by_status for bulk operations." }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
           if (!validStatuses.includes(newStatus)) {
             return new Response(JSON.stringify({ error: `Invalid status. Valid: ${validStatuses.join(", ")}` }), {
