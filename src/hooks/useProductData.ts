@@ -205,53 +205,66 @@ function mapDbProduct(p: any): Product {
   };
 }
 
-async function fallbackProductQuery(): Promise<Product[]> {
-  let data: any[] | null = null;
-
-  const publicRes = await supabase
-    .from("products_public")
+// ─── Direct queries (portable, no edge functions needed) ───
+async function directProductQuery(params?: {
+  category?: string;
+  search?: string;
+  featured?: boolean;
+}): Promise<Product[]> {
+  // Try products table directly (works on any Supabase instance)
+  let query = supabase
+    .from("products")
     .select("*, categories(name)")
     .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  if (publicRes.error) {
-    console.warn("[Products] products_public query failed, retrying products table", publicRes.error.message);
+  if (params?.category) {
+    query = query.eq("category_id", params.category);
+  }
+  if (params?.search) {
+    query = query.ilike("title", `%${params.search}%`);
+  }
+  if (params?.featured) {
+    query = query.eq("is_featured", true);
+  }
 
-    const tableRes = await supabase
-      .from("products")
+  const { data, error } = await query;
+
+  if (error) {
+    console.warn("[Products] products table query failed:", error.message);
+    // Try products_public view as last resort
+    const viewRes = await supabase
+      .from("products_public")
       .select("*, categories(name)")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
-
-    if (tableRes.error) throw tableRes.error;
-    data = tableRes.data;
-  } else {
-    data = publicRes.data;
+    if (viewRes.error) throw viewRes.error;
+    return (viewRes.data || []).map(mapDbProduct);
   }
 
   return (data || []).map(mapDbProduct);
 }
 
-async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> {
+async function directProductDetail(idOrSlug: string): Promise<Product | null> {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
-  let publicQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
-  publicQuery = isUuid ? publicQuery.eq("id", idOrSlug) : publicQuery.eq("slug", idOrSlug);
-  const publicRes = await publicQuery.maybeSingle();
+  let query = supabase.from("products").select("*, categories(name)").eq("is_active", true);
+  query = isUuid ? query.eq("id", idOrSlug) : query.eq("slug", idOrSlug);
+  const { data, error } = await query.maybeSingle();
 
-  if (publicRes.error) {
-    console.warn("[Product] products_public detail failed, retrying products table", publicRes.error.message);
-
-    let tableQuery = supabase.from("products").select("*, categories(name)").eq("is_active", true);
-    tableQuery = isUuid ? tableQuery.eq("id", idOrSlug) : tableQuery.eq("slug", idOrSlug);
-    const tableRes = await tableQuery.maybeSingle();
-
-    if (tableRes.error) throw tableRes.error;
-    if (!tableRes.data) return null;
-    return mapDbProduct(tableRes.data);
+  if (error) {
+    console.warn("[Product] products table detail failed:", error.message);
+    // Try products_public view
+    let viewQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
+    viewQuery = isUuid ? viewQuery.eq("id", idOrSlug) : viewQuery.eq("slug", idOrSlug);
+    const viewRes = await viewQuery.maybeSingle();
+    if (viewRes.error) throw viewRes.error;
+    if (!viewRes.data) return null;
+    return mapDbProduct(viewRes.data);
   }
 
-  if (!publicRes.data) return null;
-  return mapDbProduct(publicRes.data);
+  if (!data) return null;
+  return mapDbProduct(data);
 }
 
