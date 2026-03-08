@@ -37,10 +37,12 @@ const Index = () => {
       return dbCategories.slice(0, 4).map((cat) => ({
         name: cat.name,
         slug: cat.slug,
-        image: resolveStorageImageUrl(
-          cat.image_url,
-          fallbackCategoryImages[cat.slug.toLowerCase()] || STORAGE_CATEGORY_FALLBACK_URL,
-        ),
+        image: cat.image_url && cat.image_url.startsWith("http")
+          ? cat.image_url
+          : resolveStorageImageUrl(
+              cat.image_url,
+              fallbackCategoryImages[cat.slug.toLowerCase()] || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80",
+            ),
       }));
     }
 
