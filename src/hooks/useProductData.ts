@@ -149,45 +149,7 @@ function mapApiProduct(p: ApiProduct): Product {
 }
 
 // ─── Fallback queries (direct Supabase) ───
-async function fallbackProductQuery(): Promise<Product[]> {
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("*, categories(name)")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-
-  return (products || []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    description: p.description || "",
-    price: Number(p.price),
-    image: resolveStorageImageUrl(p.image_url, STORAGE_PRODUCT_FALLBACK_URL),
-    category: p.categories?.name || "Uncategorized",
-    category_id: p.category_id,
-    rating: Number(p.rating) || 0,
-    review_count: p.review_count || 0,
-    stock_quantity: p.stock_quantity,
-    is_featured: p.is_featured,
-    compare_at_price: p.compare_at_price ? Number(p.compare_at_price) : null,
-    currency: p.currency,
-    images: (p.images || []).map((img: string) => resolveStorageImageUrl(img, STORAGE_PRODUCT_FALLBACK_URL)),
-    tags: p.tags || [],
-  }));
-}
-
-async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> {
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
-  let query = supabase.from("products").select("*, categories(name)").eq("is_active", true);
-  query = isUuid ? query.eq("id", idOrSlug) : query.eq("slug", idOrSlug);
-
-  const { data, error } = await query.maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-
-  const p: any = data;
+function mapDbProduct(p: any): Product {
   return {
     id: p.id,
     title: p.title,
@@ -206,5 +168,55 @@ async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> 
     images: (p.images || []).map((img: string) => resolveStorageImageUrl(img, STORAGE_PRODUCT_FALLBACK_URL)),
     tags: p.tags || [],
   };
+}
+
+async function fallbackProductQuery(): Promise<Product[]> {
+  let data: any[] | null = null;
+
+  const publicRes = await supabase
+    .from("products_public")
+    .select("*, categories(name)")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (publicRes.error) {
+    console.warn("[Products] products_public query failed, retrying products table", publicRes.error.message);
+
+    const tableRes = await supabase
+      .from("products")
+      .select("*, categories(name)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (tableRes.error) throw tableRes.error;
+    data = tableRes.data;
+  } else {
+    data = publicRes.data;
+  }
+
+  return (data || []).map(mapDbProduct);
+}
+
+async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
+  let publicQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
+  publicQuery = isUuid ? publicQuery.eq("id", idOrSlug) : publicQuery.eq("slug", idOrSlug);
+  const publicRes = await publicQuery.maybeSingle();
+
+  if (publicRes.error) {
+    console.warn("[Product] products_public detail failed, retrying products table", publicRes.error.message);
+
+    let tableQuery = supabase.from("products").select("*, categories(name)").eq("is_active", true);
+    tableQuery = isUuid ? tableQuery.eq("id", idOrSlug) : tableQuery.eq("slug", idOrSlug);
+    const tableRes = await tableQuery.maybeSingle();
+
+    if (tableRes.error) throw tableRes.error;
+    if (!tableRes.data) return null;
+    return mapDbProduct(tableRes.data);
+  }
+
+  if (!publicRes.data) return null;
+  return mapDbProduct(publicRes.data);
 }
 
