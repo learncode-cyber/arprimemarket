@@ -416,6 +416,13 @@ const OrderManagement = () => {
                     <Badge className={statusColors[order.status]}>{order.status}</Badge>
                     <Badge className={statusColors[order.payment_status]}>{order.payment_status}</Badge>
                   </DialogTitle>
+                  {order.tracking_number && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Hash className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs text-muted-foreground">Tracking:</span>
+                      <span className="font-mono text-xs font-bold text-primary">{order.tracking_number}</span>
+                    </div>
+                  )}
                 </DialogHeader>
 
                 {/* Timeline */}
