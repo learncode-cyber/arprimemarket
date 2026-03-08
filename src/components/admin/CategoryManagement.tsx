@@ -168,7 +168,7 @@ const CategoryManagement = () => {
             {editingId === cat.id ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4">
-                  <CategoryImageUploader imageUrl={editForm.image_url} onChange={(url) => setEditForm(f => ({ ...f, image_url: url }))} />
+                  <CategoryImageUploader imageUrl={editForm.image_url} onChange={(url) => setEditForm(f => ({ ...f, image_url: url }))} onUploadComplete={refreshCategories} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] text-muted-foreground">Name</label>
