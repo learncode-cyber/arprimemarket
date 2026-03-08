@@ -898,6 +898,9 @@ ${productContext}${learningContext}${strategyContext}`;
 
       const { data: trackingPixels } = await adminClient.from("tracking_pixels").select("platform, pixel_id, is_active");
 
+      // Fetch categories so AI knows UUIDs for update_category_seo
+      const { data: allCategories } = await adminClient.from("categories").select("id, name, slug, description").order("name").limit(50);
+
       // Country-wise order distribution
       const countryOrders: Record<string, number> = {};
       (recentOrders || []).forEach(o => {
