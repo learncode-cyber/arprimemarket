@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Loader2, Save, Package, DollarSign, BarChart3, Truck, Search as SearchIcon, FileText, Layers } from "lucide-react";
+import { X, Loader2, Save, Package, DollarSign, BarChart3, Truck, Search as SearchIcon, FileText, Layers, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import { ProductImageUploader } from "./ProductImageUploader";
 import { ProductVariantEditor, VariantRow } from "./ProductVariantEditor";
 import { SEOScoreWidget } from "./SEOScoreWidget";
+import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface DbCategory {
@@ -26,7 +27,7 @@ type TabKey = "basics" | "pricing" | "inventory" | "shipping" | "seo" | "descrip
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "basics", label: "Basics", icon: <Package className="w-3.5 h-3.5" /> },
-  { key: "images", label: "Images", icon: <FileText className="w-3.5 h-3.5" /> },
+  { key: "images", label: "Images", icon: <ImageIcon className="w-3.5 h-3.5" /> },
   { key: "pricing", label: "Pricing", icon: <DollarSign className="w-3.5 h-3.5" /> },
   { key: "inventory", label: "Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { key: "shipping", label: "Shipping", icon: <Truck className="w-3.5 h-3.5" /> },
@@ -431,12 +432,12 @@ export const ProductModal = ({ open, onClose, product, categories, onSaved }: Pr
           {tab === "description" && (
             <div className="space-y-3">
               <label className={labelClass}>Product Description</label>
-              <textarea
-                rows={12}
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => update("description", e.target.value)}
-                className={`${inputClass} resize-y min-h-[200px]`}
-                placeholder="Write a detailed product description..."
+                onChange={(v) => update("description", v)}
+                placeholder="Write a detailed product description with formatting..."
+                minHeight="280px"
+                storageBucket="product-images"
               />
               <p className="text-[10px] text-muted-foreground">{form.description.length} characters</p>
             </div>
