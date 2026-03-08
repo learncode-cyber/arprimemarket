@@ -370,7 +370,7 @@ const OrderManagement = () => {
       <div className="flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by order #, name, phone..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by order #, tracking ID, name, phone..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
