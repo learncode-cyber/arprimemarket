@@ -5,6 +5,7 @@ import { SEOScoreWidget } from "@/components/admin/SEOScoreWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
+import { ProductModal } from "./ProductModal";
 
 const ProductManagement = () => {
   const { data: products = [], refetch } = useProducts();
@@ -13,7 +14,6 @@ const ProductManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
-  const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState<string | null>(null);
   const [aiContent, setAiContent] = useState<Record<string, any>>({});
@@ -21,11 +21,8 @@ const ProductManagement = () => {
   const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; current: string; running: boolean } | null>(null);
   const [imageEnhancing, setImageEnhancing] = useState<string | null>(null);
   const [enhancedImages, setEnhancedImages] = useState<Record<string, string>>({});
-  const [newProduct, setNewProduct] = useState({
-    title: "", price: "", compare_at_price: "", category_id: "", image_url: "",
-    image_2: "", image_3: "", image_4: "",
-    description: "", stock_quantity: "0", sku: "", tags: "", weight: "",
-  });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState<Product | null>(null);
 
   const filtered = products.filter(p => {
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
