@@ -264,6 +264,7 @@ const OrderManagement = () => {
   const filtered = orders.filter(o => {
     const matchSearch = !search ||
       o.order_number.toLowerCase().includes(search.toLowerCase()) ||
+      (o.tracking_number || "").toLowerCase().includes(search.toLowerCase()) ||
       (o.shipping_name || "").toLowerCase().includes(search.toLowerCase()) ||
       (o.shipping_phone || "").includes(search);
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
