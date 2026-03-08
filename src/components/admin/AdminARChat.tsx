@@ -416,38 +416,69 @@ const AdminARChat = () => {
                         <ReactMarkdown>{m.content}</ReactMarkdown>
                       </div>
                     ) : m.content}
-                    {/* Action confirmation buttons */}
+                    {/* Action confirmation buttons — Professional dual-button layout */}
                     {m.actions && m.actions.length > 0 && m.actionResults && (
-                      <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
+                      <div className="mt-3 space-y-2.5 border-t border-border/30 pt-3">
                         {m.actions.map((act, i) => {
                           const key = `${act.tool}_${i}`;
                           const result = m.actionResults?.[key];
+                          const isDestructive = act.tool.includes("delete") || act.tool.includes("cancel");
                           return (
-                            <div key={key} className="flex items-center gap-2">
+                            <div key={key}>
                               {result?.status === "pending" && (
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="h-7 text-xs gap-1.5"
-                                  onClick={() => executeAction(m.id, act, key)}
-                                >
-                                  <AlertTriangle className="w-3 h-3" />
-                                  Confirm: {act.description}
-                                </Button>
+                                <div className="bg-muted/40 rounded-xl p-3 space-y-2.5">
+                                  {/* Impact badge */}
+                                  <div className="flex items-center gap-1.5">
+                                    {isDestructive ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/15 text-destructive text-[9px] font-semibold">
+                                        <AlertTriangle className="w-2.5 h-2.5" /> Warning — Destructive Action
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/15 text-green-600 dark:text-green-400 text-[9px] font-semibold">
+                                        <CheckCircle2 className="w-2.5 h-2.5" /> Safe — New Data Creation
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">{act.description}</p>
+                                  {/* Dual buttons */}
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => executeAction(m.id, act, key)}
+                                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all hover:brightness-110 active:scale-[0.97] ${
+                                        isDestructive
+                                          ? "bg-destructive text-destructive-foreground"
+                                          : "bg-green-600 text-white"
+                                      }`}
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Proceed
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setMessages(prev => prev.map(msg => {
+                                          if (msg.id !== m.id) return msg;
+                                          return { ...msg, actionResults: { ...msg.actionResults, [key]: { status: "error" as const, message: "Dismissed by admin" } } };
+                                        }));
+                                      }}
+                                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-medium bg-secondary text-muted-foreground hover:bg-border transition-all active:scale-[0.97]"
+                                    >
+                                      <X className="w-3.5 h-3.5" /> Cancel
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                               {result?.status === "loading" && (
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <Loader2 className="w-3 h-3 animate-spin" /> Executing...
+                                <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-primary/10 text-primary text-xs font-medium">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Executing action...
                                 </div>
                               )}
                               {result?.status === "done" && (
-                                <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-                                  <CheckCircle2 className="w-3 h-3" /> {result.message || "Done!"}
+                                <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-medium">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> {result.message || "Completed successfully!"}
                                 </div>
                               )}
                               {result?.status === "error" && (
-                                <div className="flex items-center gap-1.5 text-xs text-destructive">
-                                  <AlertTriangle className="w-3 h-3" /> {result.message || "Failed"}
+                                <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-destructive/10 text-destructive text-xs font-medium">
+                                  <AlertTriangle className="w-3.5 h-3.5" /> {result.message || "Action failed"}
                                 </div>
                               )}
                             </div>
