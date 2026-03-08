@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, ImagePlus, Wand2 } from "lucide-react";
-import { SEOScoreWidget } from "@/components/admin/SEOScoreWidget";
+import { Search, Plus, Trash2, Edit3, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
