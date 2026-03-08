@@ -119,7 +119,7 @@ const CategoryManagement = () => {
             <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
               <h3 className="font-display text-sm font-semibold text-foreground">New Category</h3>
               <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5">
-                <CategoryImageUploader imageUrl={newCategory.image_url} onChange={(url) => setNewCategory(p => ({ ...p, image_url: url }))} />
+                <CategoryImageUploader imageUrl={newCategory.image_url} onChange={(url) => setNewCategory(p => ({ ...p, image_url: url }))} onUploadComplete={refreshCategories} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground">Name *</label>
