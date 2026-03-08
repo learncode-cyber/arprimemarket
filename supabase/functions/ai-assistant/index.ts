@@ -861,7 +861,7 @@ ${productContext}${learningContext}${strategyContext}`;
       
       // Revenue data
       const { data: recentOrders } = await adminClient.from("orders")
-        .select("order_number, status, payment_status, total, currency, created_at, shipping_country")
+        .select("id, order_number, tracking_number, status, payment_status, total, currency, created_at, shipping_country, shipping_name")
         .order("created_at", { ascending: false }).limit(10);
       
       // Calculate today's sales
