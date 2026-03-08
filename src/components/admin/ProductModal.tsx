@@ -27,7 +27,7 @@ type TabKey = "basics" | "pricing" | "inventory" | "shipping" | "seo" | "descrip
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "basics", label: "Basics", icon: <Package className="w-3.5 h-3.5" /> },
-  { key: "images", label: "Images", icon: <FileText className="w-3.5 h-3.5" /> },
+  { key: "images", label: "Images", icon: <ImageIcon className="w-3.5 h-3.5" /> },
   { key: "pricing", label: "Pricing", icon: <DollarSign className="w-3.5 h-3.5" /> },
   { key: "inventory", label: "Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { key: "shipping", label: "Shipping", icon: <Truck className="w-3.5 h-3.5" /> },
