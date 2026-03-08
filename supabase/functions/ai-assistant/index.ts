@@ -1125,9 +1125,58 @@ RESPONSE RULES:
         });
       }
 
+      // UUID validation helper
+      const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
       let result: any = { success: false };
 
       switch (tool) {
+        case "search_order": {
+          const query = (params?.query || "").trim();
+          if (!query) {
+            return new Response(JSON.stringify({ error: "query is required (tracking ID, order number, or UUID)" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          let order = null;
+          // Try by tracking number
+          if (query.startsWith("ARP-TRK-")) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("tracking_number", query).maybeSingle();
+            order = data;
+          }
+          // Try by order number
+          if (!order && query.startsWith("ARP-")) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("order_number", query).maybeSingle();
+            order = data;
+          }
+          // Try by UUID
+          if (!order && isValidUUID(query)) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("id", query).maybeSingle();
+            order = data;
+          }
+          if (!order) {
+            result = { success: false, message: `No order found for "${query}". Please verify the tracking ID or order number.` };
+          } else {
+            result = { success: true, message: `Order found: ${order.order_number} (${order.tracking_number || "No tracking"})`, data: order };
+          }
+          break;
+        }
+        case "update_orders_by_status": {
+          const fromStatus = params?.from_status;
+          const toStatus = params?.to_status;
+          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          if (!fromStatus || !toStatus || !validStatuses.includes(fromStatus) || !validStatuses.includes(toStatus)) {
+            return new Response(JSON.stringify({ error: `from_status and to_status required. Valid: ${validStatuses.join(", ")}` }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const updateData: any = { status: toStatus, updated_at: new Date().toISOString() };
+          if (toStatus === "delivered") updateData.delivered_at = new Date().toISOString();
+          const { data, error } = await adminClient.from("orders").update(updateData).eq("status", fromStatus).select("id");
+          if (error) throw error;
+          result = { success: true, affected: data?.length || 0, message: `${data?.length || 0} orders moved from '${fromStatus}' to '${toStatus}'.` };
+          break;
+        }
         case "cancel_pending_orders": {
           const { data, error } = await adminClient
             .from("orders")
@@ -1140,8 +1189,8 @@ RESPONSE RULES:
         }
         case "cancel_order": {
           const orderId = params?.order_id;
-          if (!orderId) {
-            return new Response(JSON.stringify({ error: "order_id required" }), {
+          if (!orderId || !isValidUUID(orderId)) {
+            return new Response(JSON.stringify({ error: "A valid UUID order_id is required (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Use search_order to find the UUID first." }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
