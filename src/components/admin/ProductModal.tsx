@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ProductImageUploader } from "./ProductImageUploader";
 import { ProductVariantEditor, VariantRow } from "./ProductVariantEditor";
 import { SEOScoreWidget } from "./SEOScoreWidget";
+import { GoogleSEOPreview } from "./GoogleSEOPreview";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
