@@ -134,6 +134,7 @@ export const ProductModal = ({ open, onClose, product, categories, onSaved }: Pr
         variant_label: v.variant_label,
         size: v.size || "",
         color: v.color || "",
+        material: "",
         sku: v.sku || "",
         price_delta: v.price_delta?.toString() || "0",
         stock_quantity: v.stock_quantity?.toString() || "0",
