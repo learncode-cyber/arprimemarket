@@ -16,13 +16,20 @@ export const resolveStorageImageUrl = (
   imageUrl: string | null | undefined,
   fallbackUrl: string,
   defaultBucket = "blog-images",
+  cacheBust = true,
 ): string => {
   if (!imageUrl) return fallbackUrl;
 
   const trimmed = imageUrl.trim();
   if (!trimmed) return fallbackUrl;
 
-  if (PROTOCOL_REGEX.test(trimmed)) return trimmed;
+  const appendCacheBust = (url: string) => {
+    if (!cacheBust) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}t=${Date.now()}`;
+  };
+
+  if (PROTOCOL_REGEX.test(trimmed)) return appendCacheBust(trimmed);
 
   const normalized = trimmed.replace(/^\/+/, "");
 
@@ -31,14 +38,14 @@ export const resolveStorageImageUrl = (
   }
 
   if (normalized.startsWith(PUBLIC_STORAGE_PATH)) {
-    return CLOUD_URL ? `${CLOUD_URL}/${normalized}` : fallbackUrl;
+    return CLOUD_URL ? appendCacheBust(`${CLOUD_URL}/${normalized}`) : fallbackUrl;
   }
 
   if (/^[a-z0-9][a-z0-9_-]*\/.+$/i.test(normalized)) {
-    return CLOUD_URL ? `${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${normalized}` : fallbackUrl;
+    return CLOUD_URL ? appendCacheBust(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${normalized}`) : fallbackUrl;
   }
 
   return CLOUD_URL
-    ? `${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${defaultBucket}/${normalized}`
+    ? appendCacheBust(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${defaultBucket}/${normalized}`)
     : fallbackUrl;
 };
