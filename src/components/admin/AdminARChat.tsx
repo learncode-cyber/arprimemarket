@@ -267,7 +267,46 @@ const AdminARChat = () => {
     setLoading(false);
   };
 
-  if (!open) {
+  const executeAction = async (messageId: string, action: ParsedAction, actionKey: string) => {
+    // Set loading
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "loading" as const } } };
+    }));
+
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "execute_action",
+          tool: action.tool,
+          params: action.params,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Action failed");
+
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "done" as const, message: data.message } } };
+      }));
+    } catch (err: any) {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        return { ...m, actionResults: { ...m.actionResults, [actionKey]: { status: "error" as const, message: err.message } } };
+      }));
+    }
+  };
+
     return (
       <motion.button
         onClick={() => { setOpen(true); setHasNotification(false); }}
