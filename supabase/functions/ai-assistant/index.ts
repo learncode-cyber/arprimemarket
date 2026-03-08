@@ -403,9 +403,33 @@ ${productContext}${learningContext}${strategyContext}`;
       });
     }
 
-    // ─── LEARN FROM FEEDBACK ───
+    // ─── LEARN FROM FEEDBACK (Admin only) ───
     if (action === "learn") {
       const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+      // Require admin auth
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(authHeader.replace("Bearer ", ""));
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: roleData } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", claimsData.claims.sub).eq("role", "admin").maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Forbidden: admin access required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { lesson, category, lesson_type, trigger_message, wrong_response, correct_response } = body;
       
       if (!lesson) {
