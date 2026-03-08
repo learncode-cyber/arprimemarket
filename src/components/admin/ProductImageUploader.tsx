@@ -20,8 +20,8 @@ export const ProductImageUploader = ({ images, onChange, maxImages = 5 }: Produc
   const inputRef = useRef<HTMLInputElement>(null);
 
   const resolveUrl = (path: string) => {
-    if (path.startsWith("http")) return path;
-    return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+    if (path.startsWith("http")) return `${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}?t=${Date.now()}`;
   };
 
   const triggerOptimize = async (filePath: string) => {

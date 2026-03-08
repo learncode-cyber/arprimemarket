@@ -13,8 +13,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 
 const resolveUrl = (path: string) => {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+  if (path.startsWith("http")) return `${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}?t=${Date.now()}`;
 };
 
 export const CategoryImageUploader = ({ imageUrl, onChange }: CategoryImageUploaderProps) => {
