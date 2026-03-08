@@ -60,6 +60,12 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+const stripCodeBlocks = (content: string) =>
+  content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/^\s{0,3}`[^`\n]+`\s*$/gm, "")
+    .trim();
+
 const AdminARChat = () => {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
