@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Save, X, Loader2, FolderTree } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { bumpStorageImageVersion, resolveStorageImageUrl } from "@/lib/storageImage";
 import { CategoryImageUploader } from "./CategoryImageUploader";
 import { GoogleSEOPreview } from "./GoogleSEOPreview";
 
@@ -23,6 +24,12 @@ const CategoryManagement = () => {
     return !categories.some(c => c.slug === slug && c.id !== excludeId);
   };
 
+  const refreshCategories = useCallback(async () => {
+    bumpStorageImageVersion();
+    await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    await refetch();
+  }, [queryClient, refetch]);
+
   const handleAdd = async () => {
     if (!newCategory.name) { toast.error("Category name required"); return; }
     const slug = newCategory.slug || autoSlug(newCategory.name);
@@ -38,8 +45,7 @@ const CategoryManagement = () => {
       toast.success("Category added!");
       setNewCategory({ name: "", slug: "", description: "", image_url: "" });
       setShowAdd(false);
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await refreshCategories();
     }
     setSaving(false);
   };
@@ -48,7 +54,7 @@ const CategoryManagement = () => {
     if (!confirm("Delete this category?")) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Deleted"); refetch(); }
+    else { toast.success("Deleted"); await refreshCategories(); }
   };
 
   const startEdit = (cat: any) => {
@@ -68,16 +74,11 @@ const CategoryManagement = () => {
       image_url: editForm.image_url || null,
     }).eq("id", editingId);
     if (error) toast.error(error.message);
-    else { toast.success("Updated"); setEditingId(null); refetch(); }
+    else { toast.success("Updated"); setEditingId(null); await refreshCategories(); }
     setSaving(false);
   };
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-  const resolveImg = (url: string) => {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    return `${SUPABASE_URL}/storage/v1/object/public/category-images/${url}`;
-  };
+  const resolveImg = (url: string) => resolveStorageImageUrl(url, "/placeholder.svg", "category-images");
 
   return (
     <div className="space-y-5">
@@ -118,7 +119,7 @@ const CategoryManagement = () => {
             <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
               <h3 className="font-display text-sm font-semibold text-foreground">New Category</h3>
               <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5">
-                <CategoryImageUploader imageUrl={newCategory.image_url} onChange={(url) => setNewCategory(p => ({ ...p, image_url: url }))} />
+                <CategoryImageUploader imageUrl={newCategory.image_url} onChange={(url) => setNewCategory(p => ({ ...p, image_url: url }))} onUploadComplete={refreshCategories} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground">Name *</label>
@@ -167,7 +168,7 @@ const CategoryManagement = () => {
             {editingId === cat.id ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4">
-                  <CategoryImageUploader imageUrl={editForm.image_url} onChange={(url) => setEditForm(f => ({ ...f, image_url: url }))} />
+                  <CategoryImageUploader imageUrl={editForm.image_url} onChange={(url) => setEditForm(f => ({ ...f, image_url: url }))} onUploadComplete={refreshCategories} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] text-muted-foreground">Name</label>

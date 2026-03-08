@@ -1,23 +1,19 @@
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, Loader2, ImageIcon } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { bumpStorageImageVersion, resolveStorageImageUrl } from "@/lib/storageImage";
 
 interface CategoryImageUploaderProps {
   imageUrl: string;
   onChange: (url: string) => void;
+  onUploadComplete?: () => void;
 }
 
 const BUCKET = "category-images";
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const FALLBACK_IMAGE_URL = "/placeholder.svg";
 
-const resolveUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return `${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}?t=${Date.now()}`;
-};
-
-export const CategoryImageUploader = ({ imageUrl, onChange }: CategoryImageUploaderProps) => {
+export const CategoryImageUploader = ({ imageUrl, onChange, onUploadComplete }: CategoryImageUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,11 +40,13 @@ export const CategoryImageUploader = ({ imageUrl, onChange }: CategoryImageUploa
     if (error) {
       toast.error(`Upload failed: ${error.message}`);
     } else {
+      bumpStorageImageVersion();
       onChange(path);
+      onUploadComplete?.();
       toast.success("Image uploaded!");
     }
     setUploading(false);
-  }, [onChange]);
+  }, [onChange, onUploadComplete]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -59,7 +57,7 @@ export const CategoryImageUploader = ({ imageUrl, onChange }: CategoryImageUploa
 
   const removeImage = () => onChange("");
 
-  const displayUrl = resolveUrl(imageUrl);
+  const displayUrl = resolveStorageImageUrl(imageUrl, FALLBACK_IMAGE_URL, BUCKET);
 
   return (
     <div className="space-y-2">
@@ -71,7 +69,7 @@ export const CategoryImageUploader = ({ imageUrl, onChange }: CategoryImageUploa
             src={displayUrl}
             alt="Category"
             className="w-24 h-24 rounded-xl object-cover border-2 border-border"
-            onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
+            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE_URL; }}
           />
           <button
             type="button"

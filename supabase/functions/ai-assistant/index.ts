@@ -861,7 +861,7 @@ ${productContext}${learningContext}${strategyContext}`;
       
       // Revenue data
       const { data: recentOrders } = await adminClient.from("orders")
-        .select("order_number, status, payment_status, total, currency, created_at, shipping_country")
+        .select("id, order_number, tracking_number, status, payment_status, total, currency, created_at, shipping_country, shipping_name")
         .order("created_at", { ascending: false }).limit(10);
       
       // Calculate today's sales
@@ -901,6 +901,114 @@ ${productContext}${learningContext}${strategyContext}`;
       // Fetch categories so AI knows UUIDs for update_category_seo
       const { data: allCategories } = await adminClient.from("categories").select("id, name, slug, description").order("name").limit(50);
 
+      const rawMessage = String(message || "");
+      const normalizedMessage = rawMessage.toLowerCase();
+      const ownerAskedForCode = /(show( me)? code|give( me)? code|code snippet|sql|typescript|javascript|tsx|jsx)/i.test(rawMessage);
+
+      const buildActionReply = (toolName: string, description: string, params: Record<string, unknown> = {}) => {
+        return `${description}\n<!--ACTION:${JSON.stringify({ tool: toolName, description, params })}-->`;
+      };
+
+      const normalizeStatus = (value?: string | null) => {
+        if (!value) return null;
+        const cleaned = value.toLowerCase().replace(/\s+/g, "_").trim();
+        if (["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"].includes(cleaned)) return cleaned;
+        if (cleaned === "canceled") return "cancelled";
+        return null;
+      };
+
+      const statusMatches = [
+        { status: "pending", regex: /\bpending\b/i },
+        { status: "processing", regex: /\bprocessing\b/i },
+        { status: "shipped", regex: /\bshipped\b/i },
+        { status: "out_for_delivery", regex: /\bout[\s_-]*for[\s_-]*delivery\b/i },
+        { status: "delivered", regex: /\bdelivered\b/i },
+        { status: "cancelled", regex: /\bcancel(?:led)?\b/i },
+      ]
+        .map(({ status, regex }) => ({ status, index: rawMessage.search(regex) }))
+        .filter((m) => m.index >= 0)
+        .sort((a, b) => a.index - b.index);
+
+      const matchedCategory = (allCategories || []).find((category) =>
+        normalizedMessage.includes(category.name.toLowerCase()) || normalizedMessage.includes(category.slug.toLowerCase())
+      );
+
+      if (!ownerAskedForCode) {
+        const cancelPendingIntent = /cancel\s+(all\s+)?pending\s+orders?/i.test(rawMessage);
+        if (cancelPendingIntent) {
+          return new Response(JSON.stringify({
+            reply: buildActionReply("cancel_pending_orders", "Cancel all pending orders", {}),
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const bulkIntent = /\b(all|multiple|bulk|every)\b/i.test(rawMessage) && /\borders?\b/i.test(rawMessage);
+        if (bulkIntent && statusMatches.length >= 2) {
+          const fromStatus = normalizeStatus(statusMatches[0].status);
+          const toStatus = normalizeStatus(statusMatches[1].status);
+          if (fromStatus && toStatus && fromStatus !== toStatus) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_orders_by_status",
+                `Move all ${fromStatus.replaceAll("_", " ")} orders to ${toStatus.replaceAll("_", " ")}`,
+                { from_status: fromStatus, to_status: toStatus },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        const categorySeoIntent = /(seo|keyword|meta)/i.test(rawMessage) && /categor/i.test(rawMessage);
+        if (categorySeoIntent) {
+          if (matchedCategory) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_category_seo",
+                `Optimize SEO for category \"${matchedCategory.name}\"`,
+                { category_id: matchedCategory.id },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          return new Response(JSON.stringify({
+            reply: "Please tell me which category to optimize, then I’ll prepare the action for confirmation.",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const orderRefMatch = rawMessage.match(/(ARP-TRK-[A-Z0-9-]+|ARP-\d{8}-[A-Z0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+        const singleOrderIntent = /\b(order|tracking)\b/i.test(rawMessage) && !bulkIntent;
+        if (singleOrderIntent && orderRefMatch) {
+          const orderIdentifier = orderRefMatch[1];
+          const targetStatus = normalizeStatus(statusMatches[0]?.status) || (/\bcancel(?:led)?\b/i.test(rawMessage) ? "cancelled" : null);
+
+          if (targetStatus === "cancelled") {
+            return new Response(JSON.stringify({
+              reply: buildActionReply("cancel_order", `Cancel order ${orderIdentifier}`, { order_id: orderIdentifier }),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          if (targetStatus) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_order_status",
+                `Update order ${orderIdentifier} to ${targetStatus.replaceAll("_", " ")}`,
+                { order_id: orderIdentifier, status: targetStatus },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+      }
+
       // Country-wise order distribution
       const countryOrders: Record<string, number> = {};
       (recentOrders || []).forEach(o => {
@@ -920,7 +1028,8 @@ CORE CAPABILITIES:
 
 1. **Senior Developer Mode**:
    - Explain any part of the codebase in plain terms
-   - Generate ready-to-use code snippets (React, TypeScript, Tailwind, Edge Functions)
+   - Provide implementation strategy and architecture decisions first
+   - Generate code snippets ONLY when the owner explicitly asks for code
    - Review bugs and suggest fixes with exact file paths
    - Performance optimization recommendations
    - Database schema design and migration guidance
@@ -1118,7 +1227,10 @@ RESPONSE RULES:
       }
 
       const aiData = await aiResponse.json();
-      const reply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const rawReply = aiData.choices?.[0]?.message?.content || "No response from AI.";
+      const reply = ownerAskedForCode
+        ? rawReply
+        : rawReply.replace(/```[\s\S]*?```/g, "").trim();
       const tokensUsed = aiData.usage?.total_tokens || 0;
 
       // Log to ai_engine_logs for monitoring
@@ -1134,7 +1246,7 @@ RESPONSE RULES:
         });
       } catch {}
 
-      return new Response(JSON.stringify({ reply }), {
+      return new Response(JSON.stringify({ reply: reply || "Action prepared — confirm to execute." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -1148,31 +1260,77 @@ RESPONSE RULES:
         });
       }
 
-      // UUID validation helper
+      // UUID validation helpers
       const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+      const invalidAliases = new Set(["all", "multiple", "latest", "recent", "pending_ones", "all_recent_cancelled"]);
 
-      // ─── GLOBAL PARAM SANITIZER: Reject any *_id param that isn't a valid UUID ───
+      const resolveOrderReference = async (value: string) => {
+        const trimmed = value.trim();
+        if (isValidUUID(trimmed)) return trimmed;
+        if (trimmed.startsWith("ARP-TRK-") || trimmed.startsWith("ARP-")) {
+          const lookupField = trimmed.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
+          const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, trimmed).maybeSingle();
+          return resolvedOrder?.id || null;
+        }
+        return null;
+      };
+
+      // ─── GLOBAL PARAM SANITIZER: normalize IDs, reject aliases, support *_ids arrays ───
       if (params && typeof params === "object") {
-        for (const [key, value] of Object.entries(params)) {
-          if (key.endsWith("_id") && typeof value === "string" && value.length > 0 && !isValidUUID(value)) {
-            // Check if it's a tracking ID or order number that needs resolution first
-            if (value.startsWith("ARP-TRK-") || value.startsWith("ARP-")) {
-              // Auto-resolve: look up the UUID from tracking/order number
-              const lookupField = value.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
-              const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, value).maybeSingle();
-              if (resolvedOrder) {
-                params[key] = resolvedOrder.id;
-                continue;
-              }
-              return new Response(JSON.stringify({ 
-                error: `Could not find order with ${lookupField} "${value}". Please verify the ID.`,
-                suggestion: "Use search_order tool to find the correct order first."
+        for (const [key, rawValue] of Object.entries(params)) {
+          if (!key.endsWith("_id") && !key.endsWith("_ids")) continue;
+
+          if (key.endsWith("_id")) {
+            if (Array.isArray(rawValue)) {
+              return new Response(JSON.stringify({ error: `Parameter "${key}" must be a single UUID, not an array.` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            if (typeof rawValue !== "string" || !rawValue.trim()) continue;
+            const value = rawValue.trim();
+            if (invalidAliases.has(value.toLowerCase())) {
+              return new Response(JSON.stringify({ error: `Invalid identifier "${value}". Use exact UUID(s) or use bulk tools for multiple records.` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            const resolved = key === "order_id" ? await resolveOrderReference(value) : null;
+            const finalId = resolved || (isValidUUID(value) ? value : null);
+            if (!finalId) {
+              return new Response(JSON.stringify({
+                error: `Parameter "${key}" must be a valid UUID. Received: "${value}". Use search_order or provide exact UUID(s).`,
               }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
             }
-            return new Response(JSON.stringify({ 
-              error: `Parameter "${key}" must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Received: "${value}". Use search_order to find the correct UUID, or use bulk tools (update_orders_by_status, cancel_pending_orders) for multiple orders.`,
-            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            params[key] = finalId;
+            continue;
           }
+
+          const values = Array.isArray(rawValue)
+            ? rawValue
+            : typeof rawValue === "string"
+              ? rawValue.split(",")
+              : [];
+
+          const normalizedIds: string[] = [];
+          for (const rawItem of values) {
+            const item = String(rawItem || "").trim();
+            if (!item) continue;
+            if (invalidAliases.has(item.toLowerCase())) {
+              return new Response(JSON.stringify({ error: `Invalid list identifier "${item}" for "${key}".` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            const resolved = key === "order_ids" ? await resolveOrderReference(item) : null;
+            const finalId = resolved || (isValidUUID(item) ? item : null);
+            if (!finalId) {
+              return new Response(JSON.stringify({ error: `All values in "${key}" must be valid UUIDs. Invalid: "${item}"` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            normalizedIds.push(finalId);
+          }
+          params[key] = [...new Set(normalizedIds)];
         }
       }
 
@@ -1212,7 +1370,7 @@ RESPONSE RULES:
         case "update_orders_by_status": {
           const fromStatus = params?.from_status;
           const toStatus = params?.to_status;
-          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          const validStatuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"];
           if (!fromStatus || !toStatus || !validStatuses.includes(fromStatus) || !validStatuses.includes(toStatus)) {
             return new Response(JSON.stringify({ error: `from_status and to_status required. Valid: ${validStatuses.join(", ")}` }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1273,7 +1431,7 @@ RESPONSE RULES:
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
-          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          const validStatuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"];
           if (!validStatuses.includes(newStatus)) {
             return new Response(JSON.stringify({ error: `Invalid status. Valid: ${validStatuses.join(", ")}` }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1511,7 +1669,7 @@ Research trending buyer-intent keywords for this category niche and generate con
           
           result = { 
             success: true, 
-            message: `✅ Category "${cat.name}" SEO updated!\n\n📝 Description: ${seo.description}\n🏷️ Keywords: ${(seo.keywords_used || []).join(", ")}\n📊 Meta Title: ${seo.meta_title || "N/A"}\n📋 Meta Description: ${seo.meta_description || "N/A"}`,
+            message: `✅ Task Completed — SEO updated for "${cat.name}". Keywords: ${(seo.keywords_used || []).join(", ")}`,
             data: seo,
           };
           break;

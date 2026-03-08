@@ -276,6 +276,7 @@ const OrderManagement = () => {
     pending: orders.filter(o => o.status === "pending").length,
     processing: orders.filter(o => o.status === "processing").length,
     shipped: orders.filter(o => o.status === "shipped").length,
+    out_for_delivery: orders.filter(o => o.status === "out_for_delivery").length,
     delivered: orders.filter(o => o.status === "delivered").length,
     cancelled: orders.filter(o => o.status === "cancelled").length,
   };
@@ -348,13 +349,14 @@ const OrderManagement = () => {
         )}
       </AnimatePresence>
 
-      {/* Stats — now 6 cards including Cancelled */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+      {/* Stats — now all status cards are clickable filters */}
+      <div className="grid grid-cols-3 sm:grid-cols-7 gap-2.5">
         {[
           { label: "Total", value: stats.total, color: "text-foreground", filterVal: "all" },
           { label: "Pending", value: stats.pending, color: "text-amber-500", filterVal: "pending" },
           { label: "Processing", value: stats.processing, color: "text-blue-500", filterVal: "processing" },
           { label: "Shipped", value: stats.shipped, color: "text-primary", filterVal: "shipped" },
+          { label: "Out", value: stats.out_for_delivery, color: "text-orange-500", filterVal: "out_for_delivery" },
           { label: "Delivered", value: stats.delivered, color: "text-green-500", filterVal: "delivered" },
           { label: "Cancelled", value: stats.cancelled, color: "text-destructive", filterVal: "cancelled" },
         ].map(s => (

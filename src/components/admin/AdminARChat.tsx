@@ -46,6 +46,7 @@ const QUICK_ACTIONS = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_DOC_TYPES = ["text/csv", "application/json", "text/plain", "text/html"];
+const CODE_REQUEST_REGEX = /(show\s+(me\s+)?)?code|code\s*snippet|sql\s+query|typescript|javascript|tsx|jsx/i;
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -58,6 +59,12 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
 };
+
+const stripCodeBlocks = (content: string) =>
+  content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/^\s{0,3}`[^`\n]+`\s*$/gm, "")
+    .trim();
 
 const AdminARChat = () => {
   const [open, setOpen] = useState(false);
@@ -250,13 +257,15 @@ const AdminARChat = () => {
         } catch {}
       }
       const cleanContent = rawReply.replace(/<!--ACTION:.*?-->/g, "").trim();
+      const canShowCode = CODE_REQUEST_REGEX.test(content);
+      const sanitizedContent = canShowCode ? cleanContent : stripCodeBlocks(cleanContent);
       
       const actionResults: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }> = {};
       actions.forEach((a, i) => { actionResults[`${a.tool}_${i}`] = { status: "pending" }; });
 
       setMessages(prev => [...prev, { 
         id: crypto.randomUUID(), 
-        content: cleanContent, 
+        content: sanitizedContent || (actions.length > 0 ? "Action prepared — confirm to execute." : "No response."), 
         role: "assistant",
         actions: actions.length > 0 ? actions : undefined,
         actionResults: actions.length > 0 ? actionResults : undefined,
