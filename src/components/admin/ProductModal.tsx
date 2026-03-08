@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Loader2, Save, Package, DollarSign, BarChart3, Truck, Search as SearchIcon, FileText, Layers } from "lucide-react";
+import { X, Loader2, Save, Package, DollarSign, BarChart3, Truck, Search as SearchIcon, FileText, Layers, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
 import { ProductImageUploader } from "./ProductImageUploader";
 import { ProductVariantEditor, VariantRow } from "./ProductVariantEditor";
 import { SEOScoreWidget } from "./SEOScoreWidget";
+import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface DbCategory {
