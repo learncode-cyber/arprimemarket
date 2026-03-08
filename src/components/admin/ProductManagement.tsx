@@ -1,19 +1,16 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Edit3, Save, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, ImagePlus, Wand2 } from "lucide-react";
-import { SEOScoreWidget } from "@/components/admin/SEOScoreWidget";
+import { Search, Plus, Trash2, Edit3, X, Loader2, Star, Sparkles, Copy, CheckSquare, Square, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, useCategories, Product } from "@/hooks/useProductData";
 import { toast } from "sonner";
+import { ProductModal } from "./ProductModal";
 
 const ProductManagement = () => {
   const { data: products = [], refetch } = useProducts();
   const { data: categories = [] } = useCategories();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Record<string, any>>({});
-  const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState<string | null>(null);
   const [aiContent, setAiContent] = useState<Record<string, any>>({});
@@ -21,11 +18,8 @@ const ProductManagement = () => {
   const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; current: string; running: boolean } | null>(null);
   const [imageEnhancing, setImageEnhancing] = useState<string | null>(null);
   const [enhancedImages, setEnhancedImages] = useState<Record<string, string>>({});
-  const [newProduct, setNewProduct] = useState({
-    title: "", price: "", compare_at_price: "", category_id: "", image_url: "",
-    image_2: "", image_3: "", image_4: "",
-    description: "", stock_quantity: "0", sku: "", tags: "", weight: "",
-  });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState<Product | null>(null);
 
   const filtered = products.filter(p => {
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
@@ -46,29 +40,14 @@ const ProductManagement = () => {
     else setSelectedIds(new Set(filtered.map(p => p.id)));
   };
 
-  const handleAdd = async () => {
-    if (!newProduct.title || !newProduct.price) { toast.error("Title and price required"); return; }
-    setSaving(true);
-    const slug = newProduct.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
-    const images = [newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].filter(Boolean);
-    const { error } = await supabase.from("products").insert({
-      title: newProduct.title, slug, price: parseFloat(newProduct.price),
-      compare_at_price: newProduct.compare_at_price ? parseFloat(newProduct.compare_at_price) : null,
-      category_id: newProduct.category_id || null, image_url: newProduct.image_url || null,
-      images: images,
-      description: newProduct.description || null, stock_quantity: parseInt(newProduct.stock_quantity) || 0,
-      sku: newProduct.sku || null, weight: newProduct.weight ? parseFloat(newProduct.weight) : null,
-      tags: newProduct.tags ? newProduct.tags.split(",").map(t => t.trim()) : [],
-      is_active: true,
-    });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Product added!");
-      setNewProduct({ title: "", price: "", compare_at_price: "", category_id: "", image_url: "", image_2: "", image_3: "", image_4: "", description: "", stock_quantity: "0", sku: "", tags: "", weight: "" });
-      setShowAdd(false);
-      refetch();
-    }
-    setSaving(false);
+  const openCreateModal = () => {
+    setModalProduct(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (p: Product) => {
+    setModalProduct(p);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -83,25 +62,7 @@ const ProductManagement = () => {
   };
 
   const startEdit = (p: Product) => {
-    setEditingId(p.id);
-    setEditForm({
-      title: p.title, price: p.price.toString(), stock_quantity: p.stock_quantity.toString(),
-      compare_at_price: p.compare_at_price?.toString() || "", image_url: p.image || "",
-      description: p.description || "",
-    });
-  };
-
-  const saveEdit = async () => {
-    if (!editingId) return;
-    setSaving(true);
-    const { error } = await supabase.from("products").update({
-      title: editForm.title, price: parseFloat(editForm.price),
-      stock_quantity: parseInt(editForm.stock_quantity) || 0,
-      compare_at_price: editForm.compare_at_price ? parseFloat(editForm.compare_at_price) : null,
-      image_url: editForm.image_url || null, description: editForm.description || null,
-    }).eq("id", editingId);
-    if (error) toast.error(error.message); else { toast.success("Updated"); setEditingId(null); refetch(); }
-    setSaving(false);
+    openEditModal(p);
   };
 
   // Single AI Content Generation
@@ -309,70 +270,19 @@ const ProductManagement = () => {
             AI Generate ({selectedIds.size})
           </button>
         )}
-        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
+        <button onClick={openCreateModal} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
           <Plus className="w-4 h-4" /> Add Product
         </button>
       </div>
 
-      {/* Add Product Form */}
-      <AnimatePresence>
-        {showAdd && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-              <h3 className="font-display text-base font-semibold text-foreground">New Product</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="text-xs text-muted-foreground">Title *</label><input value={newProduct.title} onChange={e => setNewProduct(p => ({ ...p, title: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">SKU</label><input value={newProduct.sku} onChange={e => setNewProduct(p => ({ ...p, sku: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Price *</label><input type="number" value={newProduct.price} onChange={e => setNewProduct(p => ({ ...p, price: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Compare Price</label><input type="number" value={newProduct.compare_at_price} onChange={e => setNewProduct(p => ({ ...p, compare_at_price: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Category</label>
-                  <select value={newProduct.category_id} onChange={e => setNewProduct(p => ({ ...p, category_id: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    <option value="">Select</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-xs text-muted-foreground">Stock</label><input type="number" value={newProduct.stock_quantity} onChange={e => setNewProduct(p => ({ ...p, stock_quantity: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Weight (kg)</label><input type="number" value={newProduct.weight} onChange={e => setNewProduct(p => ({ ...p, weight: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                <div><label className="text-xs text-muted-foreground">Tags (comma separated)</label><input value={newProduct.tags} onChange={e => setNewProduct(p => ({ ...p, tags: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground font-medium">Product Images (up to 4)</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div><label className="text-[10px] text-muted-foreground">Main Image URL *</label><input value={newProduct.image_url} onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 2</label><input value={newProduct.image_2} onChange={e => setNewProduct(p => ({ ...p, image_2: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 3</label><input value={newProduct.image_3} onChange={e => setNewProduct(p => ({ ...p, image_3: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div><label className="text-[10px] text-muted-foreground">Image 4</label><input value={newProduct.image_4} onChange={e => setNewProduct(p => ({ ...p, image_4: e.target.value }))} placeholder="https://..." className="w-full mt-0.5 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                </div>
-                {/* Image previews */}
-                {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].some(Boolean) && (
-                  <div className="flex gap-2 flex-wrap">
-                    {[newProduct.image_url, newProduct.image_2, newProduct.image_3, newProduct.image_4].map((url, i) => url ? (
-                      <img key={i} src={url} alt={`Preview ${i+1}`} className="w-16 h-16 rounded-lg object-cover border border-border" onError={e => (e.currentTarget.style.display = 'none')} />
-                    ) : null)}
-                  </div>
-                )}
-              </div>
-              <div><label className="text-xs text-muted-foreground">Description</label><textarea rows={3} value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} className="w-full mt-1 px-3 py-2.5 rounded-xl bg-secondary text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
-              
-              {/* SEO Score Widget */}
-              <SEOScoreWidget
-                title={newProduct.title}
-                description={newProduct.description}
-                category={categories.find(c => c.id === newProduct.category_id)?.name}
-                price={newProduct.price ? parseFloat(newProduct.price) : undefined}
-                onTitleGenerated={(t) => setNewProduct(p => ({ ...p, title: t }))}
-                onDescriptionGenerated={(d) => setNewProduct(p => ({ ...p, description: d }))}
-              />
-
-              <div className="flex gap-2">
-                <button onClick={handleAdd} disabled={saving} className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60 flex items-center gap-1.5">
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Add Product
-                </button>
-                <button onClick={() => setShowAdd(false)} className="px-5 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-medium">Cancel</button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Product Modal */}
+      <ProductModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setModalProduct(null); }}
+        product={modalProduct}
+        categories={categories}
+        onSaved={refetch}
+      />
 
       {/* Products Table */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -395,33 +305,6 @@ const ProductManagement = () => {
             <tbody>
               {filtered.map(p => (
                 <tr key={p.id} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""}`}>
-                  {editingId === p.id ? (
-                    <td className="px-4 py-3" colSpan={6}>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Title" />
-                          <input type="number" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Price" />
-                          <input type="number" value={editForm.stock_quantity} onChange={e => setEditForm(f => ({ ...f, stock_quantity: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Stock" />
-                        </div>
-                        <textarea rows={2} value={editForm.description || ""} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none" placeholder="Description" />
-                        <SEOScoreWidget
-                          title={editForm.title || ""}
-                          description={editForm.description || ""}
-                          onTitleGenerated={(t) => setEditForm(f => ({ ...f, title: t }))}
-                          onDescriptionGenerated={(d) => setEditForm(f => ({ ...f, description: d }))}
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={saveEdit} disabled={saving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-60">
-                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-lg bg-secondary text-muted-foreground text-xs font-medium flex items-center gap-1">
-                            <X className="w-3 h-3" /> Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  ) : (
-                    <>
                       <td className="px-3 py-3">
                         <button onClick={() => toggleSelect(p.id)} className="text-muted-foreground hover:text-foreground transition-colors">
                           {selectedIds.has(p.id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
@@ -473,8 +356,6 @@ const ProductManagement = () => {
                           </button>
                         </div>
                       </td>
-                    </>
-                  )}
                 </tr>
               ))}
               {filtered.length === 0 && (
