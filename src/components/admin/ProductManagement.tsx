@@ -209,15 +209,23 @@ const ProductManagement = () => {
       {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
-          { label: "Total Products", value: products.length, color: "text-foreground" },
-          { label: "Featured", value: products.filter(p => p.is_featured).length, color: "text-primary" },
-          { label: "Low Stock", value: lowStockCount, color: lowStockCount > 0 ? "text-amber-500" : "text-green-500" },
-          { label: "Categories", value: categories.length, color: "text-muted-foreground" },
+          { label: "Total Products", value: products.length, color: "text-foreground", filterKey: null },
+          { label: "Featured", value: products.filter(p => p.is_featured).length, color: "text-primary", filterKey: "featured" },
+          { label: "Low Stock", value: lowStockCount, color: lowStockCount > 0 ? "text-amber-500" : "text-green-500", filterKey: "lowstock" },
+          { label: "Categories", value: categories.length, color: "text-muted-foreground", filterKey: null },
         ].map(s => (
-          <div key={s.label} className="bg-card border border-border rounded-xl p-3 text-center">
+          <motion.div
+            key={s.label}
+            whileHover={{ y: -2, boxShadow: "0 4px 20px -4px hsl(var(--primary) / 0.15)" }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setStatusCardFilter(statusCardFilter === s.filterKey ? null : s.filterKey)}
+            className={`bg-card border rounded-xl p-3 text-center cursor-pointer transition-all duration-200 select-none ${
+              statusCardFilter === s.filterKey ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+            }`}
+          >
             <p className={`font-display text-lg font-bold ${s.color}`}>{s.value}</p>
             <p className="text-[10px] text-muted-foreground">{s.label}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
