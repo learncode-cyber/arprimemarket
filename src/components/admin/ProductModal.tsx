@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ProductImageUploader } from "./ProductImageUploader";
 import { ProductVariantEditor, VariantRow } from "./ProductVariantEditor";
 import { SEOScoreWidget } from "./SEOScoreWidget";
+import { GoogleSEOPreview } from "./GoogleSEOPreview";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -425,6 +426,13 @@ export const ProductModal = ({ open, onClose, product, categories, onSaved }: Pr
                 price={form.price ? parseFloat(form.price) : undefined}
                 onTitleGenerated={(t) => update("meta_title", t)}
                 onDescriptionGenerated={(d) => update("meta_description", d)}
+              />
+              {/* Google SERP Live Preview */}
+              <GoogleSEOPreview
+                title={form.meta_title || form.title}
+                description={form.meta_description || form.description?.slice(0, 160) || ""}
+                slug={product?.slug || form.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}
+                baseUrl="arprimemarket.lovable.app/products"
               />
             </div>
           )}
