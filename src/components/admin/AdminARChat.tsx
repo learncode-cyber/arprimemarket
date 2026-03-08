@@ -440,6 +440,14 @@ const AdminARChat = () => {
                                     )}
                                   </div>
                                   <p className="text-[11px] text-muted-foreground">{act.description}</p>
+                                  {/* Show explicit params being sent */}
+                                  {act.params && Object.keys(act.params).length > 0 && (
+                                    <div className="text-[10px] text-muted-foreground/80 bg-muted/50 rounded-lg px-2 py-1 font-mono">
+                                      {Object.entries(act.params).map(([k, v]) => (
+                                        <div key={k}>{k}: <span className="text-foreground/70">{String(v)}</span></div>
+                                      ))}
+                                    </div>
+                                  )}
                                   {/* Dual buttons */}
                                   <div className="flex items-center gap-2">
                                     <button
@@ -450,7 +458,7 @@ const AdminARChat = () => {
                                           : "bg-green-600 text-white"
                                       }`}
                                     >
-                                      <CheckCircle2 className="w-3.5 h-3.5" /> Proceed
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Confirm &amp; Execute
                                     </button>
                                     <button
                                       onClick={() => {
