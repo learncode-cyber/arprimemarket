@@ -351,18 +351,24 @@ const OrderManagement = () => {
       {/* Stats — now 6 cards including Cancelled */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
         {[
-          { label: "Total", value: stats.total, color: "text-foreground" },
-          { label: "Pending", value: stats.pending, color: "text-amber-500" },
-          { label: "Processing", value: stats.processing, color: "text-blue-500" },
-          { label: "Shipped", value: stats.shipped, color: "text-primary" },
-          { label: "Delivered", value: stats.delivered, color: "text-green-500" },
-          { label: "Cancelled", value: stats.cancelled, color: "text-destructive" },
+          { label: "Total", value: stats.total, color: "text-foreground", filterVal: "all" },
+          { label: "Pending", value: stats.pending, color: "text-amber-500", filterVal: "pending" },
+          { label: "Processing", value: stats.processing, color: "text-blue-500", filterVal: "processing" },
+          { label: "Shipped", value: stats.shipped, color: "text-primary", filterVal: "shipped" },
+          { label: "Delivered", value: stats.delivered, color: "text-green-500", filterVal: "delivered" },
+          { label: "Cancelled", value: stats.cancelled, color: "text-destructive", filterVal: "cancelled" },
         ].map(s => (
-          <div key={s.label} className="bg-card border border-border rounded-xl p-3 text-center cursor-pointer hover:border-primary/40 transition-colors"
-            onClick={() => setStatusFilter(s.label === "Total" ? "all" : s.label.toLowerCase())}>
+          <motion.div
+            key={s.label}
+            whileHover={{ y: -2, boxShadow: "0 4px 20px -4px hsl(var(--primary) / 0.15)" }}
+            whileTap={{ scale: 0.97 }}
+            className={`bg-card border rounded-xl p-3 text-center cursor-pointer transition-all duration-200 select-none ${
+              statusFilter === s.filterVal ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+            }`}
+            onClick={() => setStatusFilter(s.filterVal)}>
             <p className={`font-display text-xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-[10px] text-muted-foreground">{s.label}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
