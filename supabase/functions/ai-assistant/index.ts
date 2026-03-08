@@ -994,43 +994,37 @@ CORE CAPABILITIES:
       - NEVER ask owner for keywords — research and apply automatically
 
 8. **SERVER-SIDE ACTION TOOLS** (CRITICAL — YOU CAN PERFORM DATABASE ACTIONS):
-   When the owner asks you to perform a database action (cancel orders, update statuses, delete data, create categories, create products, setup suppliers, etc.), you MUST:
+   When the owner asks you to perform a database action, you MUST:
    - First explain what the action will do and show affected data counts/details
-   - Then include an action block in your response using this EXACT format:
+   - Then include an action block using this EXACT format:
      <!--ACTION:{"tool":"cancel_pending_orders","description":"Cancel all pending orders","params":{}}-->
-   - Available tools:
-     • cancel_pending_orders — Sets all orders with status='pending' to status='cancelled'
-     • cancel_order — Cancel a specific order. params: {"order_id":"uuid"}
-     • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0
-     • update_order_status — Update an order's status. params: {"order_id":"uuid","status":"shipped|delivered|cancelled|processing"}
-     • create_category — Create a new category with SEO-optimized data. params: {"name":"Category Name","slug":"seo-slug","description":"SEO meta description (conversion-focused, 150-160 chars)","image_url":"optional"}
-       When using create_category, YOU MUST:
-       1. Research high-ranking keywords for the category niche
-       2. Generate an SEO-optimized name with primary keywords
-       3. Create a conversion-focused meta description (150-160 chars) with CTAs
-       4. Generate an SEO-friendly slug with keywords
-       5. Show ALL generated data clearly before the action block
-     • create_product — Create a new product with full SEO-optimized data. params: {"title":"Product Title","price":number,"description":"Rich HTML description","category_id":"uuid (optional)","compare_at_price":number (optional),"stock_quantity":number,"tags":["tag1","tag2"],"meta_title":"SEO title (max 60 chars)","meta_description":"SEO description (max 160 chars)","sku":"optional","brand":"optional","is_featured":boolean}
-       When using create_product, YOU MUST:
-       1. Research high-ranking keywords for the product niche
-       2. Generate an SEO-optimized title with primary buying keywords (max 60 chars)
-       3. Create a compelling product description (HTML with features, benefits, specs)
-       4. Generate conversion-focused meta description (150-160 chars) with CTA
-       5. Suggest relevant tags for discoverability
-       6. Set a competitive price if owner provides a range
-       7. Show ALL generated data clearly in a formatted table before the action block
-     • create_supplier — Create a new supplier for dropshipping. params: {"name":"Supplier Name","platform":"cj_dropshipping|aliexpress|custom","api_endpoint":"API URL","contact_info":"optional contact"}
-       When using create_supplier:
-       1. Ask for API credentials if not provided
-       2. Validate the platform type
-       3. Configure sync settings (auto-sync interval, stock threshold)
-       4. Show supplier details before confirmation
-     • bulk_seo_optimize — Auto-optimize SEO for all products missing meta titles/descriptions. params: {}
-       This will use AI to generate SEO-optimized meta titles and descriptions for products that are missing them.
-   - The UI will parse this and show a "Confirm" button to the owner.
-   - NEVER execute actions without the action block — the owner must confirm first.
-   - You can include multiple action blocks if the owner asks for multiple operations.
-   - Always show what will be affected BEFORE the action block.
+
+   **⚠️ CRITICAL UUID RULE — NEVER BREAK THIS:**
+   - When a tool requires "order_id", you MUST provide a REAL UUID from the database (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
+   - NEVER pass text descriptions like "all_recent_cancelled", "latest_order", "pending_ones" as order_id — these will cause database errors.
+   - If the owner asks to update/cancel multiple orders by status, use the BULK tools (update_orders_by_status, cancel_pending_orders) — NOT cancel_order with fake IDs.
+   - If you need a specific order's UUID, first look at the RECENT ORDERS data in your system state, or ask the owner for the order number/tracking ID.
+   - To find an order by tracking ID or order number, use the search_order tool FIRST, then use the returned UUID.
+
+   Available tools:
+     • cancel_pending_orders — Bulk cancel ALL orders with status='pending'. No params needed.
+     • cancel_order — Cancel ONE specific order. params: {"order_id":"REAL-UUID-HERE"}
+     • update_order_status — Update ONE order's status. params: {"order_id":"REAL-UUID-HERE","status":"shipped|delivered|cancelled|processing"}
+     • update_orders_by_status — Bulk update orders from one status to another. params: {"from_status":"pending|processing|shipped","to_status":"processing|shipped|delivered|cancelled"}
+     • search_order — Find an order by tracking ID (ARP-TRK-xxx), order number (ARP-xxx), or UUID. Returns order details. params: {"query":"ARP-TRK-XXXXXXXX or ARP-20260308-XXXXXX or UUID"}
+     • deactivate_out_of_stock — Sets is_active=false for products with stock_quantity<=0. No params needed.
+     • create_category — Create a new category with SEO-optimized data. params: {"name":"Category Name","slug":"seo-slug","description":"SEO meta description","image_url":"optional"}
+     • create_product — Create a new product. params: {"title":"Product Title","price":number,"description":"HTML desc","stock_quantity":number,"tags":[],"meta_title":"max 60","meta_description":"max 160","sku":"optional","brand":"optional","is_featured":boolean,"category_id":"uuid optional","compare_at_price":number optional}
+     • create_supplier — Create a supplier. params: {"name":"Name","platform":"cj_dropshipping|aliexpress|custom","api_endpoint":"URL","contact_info":"optional"}
+     • bulk_seo_optimize — Auto-optimize SEO for all products missing metadata. No params needed.
+
+   TOOL SELECTION GUIDE:
+   - "Cancel all pending orders" → use cancel_pending_orders (NOT cancel_order)
+   - "Cancel order ARP-TRK-XXXX" → use search_order first to get UUID, then cancel_order
+   - "Move all pending to processing" → use update_orders_by_status {"from_status":"pending","to_status":"processing"}
+   - "Cancel order abc123-..." → use cancel_order with the exact UUID
+   
+   The UI will parse action blocks and show Confirm/Cancel buttons. NEVER execute without the action block.
 
 CURRENT SYSTEM STATE (REAL-TIME — NEVER HALLUCINATE):
 📦 Products: ${totalProducts} total (${activeProducts} active, ${outOfStock || 0} out of stock)
@@ -1131,9 +1125,58 @@ RESPONSE RULES:
         });
       }
 
+      // UUID validation helper
+      const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
       let result: any = { success: false };
 
       switch (tool) {
+        case "search_order": {
+          const query = (params?.query || "").trim();
+          if (!query) {
+            return new Response(JSON.stringify({ error: "query is required (tracking ID, order number, or UUID)" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          let order = null;
+          // Try by tracking number
+          if (query.startsWith("ARP-TRK-")) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("tracking_number", query).maybeSingle();
+            order = data;
+          }
+          // Try by order number
+          if (!order && query.startsWith("ARP-")) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("order_number", query).maybeSingle();
+            order = data;
+          }
+          // Try by UUID
+          if (!order && isValidUUID(query)) {
+            const { data } = await adminClient.from("orders").select("id, order_number, tracking_number, status, payment_status, total, shipping_name, shipping_phone, created_at").eq("id", query).maybeSingle();
+            order = data;
+          }
+          if (!order) {
+            result = { success: false, message: `No order found for "${query}". Please verify the tracking ID or order number.` };
+          } else {
+            result = { success: true, message: `Order found: ${order.order_number} (${order.tracking_number || "No tracking"})`, data: order };
+          }
+          break;
+        }
+        case "update_orders_by_status": {
+          const fromStatus = params?.from_status;
+          const toStatus = params?.to_status;
+          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          if (!fromStatus || !toStatus || !validStatuses.includes(fromStatus) || !validStatuses.includes(toStatus)) {
+            return new Response(JSON.stringify({ error: `from_status and to_status required. Valid: ${validStatuses.join(", ")}` }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const updateData: any = { status: toStatus, updated_at: new Date().toISOString() };
+          if (toStatus === "delivered") updateData.delivered_at = new Date().toISOString();
+          const { data, error } = await adminClient.from("orders").update(updateData).eq("status", fromStatus).select("id");
+          if (error) throw error;
+          result = { success: true, affected: data?.length || 0, message: `${data?.length || 0} orders moved from '${fromStatus}' to '${toStatus}'.` };
+          break;
+        }
         case "cancel_pending_orders": {
           const { data, error } = await adminClient
             .from("orders")
@@ -1146,8 +1189,8 @@ RESPONSE RULES:
         }
         case "cancel_order": {
           const orderId = params?.order_id;
-          if (!orderId) {
-            return new Response(JSON.stringify({ error: "order_id required" }), {
+          if (!orderId || !isValidUUID(orderId)) {
+            return new Response(JSON.stringify({ error: "A valid UUID order_id is required (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Use search_order to find the UUID first." }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
@@ -1174,6 +1217,11 @@ RESPONSE RULES:
           const { order_id, status: newStatus } = params || {};
           if (!order_id || !newStatus) {
             return new Response(JSON.stringify({ error: "order_id and status required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (!isValidUUID(order_id)) {
+            return new Response(JSON.stringify({ error: "order_id must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Use search_order to find the UUID first, or use update_orders_by_status for bulk operations." }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
@@ -1272,14 +1320,14 @@ RESPONSE RULES:
             .from("suppliers")
             .insert({
               name,
-              platform,
-              api_endpoint: api_endpoint || null,
-              contact_info: contact_info || null,
+              api_type: platform,
+              api_url: api_endpoint || null,
+              notes: contact_info || null,
               is_active: true,
               auto_sync: true,
               sync_interval_hours: 6,
             })
-            .select("id, name, platform")
+            .select("id, name, api_type")
             .single();
           if (supError) throw supError;
           result = { success: true, message: `Supplier "${name}" (${platform}) created and ready for sync!`, data: newSupplier };
