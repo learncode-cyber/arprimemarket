@@ -901,6 +901,114 @@ ${productContext}${learningContext}${strategyContext}`;
       // Fetch categories so AI knows UUIDs for update_category_seo
       const { data: allCategories } = await adminClient.from("categories").select("id, name, slug, description").order("name").limit(50);
 
+      const rawMessage = String(message || "");
+      const normalizedMessage = rawMessage.toLowerCase();
+      const ownerAskedForCode = /(show( me)? code|give( me)? code|code snippet|sql|typescript|javascript|tsx|jsx)/i.test(rawMessage);
+
+      const buildActionReply = (toolName: string, description: string, params: Record<string, unknown> = {}) => {
+        return `${description}\n<!--ACTION:${JSON.stringify({ tool: toolName, description, params })}-->`;
+      };
+
+      const normalizeStatus = (value?: string | null) => {
+        if (!value) return null;
+        const cleaned = value.toLowerCase().replace(/\s+/g, "_").trim();
+        if (["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"].includes(cleaned)) return cleaned;
+        if (cleaned === "canceled") return "cancelled";
+        return null;
+      };
+
+      const statusMatches = [
+        { status: "pending", regex: /\bpending\b/i },
+        { status: "processing", regex: /\bprocessing\b/i },
+        { status: "shipped", regex: /\bshipped\b/i },
+        { status: "out_for_delivery", regex: /\bout[\s_-]*for[\s_-]*delivery\b/i },
+        { status: "delivered", regex: /\bdelivered\b/i },
+        { status: "cancelled", regex: /\bcancel(?:led)?\b/i },
+      ]
+        .map(({ status, regex }) => ({ status, index: rawMessage.search(regex) }))
+        .filter((m) => m.index >= 0)
+        .sort((a, b) => a.index - b.index);
+
+      const matchedCategory = (allCategories || []).find((category) =>
+        normalizedMessage.includes(category.name.toLowerCase()) || normalizedMessage.includes(category.slug.toLowerCase())
+      );
+
+      if (!ownerAskedForCode) {
+        const cancelPendingIntent = /cancel\s+(all\s+)?pending\s+orders?/i.test(rawMessage);
+        if (cancelPendingIntent) {
+          return new Response(JSON.stringify({
+            reply: buildActionReply("cancel_pending_orders", "Cancel all pending orders", {}),
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const bulkIntent = /\b(all|multiple|bulk|every)\b/i.test(rawMessage) && /\borders?\b/i.test(rawMessage);
+        if (bulkIntent && statusMatches.length >= 2) {
+          const fromStatus = normalizeStatus(statusMatches[0].status);
+          const toStatus = normalizeStatus(statusMatches[1].status);
+          if (fromStatus && toStatus && fromStatus !== toStatus) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_orders_by_status",
+                `Move all ${fromStatus.replaceAll("_", " ")} orders to ${toStatus.replaceAll("_", " ")}`,
+                { from_status: fromStatus, to_status: toStatus },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        const categorySeoIntent = /(seo|keyword|meta)/i.test(rawMessage) && /categor/i.test(rawMessage);
+        if (categorySeoIntent) {
+          if (matchedCategory) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_category_seo",
+                `Optimize SEO for category \"${matchedCategory.name}\"`,
+                { category_id: matchedCategory.id },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          return new Response(JSON.stringify({
+            reply: "Please tell me which category to optimize, then I’ll prepare the action for confirmation.",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const orderRefMatch = rawMessage.match(/(ARP-TRK-[A-Z0-9-]+|ARP-\d{8}-[A-Z0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+        const singleOrderIntent = /\b(order|tracking)\b/i.test(rawMessage) && !bulkIntent;
+        if (singleOrderIntent && orderRefMatch) {
+          const orderIdentifier = orderRefMatch[1];
+          const targetStatus = normalizeStatus(statusMatches[0]?.status) || (/\bcancel(?:led)?\b/i.test(rawMessage) ? "cancelled" : null);
+
+          if (targetStatus === "cancelled") {
+            return new Response(JSON.stringify({
+              reply: buildActionReply("cancel_order", `Cancel order ${orderIdentifier}`, { order_id: orderIdentifier }),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          if (targetStatus) {
+            return new Response(JSON.stringify({
+              reply: buildActionReply(
+                "update_order_status",
+                `Update order ${orderIdentifier} to ${targetStatus.replaceAll("_", " ")}`,
+                { order_id: orderIdentifier, status: targetStatus },
+              ),
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+      }
+
       // Country-wise order distribution
       const countryOrders: Record<string, number> = {};
       (recentOrders || []).forEach(o => {
