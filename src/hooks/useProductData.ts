@@ -56,8 +56,9 @@ export interface Product {
 }
 
 /**
- * Fetches products via the API gateway (server-side cached, rate-limited).
- * Falls back to direct Supabase query if gateway is unavailable.
+ * Fetches products directly from the database.
+ * Tries API gateway first only if edge functions are available,
+ * otherwise goes straight to direct Supabase query for portability.
  */
 export const useProducts = (params?: {
   page?: number;
@@ -69,15 +70,26 @@ export const useProducts = (params?: {
   return useQuery({
     queryKey: ["products", params],
     queryFn: async (): Promise<Product[]> => {
-      // Try API gateway first
-      const res = await api.products.list(params);
-      if (res.data) {
-        return res.data.products.map(mapApiProduct);
+      // Always try direct DB query first for maximum portability
+      try {
+        const products = await directProductQuery(params);
+        if (products.length > 0) return products;
+      } catch (dbErr) {
+        console.warn("[Products] Direct DB query failed:", dbErr);
       }
 
-      // Fallback to direct query
-      console.warn("[Products] API gateway unavailable, using direct query");
-      return fallbackProductQuery();
+      // Then try API gateway as secondary
+      try {
+        const res = await api.products.list(params);
+        if (res.data) {
+          return res.data.products.map(mapApiProduct);
+        }
+      } catch (apiErr) {
+        console.warn("[Products] API gateway also failed:", apiErr);
+      }
+
+      console.error("[Products] All data sources failed");
+      return [];
     },
   });
 };
@@ -86,12 +98,23 @@ export const useProduct = (idOrSlug: string) => {
   return useQuery({
     queryKey: ["product", idOrSlug],
     queryFn: async (): Promise<Product | null> => {
-      const res = await api.products.detail(idOrSlug);
-      if (res.data) return mapApiProduct(res.data);
+      // Direct DB first
+      try {
+        const product = await directProductDetail(idOrSlug);
+        if (product) return product;
+      } catch (dbErr) {
+        console.warn("[Product] Direct DB query failed:", dbErr);
+      }
 
-      // Fallback
-      console.warn("[Product] API gateway unavailable, using direct query");
-      return fallbackProductDetail(idOrSlug);
+      // API gateway fallback
+      try {
+        const res = await api.products.detail(idOrSlug);
+        if (res.data) return mapApiProduct(res.data);
+      } catch (apiErr) {
+        console.warn("[Product] API gateway also failed:", apiErr);
+      }
+
+      return null;
     },
     enabled: !!idOrSlug,
   });
@@ -101,27 +124,39 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ["categories"],
     queryFn: async (): Promise<DbCategory[]> => {
-      const res = await api.categories.list();
-      if (res.data) {
-        return (res.data as ApiCategory[]).map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          image_url: resolveStorageImageUrl(c.image_url, CATEGORY_FALLBACK),
-        }));
+      // Direct DB first
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, slug, image_url")
+          .order("name");
+        if (!error && data && data.length > 0) {
+          return data.map((category) => ({
+            ...category,
+            image_url: resolveStorageImageUrl(category.image_url, CATEGORY_FALLBACK),
+          }));
+        }
+        if (error) console.warn("[Categories] Direct query error:", error.message);
+      } catch (err) {
+        console.warn("[Categories] Direct query failed:", err);
       }
 
-      // Fallback
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, slug, image_url")
-        .order("name");
-      if (error) throw error;
+      // API gateway fallback
+      try {
+        const res = await api.categories.list();
+        if (res.data) {
+          return (res.data as ApiCategory[]).map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            image_url: resolveStorageImageUrl(c.image_url, CATEGORY_FALLBACK),
+          }));
+        }
+      } catch (apiErr) {
+        console.warn("[Categories] API gateway also failed:", apiErr);
+      }
 
-      return (data || []).map((category) => ({
-        ...category,
-        image_url: resolveStorageImageUrl(category.image_url, CATEGORY_FALLBACK),
-      }));
+      return [];
     },
   });
 };
@@ -170,53 +205,66 @@ function mapDbProduct(p: any): Product {
   };
 }
 
-async function fallbackProductQuery(): Promise<Product[]> {
-  let data: any[] | null = null;
-
-  const publicRes = await supabase
-    .from("products_public")
+// ─── Direct queries (portable, no edge functions needed) ───
+async function directProductQuery(params?: {
+  category?: string;
+  search?: string;
+  featured?: boolean;
+}): Promise<Product[]> {
+  // Try products table directly (works on any Supabase instance)
+  let query = supabase
+    .from("products")
     .select("*, categories(name)")
     .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  if (publicRes.error) {
-    console.warn("[Products] products_public query failed, retrying products table", publicRes.error.message);
+  if (params?.category) {
+    query = query.eq("category_id", params.category);
+  }
+  if (params?.search) {
+    query = query.ilike("title", `%${params.search}%`);
+  }
+  if (params?.featured) {
+    query = query.eq("is_featured", true);
+  }
 
-    const tableRes = await supabase
-      .from("products")
+  const { data, error } = await query;
+
+  if (error) {
+    console.warn("[Products] products table query failed:", error.message);
+    // Try products_public view as last resort
+    const viewRes = await supabase
+      .from("products_public")
       .select("*, categories(name)")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
-
-    if (tableRes.error) throw tableRes.error;
-    data = tableRes.data;
-  } else {
-    data = publicRes.data;
+    if (viewRes.error) throw viewRes.error;
+    return (viewRes.data || []).map(mapDbProduct);
   }
 
   return (data || []).map(mapDbProduct);
 }
 
-async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> {
+async function directProductDetail(idOrSlug: string): Promise<Product | null> {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
-  let publicQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
-  publicQuery = isUuid ? publicQuery.eq("id", idOrSlug) : publicQuery.eq("slug", idOrSlug);
-  const publicRes = await publicQuery.maybeSingle();
+  let query = supabase.from("products").select("*, categories(name)").eq("is_active", true);
+  query = isUuid ? query.eq("id", idOrSlug) : query.eq("slug", idOrSlug);
+  const { data, error } = await query.maybeSingle();
 
-  if (publicRes.error) {
-    console.warn("[Product] products_public detail failed, retrying products table", publicRes.error.message);
-
-    let tableQuery = supabase.from("products").select("*, categories(name)").eq("is_active", true);
-    tableQuery = isUuid ? tableQuery.eq("id", idOrSlug) : tableQuery.eq("slug", idOrSlug);
-    const tableRes = await tableQuery.maybeSingle();
-
-    if (tableRes.error) throw tableRes.error;
-    if (!tableRes.data) return null;
-    return mapDbProduct(tableRes.data);
+  if (error) {
+    console.warn("[Product] products table detail failed:", error.message);
+    // Try products_public view
+    let viewQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
+    viewQuery = isUuid ? viewQuery.eq("id", idOrSlug) : viewQuery.eq("slug", idOrSlug);
+    const viewRes = await viewQuery.maybeSingle();
+    if (viewRes.error) throw viewRes.error;
+    if (!viewRes.data) return null;
+    return mapDbProduct(viewRes.data);
   }
 
-  if (!publicRes.data) return null;
-  return mapDbProduct(publicRes.data);
+  if (!data) return null;
+  return mapDbProduct(data);
 }
 
