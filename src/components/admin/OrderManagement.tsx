@@ -91,6 +91,8 @@ const OrderManagement = () => {
   const [alerts, setAlerts] = useState<OrderAlert[]>([]);
   const [showAlerts, setShowAlerts] = useState(false);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
