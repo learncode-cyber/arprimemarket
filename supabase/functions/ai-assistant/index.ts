@@ -1426,6 +1426,92 @@ RESPONSE RULES:
           result = { success: true, message: `SEO optimized ${optimized}/${unseoProducts.length} products with AI-generated meta titles and descriptions.`, affected: optimized };
           break;
         }
+        case "update_category_seo": {
+          const { category_id, focus_keywords } = params || {};
+          if (!category_id) {
+            return new Response(JSON.stringify({ error: "category_id is required" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Fetch current category
+          const { data: cat, error: catFetchErr } = await adminClient
+            .from("categories")
+            .select("id, name, slug, description")
+            .eq("id", category_id)
+            .maybeSingle();
+          if (catFetchErr || !cat) {
+            return new Response(JSON.stringify({ error: `Category not found: ${category_id}` }), {
+              status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Fetch products in this category for context
+          const { data: catProducts } = await adminClient
+            .from("products")
+            .select("title, tags, price")
+            .eq("category_id", category_id)
+            .eq("is_active", true)
+            .limit(20);
+          
+          const productContext = (catProducts || []).map(p => `${p.title} (৳${p.price}) tags: ${(p.tags || []).join(",")}`).join("; ");
+          
+          if (!lovableApiKey) {
+            return new Response(JSON.stringify({ error: "AI not configured for SEO research" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          // AI-powered keyword research and SEO generation
+          const seoRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: `You are an expert SEO strategist for ecommerce. Research high-ranking buyer-intent keywords and generate optimized content. Return ONLY valid JSON with NO markdown wrapping:
+{"description":"SEO-optimized category description (150-300 chars, include 2-3 keywords naturally, compelling for shoppers)","meta_title":"max 60 chars with primary keyword","meta_description":"max 160 chars with CTA and keywords","keywords_used":["keyword1","keyword2","keyword3"]}` },
+                { role: "user", content: `Category: "${cat.name}" (slug: ${cat.slug})
+Current description: ${cat.description || "none"}
+Products in this category: ${productContext || "none yet"}
+Focus keywords hint: ${focus_keywords || "auto-research based on category name and products"}
+Research trending buyer-intent keywords for this category niche and generate conversion-optimized SEO content.` },
+              ],
+            }),
+          });
+          
+          if (!seoRes.ok) {
+            return new Response(JSON.stringify({ error: "AI SEO research failed" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          const seoData = await seoRes.json();
+          const rawSeo = seoData.choices?.[0]?.message?.content || "";
+          const jsonMatch = rawSeo.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            return new Response(JSON.stringify({ error: "AI returned invalid SEO data" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          const seo = JSON.parse(jsonMatch[0]);
+          
+          // Update category in database
+          const { error: updateErr } = await adminClient
+            .from("categories")
+            .update({
+              description: seo.description || cat.description,
+            })
+            .eq("id", category_id);
+          
+          if (updateErr) throw updateErr;
+          
+          result = { 
+            success: true, 
+            message: `✅ Category "${cat.name}" SEO updated!\n\n📝 Description: ${seo.description}\n🏷️ Keywords: ${(seo.keywords_used || []).join(", ")}\n📊 Meta Title: ${seo.meta_title || "N/A"}\n📋 Meta Description: ${seo.meta_description || "N/A"}`,
+            data: seo,
+          };
+          break;
+        }
         default:
           return new Response(JSON.stringify({ error: `Unknown tool: ${tool}` }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
