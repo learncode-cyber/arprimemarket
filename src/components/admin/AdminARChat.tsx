@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Minus, Maximize2, Loader2, RefreshCw, Paperclip, ImageIcon, FileText } from "lucide-react";
+import { Bot, Send, X, Minus, Maximize2, Loader2, RefreshCw, Paperclip, ImageIcon, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -12,11 +12,19 @@ interface Attachment {
   preview?: string;
 }
 
+interface ParsedAction {
+  tool: string;
+  description: string;
+  params: Record<string, any>;
+}
+
 interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
   attachments?: Attachment[];
+  actions?: ParsedAction[];
+  actionResults?: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }>;
 }
 
 interface Alert {
