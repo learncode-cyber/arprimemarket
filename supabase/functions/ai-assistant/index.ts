@@ -1257,31 +1257,77 @@ RESPONSE RULES:
         });
       }
 
-      // UUID validation helper
+      // UUID validation helpers
       const isValidUUID = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+      const invalidAliases = new Set(["all", "multiple", "latest", "recent", "pending_ones", "all_recent_cancelled"]);
 
-      // ─── GLOBAL PARAM SANITIZER: Reject any *_id param that isn't a valid UUID ───
+      const resolveOrderReference = async (value: string) => {
+        const trimmed = value.trim();
+        if (isValidUUID(trimmed)) return trimmed;
+        if (trimmed.startsWith("ARP-TRK-") || trimmed.startsWith("ARP-")) {
+          const lookupField = trimmed.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
+          const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, trimmed).maybeSingle();
+          return resolvedOrder?.id || null;
+        }
+        return null;
+      };
+
+      // ─── GLOBAL PARAM SANITIZER: normalize IDs, reject aliases, support *_ids arrays ───
       if (params && typeof params === "object") {
-        for (const [key, value] of Object.entries(params)) {
-          if (key.endsWith("_id") && typeof value === "string" && value.length > 0 && !isValidUUID(value)) {
-            // Check if it's a tracking ID or order number that needs resolution first
-            if (value.startsWith("ARP-TRK-") || value.startsWith("ARP-")) {
-              // Auto-resolve: look up the UUID from tracking/order number
-              const lookupField = value.startsWith("ARP-TRK-") ? "tracking_number" : "order_number";
-              const { data: resolvedOrder } = await adminClient.from("orders").select("id").eq(lookupField, value).maybeSingle();
-              if (resolvedOrder) {
-                params[key] = resolvedOrder.id;
-                continue;
-              }
-              return new Response(JSON.stringify({ 
-                error: `Could not find order with ${lookupField} "${value}". Please verify the ID.`,
-                suggestion: "Use search_order tool to find the correct order first."
+        for (const [key, rawValue] of Object.entries(params)) {
+          if (!key.endsWith("_id") && !key.endsWith("_ids")) continue;
+
+          if (key.endsWith("_id")) {
+            if (Array.isArray(rawValue)) {
+              return new Response(JSON.stringify({ error: `Parameter "${key}" must be a single UUID, not an array.` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            if (typeof rawValue !== "string" || !rawValue.trim()) continue;
+            const value = rawValue.trim();
+            if (invalidAliases.has(value.toLowerCase())) {
+              return new Response(JSON.stringify({ error: `Invalid identifier "${value}". Use exact UUID(s) or use bulk tools for multiple records.` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            const resolved = key === "order_id" ? await resolveOrderReference(value) : null;
+            const finalId = resolved || (isValidUUID(value) ? value : null);
+            if (!finalId) {
+              return new Response(JSON.stringify({
+                error: `Parameter "${key}" must be a valid UUID. Received: "${value}". Use search_order or provide exact UUID(s).`,
               }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
             }
-            return new Response(JSON.stringify({ 
-              error: `Parameter "${key}" must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Received: "${value}". Use search_order to find the correct UUID, or use bulk tools (update_orders_by_status, cancel_pending_orders) for multiple orders.`,
-            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            params[key] = finalId;
+            continue;
           }
+
+          const values = Array.isArray(rawValue)
+            ? rawValue
+            : typeof rawValue === "string"
+              ? rawValue.split(",")
+              : [];
+
+          const normalizedIds: string[] = [];
+          for (const rawItem of values) {
+            const item = String(rawItem || "").trim();
+            if (!item) continue;
+            if (invalidAliases.has(item.toLowerCase())) {
+              return new Response(JSON.stringify({ error: `Invalid list identifier "${item}" for "${key}".` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            const resolved = key === "order_ids" ? await resolveOrderReference(item) : null;
+            const finalId = resolved || (isValidUUID(item) ? item : null);
+            if (!finalId) {
+              return new Response(JSON.stringify({ error: `All values in "${key}" must be valid UUIDs. Invalid: "${item}"` }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+            normalizedIds.push(finalId);
+          }
+          params[key] = [...new Set(normalizedIds)];
         }
       }
 
