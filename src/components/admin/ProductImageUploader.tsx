@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Upload, X, Loader2, GripVertical, ImagePlus, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { bumpStorageImageVersion, resolveStorageImageUrl } from "@/lib/storageImage";
 
 interface ProductImageUploaderProps {
   images: string[];
@@ -11,7 +12,7 @@ interface ProductImageUploaderProps {
 }
 
 const BUCKET = "product-images";
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const FALLBACK_IMAGE_URL = "/placeholder.svg";
 
 export const ProductImageUploader = ({ images, onChange, maxImages = 5 }: ProductImageUploaderProps) => {
   const [uploading, setUploading] = useState(false);
@@ -19,10 +20,7 @@ export const ProductImageUploader = ({ images, onChange, maxImages = 5 }: Produc
   const [optimizing, setOptimizing] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const resolveUrl = (path: string) => {
-    if (path.startsWith("http")) return `${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
-    return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}?t=${Date.now()}`;
-  };
+  const resolveUrl = (path: string) => resolveStorageImageUrl(path, FALLBACK_IMAGE_URL, BUCKET);
 
   const triggerOptimize = async (filePath: string) => {
     try {
@@ -65,6 +63,7 @@ export const ProductImageUploader = ({ images, onChange, maxImages = 5 }: Produc
       if (error) {
         toast.error(`Upload failed: ${error.message}`);
       } else {
+        bumpStorageImageVersion();
         newUrls.push(path);
         // Auto-optimize in background (non-blocking)
         triggerOptimize(path);
@@ -163,7 +162,7 @@ export const ProductImageUploader = ({ images, onChange, maxImages = 5 }: Produc
                       src={resolveUrl(img)}
                       alt={`Product ${i + 1}`}
                       className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE_URL; }}
                     />
                     {optimizing === img && (
                       <div className="absolute inset-0 bg-background/60 flex items-center justify-center">

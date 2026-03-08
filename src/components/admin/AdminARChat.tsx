@@ -257,13 +257,15 @@ const AdminARChat = () => {
         } catch {}
       }
       const cleanContent = rawReply.replace(/<!--ACTION:.*?-->/g, "").trim();
+      const canShowCode = CODE_REQUEST_REGEX.test(content);
+      const sanitizedContent = canShowCode ? cleanContent : stripCodeBlocks(cleanContent);
       
       const actionResults: Record<string, { status: "pending" | "loading" | "done" | "error"; message?: string }> = {};
       actions.forEach((a, i) => { actionResults[`${a.tool}_${i}`] = { status: "pending" }; });
 
       setMessages(prev => [...prev, { 
         id: crypto.randomUUID(), 
-        content: cleanContent, 
+        content: sanitizedContent || (actions.length > 0 ? "Action prepared — confirm to execute." : "No response."), 
         role: "assistant",
         actions: actions.length > 0 ? actions : undefined,
         actionResults: actions.length > 0 ? actionResults : undefined,
