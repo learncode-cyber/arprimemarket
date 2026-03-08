@@ -45,8 +45,7 @@ const CategoryManagement = () => {
       toast.success("Category added!");
       setNewCategory({ name: "", slug: "", description: "", image_url: "" });
       setShowAdd(false);
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await refreshCategories();
     }
     setSaving(false);
   };
