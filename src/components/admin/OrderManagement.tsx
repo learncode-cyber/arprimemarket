@@ -378,6 +378,24 @@ const OrderManagement = () => {
         </select>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-card border-2 border-destructive/30 rounded-2xl p-6 space-y-4 z-10">
+            <h3 className="font-display font-bold text-destructive">Delete Order</h3>
+            <p className="text-sm text-muted-foreground">This will permanently delete this order and all related items, payments, and alerts. This cannot be undone.</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleDeleteOrder(deleteConfirm)} disabled={deleting}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-40">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete
+              </button>
+              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm font-medium">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Orders */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
