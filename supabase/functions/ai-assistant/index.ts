@@ -1431,7 +1431,7 @@ RESPONSE RULES:
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
-          const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+          const validStatuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"];
           if (!validStatuses.includes(newStatus)) {
             return new Response(JSON.stringify({ error: `Invalid status. Valid: ${validStatuses.join(", ")}` }), {
               status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
