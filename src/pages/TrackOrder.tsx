@@ -73,7 +73,7 @@ const TrackOrder = () => {
         const token = urlParams.get("token");
         if (token) {
           const res = await supabase.rpc("get_guest_order", {
-            _order_number: orderNum,
+            _order_number: searchTerm,
             _tracking_token: token,
           });
           data = res.data?.[0] || null;
