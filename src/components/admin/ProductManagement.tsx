@@ -308,33 +308,6 @@ const ProductManagement = () => {
             <tbody>
               {filtered.map(p => (
                 <tr key={p.id} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""}`}>
-                  {editingId === p.id ? (
-                    <td className="px-4 py-3" colSpan={6}>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Title" />
-                          <input type="number" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Price" />
-                          <input type="number" value={editForm.stock_quantity} onChange={e => setEditForm(f => ({ ...f, stock_quantity: e.target.value }))} className="px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Stock" />
-                        </div>
-                        <textarea rows={2} value={editForm.description || ""} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-secondary text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none" placeholder="Description" />
-                        <SEOScoreWidget
-                          title={editForm.title || ""}
-                          description={editForm.description || ""}
-                          onTitleGenerated={(t) => setEditForm(f => ({ ...f, title: t }))}
-                          onDescriptionGenerated={(d) => setEditForm(f => ({ ...f, description: d }))}
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={saveEdit} disabled={saving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-60">
-                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-lg bg-secondary text-muted-foreground text-xs font-medium flex items-center gap-1">
-                            <X className="w-3 h-3" /> Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  ) : (
-                    <>
                       <td className="px-3 py-3">
                         <button onClick={() => toggleSelect(p.id)} className="text-muted-foreground hover:text-foreground transition-colors">
                           {selectedIds.has(p.id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
@@ -386,8 +359,6 @@ const ProductManagement = () => {
                           </button>
                         </div>
                       </td>
-                    </>
-                  )}
                 </tr>
               ))}
               {filtered.length === 0 && (
