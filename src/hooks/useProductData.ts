@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import {
   resolveStorageImageUrl,
-  STORAGE_CATEGORY_FALLBACK_URL,
   STORAGE_PRODUCT_FALLBACK_URL,
 } from "@/lib/storageImage";
+
+const CATEGORY_FALLBACK = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80";
 
 export interface DbProduct {
   id: string;
