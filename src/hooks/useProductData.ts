@@ -200,16 +200,17 @@ async function fallbackProductQuery(): Promise<Product[]> {
 async function fallbackProductDetail(idOrSlug: string): Promise<Product | null> {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
-  const buildQuery = (table: "products_public" | "products") => {
-    let query = supabase.from(table).select("*, categories(name)").eq("is_active", true);
-    query = isUuid ? query.eq("id", idOrSlug) : query.eq("slug", idOrSlug);
-    return query.maybeSingle();
-  };
+  let publicQuery = supabase.from("products_public").select("*, categories(name)").eq("is_active", true);
+  publicQuery = isUuid ? publicQuery.eq("id", idOrSlug) : publicQuery.eq("slug", idOrSlug);
+  const publicRes = await publicQuery.maybeSingle();
 
-  const publicRes = await buildQuery("products_public");
   if (publicRes.error) {
     console.warn("[Product] products_public detail failed, retrying products table", publicRes.error.message);
-    const tableRes = await buildQuery("products");
+
+    let tableQuery = supabase.from("products").select("*, categories(name)").eq("is_active", true);
+    tableQuery = isUuid ? tableQuery.eq("id", idOrSlug) : tableQuery.eq("slug", idOrSlug);
+    const tableRes = await tableQuery.maybeSingle();
+
     if (tableRes.error) throw tableRes.error;
     if (!tableRes.data) return null;
     return mapDbProduct(tableRes.data);
