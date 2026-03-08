@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Package, ArrowUpRight, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
