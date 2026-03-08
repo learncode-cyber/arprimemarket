@@ -13,13 +13,13 @@ import { useProducts, useCategories } from "@/hooks/useProductData";
 import { useLanguage } from "@/context/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
 import { organizationSchema, websiteSchema } from "@/lib/seoSchemas";
-import { resolveStorageImageUrl, STORAGE_CATEGORY_FALLBACK_URL } from "@/lib/storageImage";
+import { resolveStorageImageUrl } from "@/lib/storageImage";
 
 const fallbackCategoryImages: Record<string, string> = {
-  electronics: STORAGE_CATEGORY_FALLBACK_URL,
-  fashion: STORAGE_CATEGORY_FALLBACK_URL,
-  accessories: STORAGE_CATEGORY_FALLBACK_URL,
-  home: STORAGE_CATEGORY_FALLBACK_URL,
+  electronics: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80",
+  fashion: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&q=80",
+  accessories: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+  home: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
 };
 
 const Index = () => {
@@ -37,10 +37,12 @@ const Index = () => {
       return dbCategories.slice(0, 4).map((cat) => ({
         name: cat.name,
         slug: cat.slug,
-        image: resolveStorageImageUrl(
-          cat.image_url,
-          fallbackCategoryImages[cat.slug.toLowerCase()] || STORAGE_CATEGORY_FALLBACK_URL,
-        ),
+        image: cat.image_url && cat.image_url.startsWith("http")
+          ? cat.image_url
+          : resolveStorageImageUrl(
+              cat.image_url,
+              fallbackCategoryImages[cat.slug.toLowerCase()] || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80",
+            ),
       }));
     }
 
