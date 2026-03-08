@@ -27,6 +27,7 @@ interface Order {
 }
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [customerCount, setCustomerCount] = useState(0);
   const [productCount, setProductCount] = useState(0);
