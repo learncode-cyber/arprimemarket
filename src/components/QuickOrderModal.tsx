@@ -215,6 +215,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
     setForm({ name: "", phone: "", email: "", address: "", country: "Bangladesh" });
     setPaymentMethod("cod");
     setTxReference("");
+    setPhoneVerified(false);
     onClose();
   };
 
