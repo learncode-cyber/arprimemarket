@@ -45,6 +45,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const [txReference, setTxReference] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const selectedCountryCode = useMemo(() => getCountryCodeFromName(form.country), [form.country]);
   const phoneInputValue = useMemo(() => form.phone.replace(/^\+/, ""), [form.phone]);
