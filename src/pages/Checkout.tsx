@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, CheckCircle, MapPin, ShieldCheck, Truck, RotateCcw, Lock, Tag, X, Package, ChevronRight } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, MapPin, ShieldCheck, Shield, Truck, RotateCcw, Lock, Tag, X, Package, ChevronRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";

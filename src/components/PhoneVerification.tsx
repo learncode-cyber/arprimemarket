@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare, Phone, CheckCircle, ExternalLink, Shield } from "lucide-react";
+import { CheckCircle, Shield, KeyRound } from "lucide-react";
 
 interface PhoneVerificationProps {
   phone: string;
@@ -8,33 +8,80 @@ interface PhoneVerificationProps {
   isVerified?: boolean;
 }
 
+const MOCK_OTP = "123456";
+const OTP_LENGTH = 6;
+
 const PhoneVerification = ({ phone, onVerified, isVerified = false }: PhoneVerificationProps) => {
-  const [verifyMethod, setVerifyMethod] = useState<"whatsapp" | "sms" | null>(null);
-  const [whatsappSent, setWhatsappSent] = useState(false);
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Clean the phone number for WhatsApp link
-  const cleanPhone = phone.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  const handleSendOtp = useCallback(() => {
+    setSent(true);
+    setError("");
+    setOtp(Array(OTP_LENGTH).fill(""));
+    // In production: call edge function to send OTP via WhatsApp/SMS
+    // For now, mock OTP is 123456
+  }, []);
 
-  const whatsappVerifyLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-    "Hi! I'm verifying my phone number for my order on AR Prime Market. Please confirm this number is active."
-  )}`;
+  const verifyOtp = useCallback(
+    (code: string) => {
+      if (code === MOCK_OTP) {
+        setError("");
+        onVerified?.();
+      } else {
+        setError("Invalid code. Please try again. (Hint: 123456)");
+        setOtp(Array(OTP_LENGTH).fill(""));
+        setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      }
+    },
+    [onVerified],
+  );
 
-  const handleWhatsAppVerify = () => {
-    setVerifyMethod("whatsapp");
-    setWhatsappSent(true);
-    window.open(whatsappVerifyLink, "_blank", "noopener,noreferrer");
-    // In production, this would trigger a webhook or admin notification
-    // For now, mark as "pending verification"
-    setTimeout(() => {
-      onVerified?.();
-    }, 2000);
-  };
+  const handleChange = useCallback(
+    (index: number, value: string) => {
+      if (!/^\d*$/.test(value)) return;
+      const digit = value.slice(-1);
+      setOtp((prev) => {
+        const next = [...prev];
+        next[index] = digit;
+        const code = next.join("");
+        if (code.length === OTP_LENGTH && !next.includes("")) {
+          setTimeout(() => verifyOtp(code), 100);
+        }
+        return next;
+      });
+      if (digit && index < OTP_LENGTH - 1) {
+        inputRefs.current[index + 1]?.focus();
+      }
+    },
+    [verifyOtp],
+  );
 
-  const handleSMSVerify = () => {
-    setVerifyMethod("sms");
-    // Placeholder: In production, integrate Twilio/MessageBird/Supabase Phone Auth
-    // For now, show coming soon message
-  };
+  const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }, [otp]);
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+      if (!pasted) return;
+      const digits = pasted.split("");
+      const next = Array(OTP_LENGTH).fill("");
+      digits.forEach((d, i) => (next[i] = d));
+      setOtp(next);
+      if (digits.length === OTP_LENGTH) {
+        setTimeout(() => verifyOtp(next.join("")), 100);
+      } else {
+        inputRefs.current[digits.length]?.focus();
+      }
+    },
+    [verifyOtp],
+  );
 
   if (isVerified) {
     return (
@@ -44,7 +91,7 @@ const PhoneVerification = ({ phone, onVerified, isVerified = false }: PhoneVerif
         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20"
       >
         <CheckCircle className="w-4 h-4 text-green-500" />
-        <span className="text-xs font-medium text-green-600 dark:text-green-400">Phone verified</span>
+        <span className="text-xs font-medium text-green-600 dark:text-green-400">Phone verified ✓</span>
       </motion.div>
     );
   }
@@ -52,62 +99,55 @@ const PhoneVerification = ({ phone, onVerified, isVerified = false }: PhoneVerif
   if (!phone || phone.length < 8) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
         <Shield className="w-3 h-3" />
-        Verify your phone to confirm your order
+        Verify your phone number to proceed
       </p>
-      <div className="flex flex-wrap gap-2">
-        {/* WhatsApp verification (free) */}
+
+      {!sent ? (
         <motion.button
           type="button"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={handleWhatsAppVerify}
-          disabled={whatsappSent}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all touch-manipulation ${
-            whatsappSent
-              ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
-              : "bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/20"
-          }`}
+          onClick={handleSendOtp}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-105 transition-all touch-manipulation"
         >
-          <MessageSquare className="w-3.5 h-3.5" />
-          {whatsappSent ? "Verification sent" : "Verify via WhatsApp"}
-          {!whatsappSent && <ExternalLink className="w-3 h-3" />}
+          <KeyRound className="w-3.5 h-3.5" />
+          Send Verification Code
         </motion.button>
-
-        {/* SMS verification (placeholder) */}
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleSMSVerify}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all touch-manipulation"
-        >
-          <Phone className="w-3.5 h-3.5" />
-          Verify via SMS
-          <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full">Soon</span>
-        </motion.button>
-      </div>
-
-      {verifyMethod === "sms" && (
-        <motion.p
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-[11px] text-muted-foreground bg-muted/50 p-2 rounded-lg"
-        >
-          SMS verification will be available soon. Please use WhatsApp verification for now.
-        </motion.p>
-      )}
-
-      {whatsappSent && (
-        <motion.p
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-[11px] text-muted-foreground bg-green-500/5 p-2 rounded-lg"
-        >
-          A WhatsApp message has been opened. Our team will verify your number shortly.
-        </motion.p>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Enter the 6-digit code sent to your phone:
+          </p>
+          <div className="flex gap-2 justify-start" onPaste={handlePaste}>
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { inputRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                className="w-10 h-11 rounded-lg border border-border bg-background text-center text-base font-bold focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                autoFocus={i === 0}
+              />
+            ))}
+          </div>
+          {error && (
+            <p className="text-[11px] text-destructive font-medium">{error}</p>
+          )}
+          <button
+            type="button"
+            onClick={handleSendOtp}
+            className="text-[11px] text-primary hover:underline"
+          >
+            Resend code
+          </button>
+        </motion.div>
       )}
     </div>
   );

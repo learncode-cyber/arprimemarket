@@ -17,6 +17,7 @@ import {
   isValidPhoneForCountry,
   normalizePhoneForCountry,
 } from "@/lib/phoneUtils";
+import PhoneVerification from "@/components/PhoneVerification";
 import "react-phone-input-2/lib/style.css";
 
 interface QuickOrderProduct {
