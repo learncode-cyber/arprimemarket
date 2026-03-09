@@ -58,6 +58,11 @@ export const resolveStorageImageUrl = (
   }
 
   if (/^[a-z0-9][a-z0-9_-]*\/.+$/i.test(normalized)) {
+    // If the first segment matches the defaultBucket or a known sub-folder, use defaultBucket instead
+    const firstSegment = normalized.split("/")[0];
+    if (defaultBucket && defaultBucket !== firstSegment) {
+      return CLOUD_URL ? withCacheVersion(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${defaultBucket}/${normalized}`, cacheBust) : fallbackUrl;
+    }
     return CLOUD_URL ? withCacheVersion(`${CLOUD_URL}/${PUBLIC_STORAGE_PATH}${normalized}`, cacheBust) : fallbackUrl;
   }
 
