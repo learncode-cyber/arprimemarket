@@ -115,6 +115,11 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!phoneVerified) {
+      toast.error("Please verify your phone number before placing an order.");
+      return;
+    }
+
     if (!requiredFieldsFilled) {
       toast.error("Name, Phone, Email and Address are required");
       return;
