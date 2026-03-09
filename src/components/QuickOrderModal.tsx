@@ -107,6 +107,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const canSubmit =
     requiredFieldsFilled &&
     isPhoneValid &&
+    phoneVerified &&
     Boolean(paymentMethod) &&
     (shippingOptions.length === 0 || Boolean(selectedShipping)) &&
     !sending;
