@@ -30,7 +30,7 @@ export const CategoryImageUploader = ({ imageUrl, onChange, onUploadComplete }: 
 
     setUploading(true);
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `categories/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
     const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
       cacheControl: "31536000",
