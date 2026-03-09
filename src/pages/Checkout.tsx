@@ -163,6 +163,10 @@ const Checkout = () => {
 
   const goToPayment = () => {
     if (!validate()) return;
+    if (!phoneVerified) {
+      toast({ title: "Phone verification required", description: "Please verify your phone number before continuing.", variant: "destructive" });
+      return;
+    }
     trackInitiateCheckout(subtotal, items.map(i => ({
       id: i.product.id, title: i.product.title, price: i.product.price,
       category: i.product.category, quantity: i.quantity,
