@@ -316,6 +316,13 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                         )}
                       </p>
                     )}
+                    {isPhoneValid && (
+                      <PhoneVerification
+                        phone={form.phone}
+                        isVerified={phoneVerified}
+                        onVerified={() => setPhoneVerified(true)}
+                      />
+                    )}
                   </div>
 
                   <input
