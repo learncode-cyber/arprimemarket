@@ -17,6 +17,7 @@ import {
   isValidPhoneForCountry,
   normalizePhoneForCountry,
 } from "@/lib/phoneUtils";
+import PhoneVerification from "@/components/PhoneVerification";
 import "react-phone-input-2/lib/style.css";
 
 interface QuickOrderProduct {
@@ -44,6 +45,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const [txReference, setTxReference] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const selectedCountryCode = useMemo(() => getCountryCodeFromName(form.country), [form.country]);
   const phoneInputValue = useMemo(() => form.phone.replace(/^\+/, ""), [form.phone]);
@@ -105,12 +107,18 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
   const canSubmit =
     requiredFieldsFilled &&
     isPhoneValid &&
+    phoneVerified &&
     Boolean(paymentMethod) &&
     (shippingOptions.length === 0 || Boolean(selectedShipping)) &&
     !sending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!phoneVerified) {
+      toast.error("Please verify your phone number before placing an order.");
+      return;
+    }
 
     if (!requiredFieldsFilled) {
       toast.error("Name, Phone, Email and Address are required");
@@ -207,6 +215,7 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
     setForm({ name: "", phone: "", email: "", address: "", country: "Bangladesh" });
     setPaymentMethod("cod");
     setTxReference("");
+    setPhoneVerified(false);
     onClose();
   };
 
@@ -306,6 +315,13 @@ export const QuickOrderModal = ({ open, onClose, product }: QuickOrderModalProps
                           "يرجى إدخال رقم هاتف صالح للبلد المحدد.",
                         )}
                       </p>
+                    )}
+                    {isPhoneValid && (
+                      <PhoneVerification
+                        phone={form.phone}
+                        isVerified={phoneVerified}
+                        onVerified={() => setPhoneVerified(true)}
+                      />
                     )}
                   </div>
 

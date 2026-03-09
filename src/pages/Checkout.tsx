@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, CheckCircle, MapPin, ShieldCheck, Truck, RotateCcw, Lock, Tag, X, Package, ChevronRight } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, MapPin, ShieldCheck, Shield, Truck, RotateCcw, Lock, Tag, X, Package, ChevronRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -163,6 +163,10 @@ const Checkout = () => {
 
   const goToPayment = () => {
     if (!validate()) return;
+    if (!phoneVerified) {
+      toast({ title: "Phone verification required", description: "Please verify your phone number before continuing.", variant: "destructive" });
+      return;
+    }
     trackInitiateCheckout(subtotal, items.map(i => ({
       id: i.product.id, title: i.product.title, price: i.product.price,
       category: i.product.category, quantity: i.quantity,
@@ -176,6 +180,10 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (!validate()) return;
+    if (!phoneVerified) {
+      toast({ title: "Phone verification required", description: "Please verify your phone number before placing an order.", variant: "destructive" });
+      return;
+    }
     if (!user) {
       toast({ title: lang.code === "bn" ? "লগইন করুন" : "Please login", description: lang.code === "bn" ? "অর্ডার দিতে লগইন প্রয়োজন।" : "You need to be logged in.", variant: "destructive" });
       navigate("/login");
@@ -581,10 +589,14 @@ const Checkout = () => {
 
                 <button
                   onClick={goToPayment}
-                  className="w-full sm:w-auto px-8 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2 mt-2"
+                  disabled={!phoneVerified}
+                  className="w-full sm:w-auto px-8 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {tx("Continue to Payment", "পেমেন্টে যান", "متابعة الدفع")}
-                  <ChevronRight className="w-4 h-4" />
+                  {phoneVerified ? (
+                    <>{tx("Continue to Payment", "পেমেন্টে যান", "متابعة الدفع")} <ChevronRight className="w-4 h-4" /></>
+                  ) : (
+                    <><Shield className="w-4 h-4" /> {tx("Verify Phone to Continue", "ফোন যাচাই করুন", "تحقق من الهاتف للمتابعة")}</>
+                  )}
                 </button>
               </motion.div>
             )}
@@ -819,10 +831,14 @@ const Checkout = () => {
         {activeStep === 1 && (
           <button
             onClick={goToPayment}
-            className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2"
+            disabled={!phoneVerified}
+            className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {tx("Continue to Payment", "পেমেন্টে যান", "متابعة الدفع")}
-            <ChevronRight className="w-4 h-4" />
+            {phoneVerified ? (
+              <>{tx("Continue to Payment", "পেমেন্টে যান", "متابعة الدفع")} <ChevronRight className="w-4 h-4" /></>
+            ) : (
+              <><Shield className="w-4 h-4" /> {tx("Verify Phone to Continue", "ফোন যাচাই করুন", "تحقق من الهاتف للمتابعة")}</>
+            )}
           </button>
         )}
         {activeStep === 2 && (
