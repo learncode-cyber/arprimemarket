@@ -180,6 +180,10 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (!validate()) return;
+    if (!phoneVerified) {
+      toast({ title: "Phone verification required", description: "Please verify your phone number before placing an order.", variant: "destructive" });
+      return;
+    }
     if (!user) {
       toast({ title: lang.code === "bn" ? "লগইন করুন" : "Please login", description: lang.code === "bn" ? "অর্ডার দিতে লগইন প্রয়োজন।" : "You need to be logged in.", variant: "destructive" });
       navigate("/login");
