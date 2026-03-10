@@ -17,7 +17,6 @@ import PhoneVerification from "@/components/PhoneVerification";
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
-import { api } from "@/lib/api";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
@@ -137,16 +136,46 @@ const Checkout = () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
     try {
-      const res = await api.coupons.validate(couponCode.trim(), subtotal);
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("code", couponCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
 
-      if (res.error || !res.data?.valid) {
-        toast({ title: res.error || (lang.code === "bn" ? "কুপন পাওয়া যায়নি" : "Invalid coupon"), variant: "destructive" });
+      if (error || !data) {
+        toast({ title: lang.code === "bn" ? "কুপন পাওয়া যায়নি" : "Invalid coupon", variant: "destructive" });
         setCouponLoading(false);
         return;
       }
 
-      setCouponDiscount(res.data.calculated_discount);
-      setAppliedCoupon(res.data.code);
+      // Check expiry
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        toast({ title: "Coupon expired", variant: "destructive" });
+        setCouponLoading(false);
+        return;
+      }
+
+      // Check min order
+      if (data.min_order_amount && subtotal < Number(data.min_order_amount)) {
+        toast({ title: `Minimum order: ৳${data.min_order_amount}`, variant: "destructive" });
+        setCouponLoading(false);
+        return;
+      }
+
+      // Check max uses
+      if (data.max_uses && (data.used_count || 0) >= data.max_uses) {
+        toast({ title: "Coupon usage limit reached", variant: "destructive" });
+        setCouponLoading(false);
+        return;
+      }
+
+      const discount = data.discount_type === "percentage"
+        ? Math.round(subtotal * Number(data.discount_value) / 100)
+        : Number(data.discount_value);
+
+      setCouponDiscount(discount);
+      setAppliedCoupon(data.code);
       toast({ title: lang.code === "bn" ? "কুপন প্রয়োগ হয়েছে!" : "Coupon applied!" });
     } catch {
       toast({ title: "Error", variant: "destructive" });
