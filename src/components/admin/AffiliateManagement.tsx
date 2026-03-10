@@ -121,18 +121,18 @@ const AffiliateManagement = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Active Affiliates", value: activeCount, icon: Users },
-          { label: "Total Commissions", value: `৳${totalEarnings.toFixed(0)}`, icon: DollarSign },
-          { label: "Pending Payouts", value: `৳${totalPending.toFixed(0)}`, icon: CreditCard },
-          { label: "Affiliate Sales", value: `৳${totalSales.toFixed(0)}`, icon: TrendingUp },
+          { label: "Active Affiliates", value: activeCount, icon: Users, action: () => setTab("affiliates") },
+          { label: "Total Commissions", value: `৳${totalEarnings.toFixed(0)}`, icon: DollarSign, action: () => setTab("commissions") },
+          { label: "Pending Payouts", value: `৳${totalPending.toFixed(0)}`, icon: CreditCard, action: () => setTab("commissions") },
+          { label: "Affiliate Sales", value: `৳${totalSales.toFixed(0)}`, icon: TrendingUp, action: () => setTab("affiliates") },
         ].map((s, i) => (
-          <div key={i} className="bg-muted/30 rounded-xl p-3 space-y-1">
+          <button key={i} onClick={s.action} className="bg-muted/30 rounded-xl p-3 space-y-1 text-left transition-all duration-200 hover:scale-105 hover:bg-accent/50 hover:shadow-md cursor-pointer">
             <div className="flex items-center gap-1.5">
               <s.icon className="w-3.5 h-3.5 text-primary" />
               <span className="text-[11px] text-muted-foreground">{s.label}</span>
             </div>
             <p className="text-base font-bold text-foreground">{s.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
