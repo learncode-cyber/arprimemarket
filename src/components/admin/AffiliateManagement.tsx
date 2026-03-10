@@ -34,10 +34,15 @@ interface Commission {
 }
 
 const AffiliateManagement = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"affiliates" | "commissions">("affiliates");
+  const [tab, setTab] = useState<"affiliates" | "commissions">(() => {
+    const t = searchParams.get("tab");
+    return t === "commissions" ? "commissions" : "affiliates";
+  });
   const [payingId, setPayingId] = useState<string | null>(null);
 
   const load = async () => {
