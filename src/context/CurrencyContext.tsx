@@ -154,13 +154,18 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
     const fetchRates = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("exchange-rates");
-        if (error) throw error;
+        // Fetch live rates from free API directly (no edge function)
+        const res = await fetch("https://open.er-api.com/v6/latest/BDT", {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) throw new Error("Rate API error");
+        const json = await res.json();
+        if (json.result !== "success" || !json.rates) throw new Error("Invalid rate data");
 
-        const rates = data.rates as Record<string, number>;
+        const rates = json.rates as Record<string, number>;
         const updated = defaultCurrencies.map(c => ({ ...c, rate: rates[c.code] ?? c.rate }));
         setCurrencies(updated);
-        setRatesSource(data.source === "live" ? "live" : "fallback");
+        setRatesSource("live");
 
         setCurrency(prev => {
           const found = updated.find(c => c.code === prev.code);
