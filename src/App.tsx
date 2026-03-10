@@ -118,7 +118,6 @@ const App = () => (
                   } />
                 </Routes>
                 <PWAInstallPrompt />
-                <SpeedInsights />
                 </TrackingProvider>
               </CartProvider>
             </AuthProvider>
