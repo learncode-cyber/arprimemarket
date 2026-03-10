@@ -56,3 +56,15 @@ verify_jwt = false
 
 [functions.image-optimize]
 verify_jwt = false
+
+[functions.translate-content]
+verify_jwt = false
+
+[functions.exchange-rates]
+verify_jwt = false
+
+[functions.affiliate-cleanup]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
