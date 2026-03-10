@@ -3,6 +3,7 @@ import { Loader2, Users, DollarSign, TrendingUp, Ban, CheckCircle, CreditCard, E
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface Affiliate {
   id: string;
@@ -33,10 +34,15 @@ interface Commission {
 }
 
 const AffiliateManagement = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"affiliates" | "commissions">("affiliates");
+  const [tab, setTab] = useState<"affiliates" | "commissions">(() => {
+    const t = searchParams.get("tab");
+    return t === "commissions" ? "commissions" : "affiliates";
+  });
   const [payingId, setPayingId] = useState<string | null>(null);
 
   const load = async () => {
@@ -121,12 +127,12 @@ const AffiliateManagement = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Active Affiliates", value: activeCount, icon: Users, action: () => setTab("affiliates") },
-          { label: "Total Commissions", value: `৳${totalEarnings.toFixed(0)}`, icon: DollarSign, action: () => setTab("commissions") },
-          { label: "Pending Payouts", value: `৳${totalPending.toFixed(0)}`, icon: CreditCard, action: () => setTab("commissions") },
-          { label: "Affiliate Sales", value: `৳${totalSales.toFixed(0)}`, icon: TrendingUp, action: () => setTab("affiliates") },
+          { label: "Active Affiliates", value: activeCount, icon: Users, t: "affiliates" as const },
+          { label: "Total Commissions", value: `৳${totalEarnings.toFixed(0)}`, icon: DollarSign, t: "commissions" as const },
+          { label: "Pending Payouts", value: `৳${totalPending.toFixed(0)}`, icon: CreditCard, t: "commissions" as const },
+          { label: "Affiliate Sales", value: `৳${totalSales.toFixed(0)}`, icon: TrendingUp, t: "affiliates" as const },
         ].map((s, i) => (
-          <button key={i} onClick={s.action} className="bg-muted/30 rounded-xl p-3 space-y-1 text-left transition-all duration-200 hover:scale-105 hover:bg-accent/50 hover:shadow-md cursor-pointer">
+          <button key={i} onClick={() => { setTab(s.t); navigate(`/ar/affiliates?tab=${s.t}`); }} className="bg-muted/30 rounded-xl p-3 space-y-1 text-left transition-all duration-200 hover:scale-105 hover:bg-accent/50 hover:shadow-md cursor-pointer">
             <div className="flex items-center gap-1.5">
               <s.icon className="w-3.5 h-3.5 text-primary" />
               <span className="text-[11px] text-muted-foreground">{s.label}</span>
