@@ -17,7 +17,6 @@ import PhoneVerification from "@/components/PhoneVerification";
 import { useTracking } from "@/context/TrackingContext";
 import { securityService } from "@/lib/services";
 import { useShipping } from "@/hooks/useShipping";
-import { api } from "@/lib/api";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 

@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useLanguage, LangCode } from "@/context/LanguageContext";
 
 export interface CurrencyConfig {
