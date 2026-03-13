@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
   Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
-  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft, RotateCcw
+  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft, RotateCcw, KeyRound
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
@@ -39,6 +39,7 @@ const adminTabs = [
   { id: "api-keys", path: "/ar/api-keys", label: "API Keys", icon: Zap },
   { id: "webhooks", path: "/ar/webhooks", label: "Webhooks", icon: Globe },
   { id: "backup", path: "/ar/backup", label: "System", icon: Database },
+  { id: "account", path: "/ar/account", label: "Account & Security", icon: KeyRound },
 ];
 
 const AdminLayout = () => {
