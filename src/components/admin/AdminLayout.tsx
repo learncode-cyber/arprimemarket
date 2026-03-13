@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, Wallet, Truck, Store,
   Menu, X, ChevronRight, Activity, Globe, Zap, Gift, Megaphone, Database, Warehouse,
-  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft, RotateCcw
+  BookOpen, HelpCircle, MessageCircle, Ticket, Brain, PanelLeft, RotateCcw, KeyRound
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";

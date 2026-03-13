@@ -59,5 +59,6 @@ export const adminRoutes = [
   { path: "ai-assistant", element: <AIAssistantDashboard /> },
   { path: "api-keys", element: <APIKeyManagement /> },
   { path: "webhooks", element: <WebhookManagement /> },
-  { path: "backup", element: <div className="space-y-6"><AdminPasswordChange /><APIHealthDashboard /><BackupManagement /></div> },
+  { path: "backup", element: <div className="space-y-6"><APIHealthDashboard /><BackupManagement /></div> },
+  { path: "account", element: <AccountSecurity /> },
 ];
