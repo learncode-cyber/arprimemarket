@@ -39,6 +39,7 @@ const adminTabs = [
   { id: "api-keys", path: "/ar/api-keys", label: "API Keys", icon: Zap },
   { id: "webhooks", path: "/ar/webhooks", label: "Webhooks", icon: Globe },
   { id: "backup", path: "/ar/backup", label: "System", icon: Database },
+  { id: "account", path: "/ar/account", label: "Account & Security", icon: KeyRound },
 ];
 
 const AdminLayout = () => {
