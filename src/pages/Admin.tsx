@@ -28,6 +28,7 @@ import AdminPasswordChange from "@/components/admin/AdminPasswordChange";
 import AffiliateManagement from "@/components/admin/AffiliateManagement";
 import APIKeyManagement from "@/components/admin/APIKeyManagement";
 import WebhookManagement from "@/components/admin/WebhookManagement";
+import AccountSecurity from "@/components/admin/AccountSecurity";
 
 // Re-export all admin page components for routing
 export const adminRoutes = [
