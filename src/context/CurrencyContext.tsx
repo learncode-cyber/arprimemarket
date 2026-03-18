@@ -135,8 +135,9 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     return defaultCurrency;
   });
 
-  // Auto-switch currency when language changes
+  // Auto-switch currency when language changes (only if user hasn't manually picked one)
   useEffect(() => {
+    if (manuallySetRef.current) return;
     const targetCode = langToCurrency[lang.code];
     if (targetCode) {
       const found = currencies.find(c => c.code === targetCode);
@@ -183,6 +184,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const setCurrencyByCode = useCallback((code: string) => {
     const found = currencies.find(c => c.code === code);
     if (found) {
+      manuallySetRef.current = true;
       setCurrency(found);
       localStorage.setItem(STORAGE_KEY, code);
     }
