@@ -184,6 +184,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const setCurrencyByCode = useCallback((code: string) => {
     const found = currencies.find(c => c.code === code);
     if (found) {
+      manuallySetRef.current = true;
       setCurrency(found);
       localStorage.setItem(STORAGE_KEY, code);
     }
